@@ -1,0 +1,30 @@
+# NOTE THIS IS JUST A BOILERPLATE EXAMPLE PLEASE REPLACE WITH FINALIZED CONFIGS
+# Example application configuration.
+# Copy to config/app.yaml and fill in real values. app.yaml is gitignored.
+#
+# All hosts here are localhost. Never put a real hostname in an example file.
+
+# Base URL the web and desktop clients use to reach the server.
+# Required.
+server_url: "http://localhost:8000"
+
+identity:
+  # OIDC issuer discovery URL. Any standards-compliant provider works.
+  # Required. Obtain from your identity provider's admin console.
+  issuer: "http://localhost:8080/.well-known/openid-configuration"
+  # Public client identifier issued by that provider. Required. Not a secret.
+  client_id: "REPLACE_ME"
+  # Claim used to correlate an authenticated user with an existing account.
+  # Required. Common values: "sub", "oid", "email".
+  external_id_claim: "sub"
+
+theme:
+  # Path to a branding token file, resolved at runtime. Optional.
+  # Leave null to use the built-in default theme.
+  tokens_path: null
+
+printers:
+  # Poll interval in seconds for printer status. Optional, defaults to 5.
+  poll_interval_seconds: 5
+  # Printer endpoints. Optional; may also be discovered at runtime.
+  endpoints: []

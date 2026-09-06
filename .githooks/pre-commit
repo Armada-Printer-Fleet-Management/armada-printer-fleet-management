@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# pre-commit — scans staged changes for secrets, and keeps generated agent
+# config in step with its source.
+#
+# Which files may be committed is .gitignore's job: configuration is ignored by
+# default and only `.example` siblings are tracked. This hook covers the one
+# thing a path rule cannot see — credentials pasted inside a file that is
+# otherwise legitimate to commit.
+#
+# A missing scanner degrades to a warning so a fresh clone still works.
+# ─────────────────────────────────────────────────────────────────────────────
+set -uo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+FAILED=0
+
+red()  { printf '\033[31m%s\033[0m\n' "$*"; }
+yell() { printf '\033[33m%s\033[0m\n' "$*"; }
+dim()  { printf '\033[2m%s\033[0m\n' "$*"; }
+have() { command -v "$1" >/dev/null 2>&1; }
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$STAGED" ] && exit 0
+
+# ── Secret scanning ──────────────────────────────────────────────────────────
+if have gitleaks; then
+  if ! gitleaks protect --staged --no-banner --redact 2>/dev/null; then
+    red "✗ gitleaks found a potential secret in staged changes."
+    dim "  Nothing has been committed. Use an environment variable instead."
+    FAILED=1
+  fi
+else
+  yell "⚠ gitleaks not installed — secret scanning skipped."
+  dim "  Run /onboarding to install it."
+fi
+
+# ── Keep generated agent config in step with its source ──────────────────────
+# Skills and nested AGENTS.md files are the source; prompt files and nested
+# CLAUDE.md stubs are generated from them.
+if printf '%s' "$STAGED" | grep -qE '(^\.claude/|AGENTS\.md$)'; then
+  PY=$(command -v python3 || command -v python || true)
+  if [ -n "$PY" ] && "$PY" "$REPO_ROOT/scripts/sync_agent_config.py" >/dev/null 2>&1; then
+    REGEN=$(git diff --name-only -- '.github/prompts' '*/CLAUDE.md')
+    if [ -n "$REGEN" ]; then
+      git add .github/prompts '*/CLAUDE.md' 2>/dev/null || true
+      yell "⚠ Regenerated agent config and staged it:"
+      printf '%s\n' "$REGEN" | sed 's/^/    /'
+    fi
+  fi
+fi
+
+if [ $FAILED -ne 0 ]; then
+  echo ""
+  dim "Commit aborted. Nothing was written to history."
+  exit 1
+fi
+
+exit 0

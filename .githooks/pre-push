@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# pre-push — runs type checks and tests before anything reaches the remote.
+#
+# A gate applies when the code it checks exists in the repo. Once it applies it
+# is mandatory: a missing tool fails the push rather than being waved through,
+# so nobody pushes code they cannot verify.
+#
+# Gates whose target does not exist yet (no pyproject.toml, no buf.yaml) are
+# reported as not applicable, because there is nothing of that kind to check.
+#
+# Deliberate bypass:  git push --no-verify
+# ─────────────────────────────────────────────────────────────────────────────
+set -uo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT" || exit 1
+
+FAILED=0
+NA=()
+
+red() { printf '\033[31m%s\033[0m\n' "$*"; }
+grn() { printf '\033[32m%s\033[0m\n' "$*"; }
+dim() { printf '\033[2m%s\033[0m\n' "$*"; }
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# require <label> <tool> <command...>
+# Runs a mandatory gate. A missing tool is a failure, not a skip.
+require() {
+  local label="$1" tool="$2"; shift 2
+  printf '  %-14s ' "$label"
+  if ! have "$tool"; then
+    red "MISSING"
+    dim "    '$tool' is not installed but this repo requires it."
+    dim "    Run /onboarding to set up your environment."
+    FAILED=1
+    return
+  fi
+  if output=$("$@" 2>&1); then
+    grn "ok"
+  else
+    red "FAILED"
+    printf '%s\n' "$output" | sed 's/^/    /'
+    FAILED=1
+  fi
+}
+
+echo "pre-push checks:"
+
+# ── Protobuf contract ────────────────────────────────────────────────────────
+if [ -f buf.yaml ]; then
+  require "buf lint" buf buf lint
+else
+  NA+=("protobuf")
+fi
+
+# ── Python ───────────────────────────────────────────────────────────────────
+if [ -f pyproject.toml ]; then
+  require "ruff" ruff ruff check .
+  require "pyright" pyright pyright
+  require "import layers" lint-imports lint-imports
+  require "pytest" pytest pytest -q
+else
+  NA+=("python")
+fi
+
+# ── TypeScript ───────────────────────────────────────────────────────────────
+if [ -f pnpm-workspace.yaml ]; then
+  if [ ! -d node_modules ]; then
+    printf '  %-14s ' "typescript"
+    red "MISSING"
+    dim "    Dependencies are not installed. Run 'pnpm install' or /onboarding."
+    FAILED=1
+  else
+    require "tsc" pnpm pnpm -r exec tsc --noEmit
+    require "eslint" pnpm pnpm -r exec eslint .
+    require "vitest" pnpm pnpm -r test --run
+  fi
+else
+  NA+=("typescript")
+fi
+
+# ── Summary ──────────────────────────────────────────────────────────────────
+echo ""
+if [ ${#NA[@]} -gt 0 ]; then
+  dim "not applicable (no such code in repo yet): ${NA[*]}"
+fi
+
+if [ $FAILED -ne 0 ]; then
+  red "✗ Push aborted."
+  exit 1
+fi
+
+exit 0

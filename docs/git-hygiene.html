@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Git hygiene</title>
+<link rel="stylesheet" href="shared/docs.css">
+</head>
+<body data-depth="0">
+<div class="layout">
+<nav></nav>
+<main>
+
+<h1>Git hygiene guide</h1>
+<p class="lede">
+  Development throws up situations that break this guide. It describes what to do most of the time;
+  it is not a rigid requirement. When you depart from it, say why in the pull request.
+</p>
+
+<h2>Summary</h2>
+
+<ul>
+  <li>Rebase only, both for syncing a branch and for merging a pull request into <code>main</code>.</li>
+  <li>Commit messages are title, bullet body, ticket line.</li>
+  <li>Squash your commits into one coherent commit per ticket.</li>
+  <li>Cherry-pick to release branches.</li>
+</ul>
+
+<hr>
+
+<h2>Developer workflow</h2>
+
+<p>Assumes you are working from the most up-to-date unreleased stable branch.</p>
+
+<h3>Rebase against main, do not merge main into your branch</h3>
+
+<p>
+  Rebasing keeps commit history linear, which is significantly more organised and easier to read.
+</p>
+
+<p>
+  Rebasing onto the most recent <code>main</code> also keeps your work on top of the newest changes.
+  When you then test, there is no chance your branch is stale. A stale branch — one with newer
+  commits on <code>main</code> — risks introducing bugs, because the behaviour of the code you built
+  against may have changed underneath you.
+</p>
+
+<p>
+  Merge commits add clutter. Reserve them for large feature branches whose history has become too
+  difficult to manage otherwise.
+</p>
+
+<h3>Merge pull requests with the rebase strategy</h3>
+
+<p>
+  Rebase is the default on the remote. Merge remains available, because special cases need it.
+</p>
+
+<h3>Squash your commits into one</h3>
+
+<p>
+  One PR, one ticket, one commit. That is what makes the linear history readable and traceable.
+</p>
+
+<p>
+  The exception is when you need to cherry-pick only part of the changes later — keep those parts as
+  separate commits.
+</p>
+
+<h3>Commit message format</h3>
+
+<p>
+  Conventional commit title, a bullet list summarising the work, and the ticket as the last line.
+</p>
+
+<pre><code>&lt;type&gt;(&lt;scope&gt;): &lt;title&gt;
+
+- each point summarises one change
+
+&lt;Ticket ID&gt; &lt;Ticket Title&gt;</code></pre>
+
+<p>
+  <code>/commit-message</code> generates this for you. The <code>commit-msg</code> hook rejects
+  anything that does not match, so this is enforced rather than encouraged.
+</p>
+
+<h3>Branch naming</h3>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Kind</th><th>Pattern</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Regular ticket</td>
+      <td><code>developer/firstname.lastname/&lt;ticket-id&gt;-&lt;ticket-title&gt;</code></td>
+    </tr>
+    <tr>
+      <td>Large feature</td>
+      <td><code>feature/&lt;feature-name&gt;</code></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>
+  For a large feature, branch <code>feature/&lt;name&gt;</code> off <code>main</code>, and commit
+  developer branches into that feature branch rather than directly into <code>main</code>.
+</p>
+
+<hr>
+
+<h2>Release branches</h2>
+
+<div class="callout">
+  <p>
+    <strong>Release branches are live production.</strong> They are treated more carefully than
+    <code>main</code>, and changes reaching them carry more risk.
+  </p>
+</div>
+
+<p>
+  Only cherry-pick minimal, low-risk changes onto them. Moving a site to the next version is a large
+  maintenance event, not a cherry-pick.
+</p>
+
+<p>
+  For hot fixes to an already released version, define a <strong>clone ticket</strong>. The clone
+  cherry-picks the original pull request's commit hash, and documents anything that went wrong
+  during the pick, such as merge conflicts.
+</p>
+
+<h3>Clone commit message</h3>
+
+<pre><code>&lt;Original Commit Message&gt;
+
+Cherry-picked from &lt;commit-hash&gt;
+
+&lt;Clone Ticket ID&gt; &lt;Clone Title&gt;</code></pre>
+
+<p>
+  Keep the original subject and bullets intact, so the two commits are recognisably the same change.
+  Fixes always land on <code>main</code> first and are cherry-picked from there — never the reverse.
+</p>
+
+<hr>
+
+<h2>Agents</h2>
+
+<p>
+  Agents are given this guide, so you can ask one to handle this git plumbing for you. The rules
+  they follow are in <a href="../AGENTS.md">AGENTS.md</a>; the reasoning behind them is in the
+  Jira ticket the commit was made under.
+</p>
+
+<section class="ai-statement">
+  <h2>AI Use Statement</h2>
+  <dl>
+    <dt>Tool</dt><dd>Claude Code (Opus 5)</dd>
+    <dt>Mode</dt><dd>Local</dd>
+    <dt>Output</dt><dd>formatted the team's agreed git hygiene guide as this page; the rules themselves were written by the team</dd>
+    <dt>Data</dt><dd>none</dd>
+    <dt>Verified</dt><dd>opened the page in a VS Code browser window and read the rendered content, and read the HTML source</dd>
+  </dl>
+  <p>
+    Required by the project's <a href="../.integrity/POLICY.md">AI use policy</a>. The
+    verification field is written by a developer, never by an agent.
+  </p>
+</section>
+
+</main>
+</div>
+<script src="shared/nav.js"></script>
+</body>
+</html>

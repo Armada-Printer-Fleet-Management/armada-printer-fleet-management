@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Capstone documentation</title>
+<link rel="stylesheet" href="shared/docs.css">
+</head>
+<body data-depth="0">
+<div class="layout">
+<nav></nav>
+<main>
+
+<h1>Developer documentation</h1>
+<p class="lede">
+  What you need to work in this repository. Curated rather than exhaustive — the most important
+  things, kept current.
+</p>
+
+<div class="callout">
+  <p>
+    <strong>Read first.</strong> The conventions here are enforced automatically. A commit with the
+    wrong message shape is rejected before it reaches history, and pushes run type checks and tests.
+    None of that is discretionary, so it is worth ten minutes now rather than a confusing failure
+    later.
+  </p>
+</div>
+
+<div class="cards">
+  <a class="card" href="git-hygiene.html">
+    <strong>Git hygiene</strong>
+    <span>Branch naming, rebasing, squashing, commit format, and how fixes reach release branches.</span>
+  </a>
+  <a class="card" href="../AGENTS.md">
+    <strong>Agent instructions</strong>
+    <span>The rules Claude Code and Copilot follow. Also the fastest summary of the conventions.</span>
+  </a>
+  <a class="card" href="../config/README.md">
+    <strong>Configuration</strong>
+    <span>Why <code>config/</code> is ignored by default, and how to add a new setting safely.</span>
+  </a>
+</div>
+
+<h2>Getting set up</h2>
+
+<p>
+  Run <code>/onboarding</code> in Claude Code or Copilot. It installs the toolchain, wires the git
+  hooks, installs dependencies, prepares configuration, runs the tests, starts the applications,
+  and opens this page.
+</p>
+
+<p>
+  If you would rather do it by hand, the skill at
+  <code>.claude/skills/onboarding/SKILL.md</code> is a readable checklist. One step is easy to miss
+  and breaks everything quietly:
+</p>
+
+<pre><code>git config core.hooksPath .githooks</code></pre>
+
+<p>
+  Hooks are per-clone and are not inherited. Without that line, none of the enforcement below
+  applies to you.
+</p>
+
+<h2>What is in the repository</h2>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr><th>Path</th><th>What it holds</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>apps/</code></td><td>The server, the web app, and the desktop app</td></tr>
+    <tr><td><code>packages/</code></td><td>Shared code: the API contract, domain logic, ports, UI kit</td></tr>
+    <tr><td><code>plugins/</code></td><td>Adapters implementing the ports</td></tr>
+    <tr><td><code>config/</code></td><td>Deployment settings. Ignored by default; commit only <code>.example</code> files</td></tr>
+    <tr><td><code>docs/</code></td><td>This site, and the decision records</td></tr>
+    <tr><td><code>.githooks/</code></td><td>Commit, pre-commit and pre-push enforcement</td></tr>
+    <tr><td><code>.claude/skills/</code></td><td>Skills, which also generate the Copilot equivalents</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>How the code is layered</h2>
+
+<p>
+  Dependencies point inward only, and CI fails a build that breaks this. The rule exists because
+  domain logic has to run in both the server and the desktop app, which is only possible if it
+  depends on nothing.
+</p>
+
+<pre><code>packages/proto/         the API contract, no dependencies
+packages/core-domain/   pure domain logic, no I/O and no framework
+packages/plugin-api/    ports
+plugins/                adapters
+apps/                   composition roots</code></pre>
+
+<p>
+  If domain logic looks like it needs a database or the network, it needs a port instead.
+</p>
+
+<h2>Why things are the way they are</h2>
+
+<p>
+  Decisions are tracked in Jira, not in this repository. Every commit ends with the ticket it was
+  made under, so the history is the index: run <code>git blame</code> on the code, read the commit
+  message, and look up the ticket. Agents reach it through the Atlassian MCP server, which
+  <code>/onboarding</code> sets up.
+</p>
+
+<section class="ai-statement">
+  <h2>AI Use Statement</h2>
+  <dl>
+    <dt>Tool</dt><dd>Claude Code (Opus 5)</dd>
+    <dt>Mode</dt><dd>Local</dd>
+    <dt>Output</dt><dd>drafted this page from the repository's structure and decision records</dd>
+    <dt>Data</dt><dd>none</dd>
+    <dt>Verified</dt><dd>opened the page in a VS Code browser window and read the rendered content, and read the HTML source</dd>
+  </dl>
+  <p>
+    Required by the project's <a href="../.integrity/POLICY.md">AI use policy</a>. The
+    verification field is written by a developer, never by an agent.
+  </p>
+</section>
+
+</main>
+</div>
+<script src="shared/nav.js"></script>
+</body>
+</html>

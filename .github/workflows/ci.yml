@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, "release/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      python: ${{ steps.check.outputs.python }}
+      typescript: ${{ steps.check.outputs.typescript }}
+      proto: ${{ steps.check.outputs.proto }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          { echo "python=$([ -f pyproject.toml ] && echo true || echo false)"
+            echo "typescript=$([ -f pnpm-workspace.yaml ] && echo true || echo false)"
+            echo "proto=$([ -f buf.yaml ] && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
+
+  commit-messages:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate every commit in the pull request
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          status=0
+          for sha in $(git rev-list "$BASE..$HEAD"); do
+            git log -1 --format=%B "$sha" > "${RUNNER_TEMP}/msg"
+            if ! bash .githooks/commit-msg "${RUNNER_TEMP}/msg"; then
+              echo "::error::Commit $sha does not satisfy the commit contract"
+              status=1
+            fi
+          done
+          exit $status
+
+  agent-config:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Generated agent config is in step with its source
+        run: python scripts/sync_agent_config.py --check
+
+  proto:
+    needs: detect
+    if: needs.detect.outputs.proto == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-buf
+      - run: buf lint
+      - name: Reject breaking API changes
+        if: github.event_name == 'pull_request'
+        run: buf breaking --against ".git#branch=origin/${{ github.event.pull_request.base.ref }}"
+
+  python:
+    needs: detect
+    if: needs.detect.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: ./.github/actions/setup-buf
+        if: needs.detect.outputs.proto == 'true'
+      - run: uv sync --all-extras --dev
+      - name: Generate API code
+        if: needs.detect.outputs.proto == 'true'
+        run: buf generate
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pyright
+      - name: Layer contracts
+        run: uv run lint-imports
+      - run: uv run pytest -q
+
+  typescript:
+    needs: detect
+    if: needs.detect.outputs.typescript == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - uses: ./.github/actions/setup-buf
+        if: needs.detect.outputs.proto == 'true'
+      - run: pnpm install --frozen-lockfile
+      - name: Generate API code
+        if: needs.detect.outputs.proto == 'true'
+        run: buf generate
+      - run: pnpm -r exec tsc --noEmit
+      - run: pnpm -r exec eslint .
+      - run: pnpm -r test --run
