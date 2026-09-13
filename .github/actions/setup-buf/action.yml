@@ -1,0 +1,21 @@
+name: Setup buf
+description: Install a pinned buf release onto a Linux runner.
+
+inputs:
+  version:
+    description: buf release version, without the leading v.
+    required: false
+    default: "1.72.0"
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        version="${{ inputs.version }}"
+        url="https://github.com/bufbuild/buf/releases/download/v${version}/buf-Linux-x86_64"
+        curl -fsSL "$url" -o "${RUNNER_TEMP}/buf"
+        chmod +x "${RUNNER_TEMP}/buf"
+        sudo mv "${RUNNER_TEMP}/buf" /usr/local/bin/buf
+        buf --version

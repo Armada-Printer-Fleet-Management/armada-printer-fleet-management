@@ -1,0 +1,59 @@
+# ─── Agent-local, never committed ────────────────────────────────────────────
+# HANDOFF.md is per-developer session state. Start from HANDOFF.template.md.
+HANDOFF.md
+.claude/settings.local.json
+.integrity/transcripts/*
+!.integrity/transcripts/.gitkeep
+
+# ─── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ─── Node / TypeScript ───────────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+*.tsbuildinfo
+apps/web/dist/
+apps/desktop/frontend/dist/
+packages/ui-kit/dist/
+coverage/
+
+# ─── Generated code (buf) ────────────────────────────────────────────────────
+# Generated from packages/proto — never hand-edit, never commit.
+# Run `buf generate` (or `/onboarding`) to produce these.
+**/gen/
+
+# ─── Runtime configuration: ignored by default ───────────────────────────────
+# All application logic here is generic. Anything specific to a deployment —
+# brand assets, identity provider endpoints, database schema mappings — is
+# configuration, not code.
+#
+# Ignoring is the DEFAULT so that forgetting to ignore a new config file cannot
+# leak it. Commit a `.example` sibling to document each file's shape instead.
+config/**
+!config/**/*.example.*
+!config/**/README.md
+
+# ─── Anything marked private or local, anywhere in the tree ──────────────────
+**/private/
+*.private.*
+*.local.*
+.env
+.env.*
+!.env.example
+
+# ─── Editor / OS ─────────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
