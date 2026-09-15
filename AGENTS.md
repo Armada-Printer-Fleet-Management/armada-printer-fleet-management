@@ -45,11 +45,11 @@ Fleet management software for 3D printers, built as a university capstone projec
 
 A monorepo delivering three applications, deployed to on-premise Linux machines:
 
-| App         | Path            | Stack                                     |
-| ----------- | --------------- | ----------------------------------------- |
-| Server      | `apps/server/`  | Python, ASGI, ConnectRPC                  |
-| Web app     | `apps/web/`     | React + TypeScript + Vite                 |
-| Desktop app | `apps/desktop/` | pywebview shell (Python) + React frontend |
+| App         | Path            | Stack                                             |
+| ----------- | --------------- | -------------------------------------------------- |
+| Server      | `apps/server/`  | Python, ASGI, ConnectRPC                          |
+| Web app     | `apps/web/`     | React + TypeScript + Vite                         |
+| Desktop app | `apps/desktop/` | Python backend (pywebview) with a React frontend  |
 
 The web and desktop apps are **different applications**. They talk to each other only through the
 server. They share code through `packages/ui-kit` and `packages/api-client`, never by importing
@@ -201,6 +201,14 @@ in the pull request when you do.
 **Generated code** (`**/gen/`) is never hand-edited and never committed. Regenerate with
 `buf generate`.
 
+### Naming
+
+**Getters and setters are named `x()` / `set_x()`, in the file's own casing** — never
+`get_x()`. Python: `version()` / `set_version()` (snake_case). TypeScript: `version()` /
+`setVersion()` (camelCase). This applies to IPC methods bridged between processes as much as to
+ordinary class methods — the bridged name is what callers actually see, so it follows the same
+rule as any other getter.
+
 ### Comments
 
 **Write a comment only when the code cannot explain itself.** Clear names, small functions and
@@ -221,19 +229,24 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 
 ## Toolchain
 
-| Task                 | Command                                         |
-| -------------------- | ----------------------------------------------- |
-| Python deps          | `uv sync`                                       |
-| JS deps              | `pnpm install`                                  |
-| Regenerate API types | `buf generate`                                  |
-| Python types         | `pyright`                                       |
-| TS types             | `pnpm -r exec tsc --noEmit`                     |
-| Python tests         | `pytest`                                        |
-| JS tests             | `pnpm -r test`                                  |
-| Layer contracts      | `lint-imports`                                  |
-| Sync agent config    | `python scripts/sync_agent_config.py`           |
-| Export AI audit log  | `python scripts/export_ai_audit.py`             |
-| Read a decision      | Atlassian MCP server, configured in `.mcp.json` |
+| Task                          | Command                                                               |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| Python deps                   | `uv sync`                                                             |
+| JS deps                       | `pnpm install`                                                        |
+| Regenerate API types          | `buf generate`                                                        |
+| Python types                  | `pyright`                                                             |
+| TS types                      | `pnpm -r exec tsc --noEmit`                                           |
+| Python tests                  | `pytest`                                                              |
+| JS tests                      | `pnpm -r test`                                                        |
+| Layer contracts               | `lint-imports`                                                        |
+| Sync agent config             | `python scripts/sync_agent_config.py`                                 |
+| Export AI audit log           | `python scripts/export_ai_audit.py`                                   |
+| Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
+| Desktop Python deps           | `uv sync --project apps/desktop/backend`                              |
+| Desktop JS deps                | `pnpm install` (in `apps/desktop/frontend`)                          |
+| Generate proto code            | `python scripts/generate_proto.py <template> [--node-modules <dir>]` |
+| Run desktop app (build mode)   | `python apps/desktop/dev_run.py`                                     |
+| Run desktop app (hot reload)   | `python apps/desktop/dev_run.py --dev`                               |
 
 Full environment setup is `/onboarding`.
 

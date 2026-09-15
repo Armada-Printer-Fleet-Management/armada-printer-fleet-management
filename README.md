@@ -8,7 +8,7 @@ A monorepo delivering three applications — a server, a web app, and a desktop 
 | ----------- | --------------- | ---------------------------------------------- |
 | Server      | `apps/server/`  | Python, ASGI, ConnectRPC                       |
 | Web app     | `apps/web/`     | React, TypeScript, Vite                        |
-| Desktop app | `apps/desktop/` | pywebview shell (Python) with a React frontend |
+| Desktop app | `apps/desktop/` | Python backend (pywebview) with a React frontend |
 
 The web and desktop apps are separate applications. They communicate only through the server,
 and share code through `packages/ui-kit` and `packages/api-client` rather than by importing one

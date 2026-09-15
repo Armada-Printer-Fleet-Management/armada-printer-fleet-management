@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package desktop.v1;
+
+// The desktop app's version
+// Semantic versioning: major.minor.maintenance, with an optional postfix
+// reserved for special releases (e.g. "rc1", "beta"). postfix is typically unused
+message VersionInfo {
+  uint32 major = 1;
+  uint32 minor = 2;
+  uint32 maintenance = 3;
+  optional string postfix = 4;
+}

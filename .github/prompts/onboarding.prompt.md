@@ -14,6 +14,12 @@ Run the steps in order. A step whose target does not exist in the repository is 
 report it and move on. A step whose target exists but fails is a **failure** — stop, explain, and do
 not press on, because later steps will fail confusingly.
 
+**If something looks out of date with what this skill currently expects** — an old file shape, a
+script that doesn't match the described layout, a config option this skill no longer mentions —
+say so and ask whether the developer is on an older branch or checkout, before changing or
+overwriting anything. Don't silently "fix" it into the current shape and don't silently proceed as
+if it matched.
+
 Report a summary at the end: what was installed, what ran, what was skipped and why.
 
 ## 1. Check prerequisites
@@ -36,6 +42,7 @@ Check each before installing — never reinstall something already present.
 | `uv` | Python packages and virtualenv | `winget install astral-sh.uv` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 | `pnpm` | Node packages | `npx get-pnpm` | `npx get-pnpm` |
 | `buf` | Protobuf codegen and linting | `winget install bufbuild.buf` | `curl -sSL https://github.com/bufbuild/buf/releases/latest/download/buf-$(uname -s)-$(uname -m) -o /usr/local/bin/buf && chmod +x /usr/local/bin/buf` |
+| `protoc` | Python protobuf codegen (buf's `protoc_builtin` plugin type needs the real compiler, not a hosted one) | `winget install Google.Protobuf` | apt: `sudo apt-get install protobuf-compiler`, brew: `brew install protobuf` |
 | `gitleaks` | Secret scanning in the pre-commit hook | `winget install gitleaks.gitleaks` | `brew install gitleaks` |
 
 `pnpm` is installed with `npx get-pnpm`, the npm-based installer from <https://pnpm.io/installation>.
@@ -58,20 +65,32 @@ git config core.hooksPath .githooks
 This is per-clone and is not inherited, so a fresh clone always needs it. Verify with
 `git config core.hooksPath`, then confirm the hooks are executable.
 
+The current expected layout: `.githooks/pre-push` is a thin dispatcher; shared helpers live in
+`.githooks/pre-push.d/_lib.sh`, and each service's own checks live in
+`.githooks/pre-push.d/<service>/check.sh`. Check the clone actually matches this -- confirm
+`.githooks/pre-push.d/` may exists and is non-empty. Assume this skill and the main branches .githooks is up to date and the expected hooks.
+
 ## 4. Install dependencies
 
 | Condition | Command |
 |---|---|
 | `pyproject.toml` exists | `uv sync` |
 | `pnpm-workspace.yaml` exists | `pnpm install` |
+| `apps/desktop/backend/pyproject.toml` exists | `uv sync --project apps/desktop/backend` |
+| `apps/desktop/frontend/package.json` exists | `pnpm install` (cwd `apps/desktop/frontend`), then `pnpm approve-builds --all` (cwd `apps/desktop/frontend`) once, to allow esbuild's postinstall script -- pnpm blocks build scripts by default |
 
 ## 5. Generate API code
 
-If `buf.gen.yaml` exists:
+Each template covers one language and is invoked through the shared script rather than calling
+`buf generate` directly, so the local-plugin `PATH` handling for TypeScript lives in one place:
 
-```
-buf generate
-```
+| Condition | Command |
+|---|---|
+| `buf.gen.python.yaml` exists | `python scripts/generate_proto.py buf.gen.python.yaml` |
+| `buf.gen.ts.yaml` exists and `apps/desktop/frontend/node_modules` exists | `python scripts/generate_proto.py buf.gen.ts.yaml --node-modules apps/desktop/frontend/node_modules` |
+
+(Step 4 installs dependencies before this step generates code, so the frontend's local
+`protoc-gen-es` plugin is already present by the time the second row runs.)
 
 This produces the Python server interfaces and TypeScript clients from `packages/proto`. The output
 is gitignored and must exist before anything type-checks.
@@ -182,8 +201,15 @@ something to skip past.
 
 Skip this step if `--skip-app` was passed.
 
-Start the server, then the web app, then the desktop app, each as configured in its own directory.
-Report the URL for each. Leave them running.
+| App | Condition | Command |
+|---|---|---|
+| Server | `apps/server/pyproject.toml` exists | not yet -- report not applicable |
+| Web | `apps/web/package.json` exists | not yet -- report not applicable |
+| Desktop | `apps/desktop/backend/pyproject.toml` exists | `python apps/desktop/dev_run.py` |
+
+`python apps/desktop/dev_run.py --dev` is the hot-reload alternative for active development, not
+needed for this verification run. Report the URL for the web/server apps once they exist; the
+desktop app opens its own native window. Leave everything running.
 
 ## 10. Open the documentation
 

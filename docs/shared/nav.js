@@ -13,6 +13,10 @@ const SECTIONS = [
     ],
   },
   {
+    title: "Applications",
+    links: [{ href: "desktop.html", text: "Desktop application" }],
+  },
+  {
     title: "Reference",
     links: [
       { href: "../AGENTS.md", text: "Agent instructions" },
