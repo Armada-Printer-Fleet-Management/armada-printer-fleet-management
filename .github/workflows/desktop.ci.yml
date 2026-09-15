@@ -1,0 +1,51 @@
+name: CI (desktop)
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: ./.github/actions/setup-buf
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - run: uv sync --all-extras --dev
+        working-directory: apps/desktop/backend
+      - name: Generate API code
+        run: python scripts/generate_proto.py buf.gen.python.yaml
+      - run: uv run ruff check .
+        working-directory: apps/desktop/backend
+      - run: uv run ruff format --check .
+        working-directory: apps/desktop/backend
+      - run: uv run pyright
+        working-directory: apps/desktop/backend
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.3.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: apps/desktop/frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: apps/desktop/frontend
+      - uses: ./.github/actions/setup-buf
+      - name: Generate API code
+        run: python scripts/generate_proto.py buf.gen.ts.yaml --node-modules apps/desktop/frontend/node_modules
+      - run: pnpm exec tsc --noEmit
+        working-directory: apps/desktop/frontend
+      - run: pnpm exec eslint .
+        working-directory: apps/desktop/frontend

@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Desktop application</title>
+    <link rel="stylesheet" href="shared/docs.css" />
+  </head>
+  <body data-depth="0">
+    <div class="layout">
+      <nav></nav>
+      <main>
+        <h1>Desktop application</h1>
+        <p class="lede">
+          How <code>apps/desktop/</code> is put together: a Python backend and a
+          React frontend, talking over a real inter-process bridge, typed end to
+          end by a shared protobuf contract.
+        </p>
+
+        <div class="callout">
+          <p>
+            <strong
+              >This page goes deeper than
+              <code>apps/desktop/README.md</code>.</strong
+            >
+            Read the README first for the short version; come here for the
+            diagrams and the reasoning behind each piece.
+          </p>
+        </div>
+
+        <h2>Overview</h2>
+
+        <p>
+          The desktop app is two separate programs. <code>backend/</code> is a
+          Python process that opens a native window (via
+          <a href="https://github.com/r0x0r/pywebview">pywebview</a>) and
+          renders <code>frontend/</code>'s built React UI inside it. They are
+          not one process with two halves — the rendered frontend runs inside
+          its own WebView2 (or platform-equivalent) renderer process, separate
+          from the Python host. Calling between them is genuine inter-process
+          communication, the same reason Electron calls its own main↔renderer
+          channel "IPC."
+        </p>
+
+        <p>
+          Both sides depend on <code>packages/proto/</code> for their message
+          shapes, but nothing else is shared between them — no root workspace,
+          no linked dependency graph. Each side has its own manifest and
+          lockfile; the only thing tying them together is generated code
+          produced from the same <code>.proto</code> source.
+        </p>
+
+        <h2>System architecture</h2>
+
+        <div class="diagram">
+          <svg
+            viewBox="0 0 640 230"
+            width="100%"
+            role="img"
+            aria-label="backend and frontend as separate processes connected by the pywebview IPC bridge"
+          >
+            <defs>
+              <marker
+                id="arrow-1"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M0,0 L10,5 L0,10 z" class="arrowhead" />
+              </marker>
+            </defs>
+
+            <rect x="20" y="30" width="260" height="170" rx="8" class="box" />
+            <text x="150" y="55" text-anchor="middle" class="label-title">
+              backend (Python)
+            </text>
+            <text x="150" y="78" text-anchor="middle" class="label-muted">
+              separate OS process
+            </text>
+            <line
+              x1="40"
+              y1="90"
+              x2="260"
+              y2="90"
+              stroke="currentColor"
+              class="label-muted"
+            />
+            <text x="40" y="112" class="label-muted">window.py</text>
+            <text x="52" y="130" font-size="0.72rem">
+              window lifecycle, js_api=Ipc()
+            </text>
+            <text x="40" y="155" class="label-muted">ipc/</text>
+            <text x="52" y="173" font-size="0.72rem">
+              IpcModule, application_information.py
+            </text>
+
+            <rect x="360" y="30" width="260" height="170" rx="8" class="box" />
+            <text x="490" y="55" text-anchor="middle" class="label-title">
+              frontend (React)
+            </text>
+            <text x="490" y="78" text-anchor="middle" class="label-muted">
+              WebView2 renderer process
+            </text>
+            <line
+              x1="380"
+              y1="90"
+              x2="600"
+              y2="90"
+              stroke="currentColor"
+              class="label-muted"
+            />
+            <text x="380" y="112" class="label-muted">App.tsx</text>
+            <text x="392" y="130" font-size="0.72rem">
+              renders the version once fetched
+            </text>
+            <text x="380" y="155" class="label-muted">ipc/</text>
+            <text x="392" y="173" font-size="0.72rem">
+              pywebview.ts, application-information.ts
+            </text>
+
+            <line
+              x1="280"
+              y1="115"
+              x2="358"
+              y2="115"
+              class="flow"
+              marker-end="url(#arrow-1)"
+            />
+            <text
+              x="319"
+              y="105"
+              text-anchor="middle"
+              class="label-muted"
+              font-size="0.68rem"
+            >
+              window.pywebview.api
+            </text>
+          </svg>
+        </div>
+
+        <p>
+          <code>backend</code> hands pywebview a single <code>Ipc</code> object.
+          pywebview walks nested class instances on that object automatically
+          (verified directly against pywebview 6.2.1), so each concrete module
+          becomes its own namespace in JS —
+          <code>window.pywebview.api .application_information.version()</code> —
+          instead of one flat bag of methods on the root object. Adding a
+          capability means adding one attribute to <code>Ipc</code>, never
+          restructuring it.
+        </p>
+
+        <h2>Codegen flow</h2>
+
+        <div class="diagram">
+          <svg
+            viewBox="0 0 640 300"
+            width="100%"
+            role="img"
+            aria-label="the proto file generating into both the backend and frontend trees via two separate buf templates"
+          >
+            <defs>
+              <marker
+                id="arrow-2"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M0,0 L10,5 L0,10 z" class="arrowhead" />
+              </marker>
+            </defs>
+
+            <rect
+              x="170"
+              y="15"
+              width="300"
+              height="50"
+              rx="8"
+              class="box-accent"
+            />
+            <text
+              x="320"
+              y="35"
+              text-anchor="middle"
+              class="label-title"
+              font-size="0.82rem"
+            >
+              packages/proto/desktop/v1/
+            </text>
+            <text
+              x="320"
+              y="53"
+              text-anchor="middle"
+              class="label-title"
+              font-size="0.82rem"
+            >
+              application_information.proto
+            </text>
+
+            <line
+              x1="320"
+              y1="65"
+              x2="320"
+              y2="100"
+              class="flow"
+              marker-end="url(#arrow-2)"
+            />
+
+            <rect x="170" y="103" width="300" height="40" rx="8" class="box" />
+            <text x="320" y="128" text-anchor="middle" font-size="0.8rem">
+              scripts/generate_proto.py
+            </text>
+
+            <line
+              x1="280"
+              y1="143"
+              x2="150"
+              y2="180"
+              class="flow"
+              marker-end="url(#arrow-2)"
+            />
+            <line
+              x1="360"
+              y1="143"
+              x2="490"
+              y2="180"
+              class="flow"
+              marker-end="url(#arrow-2)"
+            />
+
+            <rect x="10" y="183" width="280" height="42" rx="8" class="box" />
+            <text x="150" y="200" text-anchor="middle" font-size="0.7rem">
+              buf.gen.python.yaml
+            </text>
+            <text
+              x="150"
+              y="216"
+              text-anchor="middle"
+              class="label-muted"
+              font-size="0.66rem"
+            >
+              protoc_builtin: python / pyi
+            </text>
+
+            <rect x="350" y="183" width="280" height="42" rx="8" class="box" />
+            <text x="490" y="200" text-anchor="middle" font-size="0.7rem">
+              buf.gen.ts.yaml
+            </text>
+            <text
+              x="490"
+              y="216"
+              text-anchor="middle"
+              class="label-muted"
+              font-size="0.66rem"
+            >
+              local: protoc-gen-es
+            </text>
+
+            <line
+              x1="150"
+              y1="225"
+              x2="150"
+              y2="250"
+              class="flow-muted"
+              marker-end="url(#arrow-2)"
+            />
+            <line
+              x1="490"
+              y1="225"
+              x2="490"
+              y2="250"
+              class="flow-muted"
+              marker-end="url(#arrow-2)"
+            />
+
+            <text x="150" y="268" text-anchor="middle" font-size="0.7rem">
+              backend/src/backend/gen/
+            </text>
+            <text x="490" y="268" text-anchor="middle" font-size="0.7rem">
+              frontend/src/gen/
+            </text>
+            <text
+              x="150"
+              y="285"
+              text-anchor="middle"
+              class="label-muted"
+              font-size="0.64rem"
+            >
+              gitignored, regenerated
+            </text>
+            <text
+              x="490"
+              y="285"
+              text-anchor="middle"
+              class="label-muted"
+              font-size="0.64rem"
+            >
+              gitignored, regenerated
+            </text>
+          </svg>
+        </div>
+
+        <p>
+          Both templates run fully offline: <code>protoc_builtin</code> uses the
+          real <code>protoc</code> compiler installed locally (an onboarding
+          prerequisite, like <code>buf</code> itself), and
+          <code>local: protoc-gen-es</code> uses the plugin binary
+          <code>pnpm install</code> puts in
+          <code>apps/desktop/frontend/node_modules/.bin/</code>. Neither needs
+          network access or the Buf Schema Registry. Two templates rather than
+          one shared <code>buf.gen.yaml</code>, so a job that only sets up one
+          language never has to also satisfy the other's plugin.
+        </p>
+
+        <h2>A version request, end to end</h2>
+
+        <div class="diagram">
+          <svg
+            viewBox="0 0 640 300"
+            width="100%"
+            role="img"
+            aria-label="sequence diagram of App.tsx fetching the backend version over the IPC bridge"
+          >
+            <defs>
+              <marker
+                id="arrow-3"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M0,0 L10,5 L0,10 z" class="arrowhead" />
+              </marker>
+            </defs>
+
+            <text x="75" y="20" text-anchor="middle" class="label-title" font-size="0.76rem">App.tsx</text>
+            <line x1="75" y1="30" x2="75" y2="280" stroke="currentColor" class="label-muted" stroke-dasharray="3 3"/>
+
+            <text x="320" y="20" text-anchor="middle" class="label-title" font-size="0.76rem">window.pywebview.api</text>
+            <line x1="320" y1="30" x2="320" y2="280" stroke="currentColor" class="label-muted" stroke-dasharray="3 3"/>
+
+            <text x="545" y="20" text-anchor="middle" class="label-title" font-size="0.76rem">ApplicationInformation</text>
+            <line x1="545" y1="30" x2="545" y2="280" stroke="currentColor" class="label-muted" stroke-dasharray="3 3"/>
+
+            <!-- 1: mount -->
+            <text x="80" y="48" font-size="0.66rem">mount → version()</text>
+            <line x1="75" y1="55" x2="320" y2="55" class="flow" marker-end="url(#arrow-3)"/>
+
+            <!-- 2: wait then call -->
+            <text x="197" y="83" text-anchor="middle" font-size="0.64rem">wait for pywebviewready, then call</text>
+            <line x1="75" y1="90" x2="320" y2="90" class="flow" marker-end="url(#arrow-3)"/>
+
+            <!-- 3: nested namespace call -->
+            <text x="432" y="118" text-anchor="middle" font-size="0.64rem">.application_information.version()</text>
+            <line x1="320" y1="125" x2="545" y2="125" class="flow" marker-end="url(#arrow-3)"/>
+            <text x="432" y="140" text-anchor="middle" class="label-muted" font-size="0.6rem">crosses the process boundary</text>
+
+            <!-- notes on the ApplicationInformation lane, right-anchored so long text grows leftward and never clips -->
+            <text x="535" y="163" text-anchor="end" font-size="0.62rem">parse pyproject.toml version</text>
+            <text x="535" y="177" text-anchor="end" font-size="0.62rem">build VersionInfo message</text>
+            <text x="535" y="191" text-anchor="end" font-size="0.62rem">message_to_dict(info)</text>
+
+            <!-- 4: dict back across the bridge -->
+            <text x="432" y="215" text-anchor="middle" font-size="0.62rem">dict: major / minor / maintenance / postfix</text>
+            <line x1="545" y1="222" x2="320" y2="222" class="flow" marker-end="url(#arrow-3)"/>
+
+            <!-- 5: resolved value to App.tsx -->
+            <text x="197" y="250" text-anchor="middle" font-size="0.64rem">resolved JSON value</text>
+            <line x1="320" y1="257" x2="75" y2="257" class="flow" marker-end="url(#arrow-3)"/>
+
+            <text x="80" y="272" font-size="0.62rem">fromJson(VersionInfoSchema, raw) → render</text>
+          </svg>
+        </div>
+
+        <h2>CI and git hooks</h2>
+
+        <p>
+          Both follow the same dispatcher-delegates-to-per-service pattern, so
+          <code>apps/server</code> and <code>apps/web</code> add their own
+          siblings later without touching what's here.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Layer</th>
+                <th>Dispatcher</th>
+                <th>Desktop's piece</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>CI</td>
+                <td><code>.github/workflows/ci.yml</code></td>
+                <td>
+                  <code>.github/workflows/desktop.ci.yml</code> (reusable
+                  workflow)
+                </td>
+              </tr>
+              <tr>
+                <td>Pre-push</td>
+                <td><code>.githooks/pre-push</code></td>
+                <td><code>.githooks/pre-push.d/desktop/check.sh</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>Running it</h2>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Mode</th>
+                <th>Command</th>
+                <th>What it does</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Default</td>
+                <td><code>python apps/desktop/dev_run.py</code></td>
+                <td>
+                  <code>pnpm build</code> → the backend loads
+                  <code>dist/index.html</code> via <code>file://</code>. No dev
+                  server process — the closest thing to how a packaged build
+                  will eventually load its assets.
+                </td>
+              </tr>
+              <tr>
+                <td>Hot reload</td>
+                <td><code>python apps/desktop/dev_run.py --dev</code></td>
+                <td>
+                  Starts a Vite dev server on <code>:5173</code>; the backend
+                  window points at it directly. Editing
+                  <code>App.tsx</code> hot-reloads without restarting the Python
+                  process.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <section class="ai-statement">
+          <h2>AI Use Statement</h2>
+          <dl>
+            <dt>Tool</dt>
+            <dd>Claude Code (Sonnet 5)</dd>
+            <dt>Mode</dt>
+            <dd>Local</dd>
+            <dt>Output</dt>
+            <dd>
+              drafted this page, including the diagrams, from the implementation
+              built in this session
+            </dd>
+            <dt>Data</dt>
+            <dd>none</dd>
+            <dt>Verified</dt>
+            <dd>Reviewed the rendered page in a browser, removed unneeded text, and confirmed the content is accurate.</dd>
+          </dl>
+          <p>
+            Required by the project's
+            <a href="../.integrity/POLICY.md">AI use policy</a>. The
+            verification field is written by a developer, never by an agent.
+          </p>
+        </section>
+      </main>
+    </div>
+    <script src="shared/nav.js"></script>
+  </body>
+</html>

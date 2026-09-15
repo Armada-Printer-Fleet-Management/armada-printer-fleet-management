@@ -19,6 +19,7 @@ jobs:
       python: ${{ steps.check.outputs.python }}
       typescript: ${{ steps.check.outputs.typescript }}
       proto: ${{ steps.check.outputs.proto }}
+      desktop: ${{ steps.check.outputs.desktop }}
     steps:
       - uses: actions/checkout@v4
       - id: check
@@ -26,6 +27,7 @@ jobs:
           { echo "python=$([ -f pyproject.toml ] && echo true || echo false)"
             echo "typescript=$([ -f pnpm-workspace.yaml ] && echo true || echo false)"
             echo "proto=$([ -f buf.yaml ] && echo true || echo false)"
+            echo "desktop=$([ -f apps/desktop/backend/pyproject.toml ] && echo true || echo false)"
           } >> "$GITHUB_OUTPUT"
 
   commit-messages:
@@ -73,7 +75,13 @@ jobs:
       - run: buf lint
       - name: Reject breaking API changes
         if: github.event_name == 'pull_request'
-        run: buf breaking --against ".git#branch=origin/${{ github.event.pull_request.base.ref }}"
+        run: |
+          BASE="origin/${{ github.event.pull_request.base.ref }}"
+          if git cat-file -e "$BASE:buf.yaml" 2>/dev/null; then
+            buf breaking --against ".git#branch=$BASE"
+          else
+            echo "No buf.yaml on $BASE yet -- nothing to compare against."
+          fi
 
   python:
     needs: detect
@@ -120,3 +128,8 @@ jobs:
       - run: pnpm -r exec tsc --noEmit
       - run: pnpm -r exec eslint .
       - run: pnpm -r test --run
+
+  desktop:
+    needs: detect
+    if: needs.detect.outputs.desktop == 'true'
+    uses: ./.github/workflows/desktop.ci.yml

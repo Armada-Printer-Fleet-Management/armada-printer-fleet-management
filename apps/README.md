@@ -7,7 +7,7 @@ Each application wires concrete adapters from `plugins/` to the ports in
 |---|---|
 | `server/` | Python ASGI service, ConnectRPC |
 | `web/` | React + TypeScript browser app |
-| `desktop/` | pywebview shell around a React frontend |
+| `desktop/` | Python backend (pywebview) around a React frontend |
 
 **Only code here may construct a concrete adapter.** Everything else depends on the port, never
 the implementation.
