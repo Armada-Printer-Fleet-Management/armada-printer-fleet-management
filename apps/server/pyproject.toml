@@ -1,0 +1,33 @@
+[project]
+name = "backend-server"
+# major.minor.maintenance, optionally -postfix (e.g. "0.1.0-rc1") for special releases
+version = "0.1.0"
+description = "Hosted server for handling requests from the frontend webapp"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "fastapi>=0.141,<1",        # https://github.com/fastapi/fastapi, MIT -- REST routes that don't fit the ConnectRPC model
+  "uvicorn[standard]>=0.53,<1", # https://github.com/encode/uvicorn, BSD-3-Clause -- ASGI server for api.main:app
+  "protobuf>=7,<8",     # runtime for the buf-generated _pb2 classes; must track protoc's own version line
+  "packaging>=24",      # https://github.com/pypa/packaging, the reference PEP 440 parser (also a transitive dep of pip/setuptools/hatchling)
+  "proto-utils",        # packages/proto/utils -- shared protobuf helpers
+]
+
+[tool.uv.sources]
+proto-utils = { path = "../../packages/proto/utils" }
+
+[dependency-groups]
+dev = ["ruff", "pyright", "pytest"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["gen"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+include = ["api"]
+exclude = ["gen"]
