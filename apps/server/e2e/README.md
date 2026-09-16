@@ -1,0 +1,1 @@
+Instructions on what e2e test vars to set and where to find them should all go in here.
