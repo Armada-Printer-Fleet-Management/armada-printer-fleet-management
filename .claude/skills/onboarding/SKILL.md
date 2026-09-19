@@ -43,12 +43,24 @@ Check each before installing — never reinstall something already present.
 | `buf` | Protobuf codegen and linting | `winget install bufbuild.buf` | `curl -sSL https://github.com/bufbuild/buf/releases/latest/download/buf-$(uname -s)-$(uname -m) -o /usr/local/bin/buf && chmod +x /usr/local/bin/buf` |
 | `protoc` | Python protobuf codegen (buf's `protoc_builtin` plugin type needs the real compiler, not a hosted one) | `winget install Google.Protobuf` | apt: `sudo apt-get install protobuf-compiler`, brew: `brew install protobuf` |
 | `gitleaks` | Secret scanning in the pre-commit hook | `winget install gitleaks.gitleaks` | `brew install gitleaks` |
+| `act` | Run GitHub Actions workflows locally, without pushing | `winget install nektos.act` (or `choco install act-cli`) | `brew install act` |
+
+**`act` must be 0.2.86 or newer** — older versions carry known advisories fixed in that release
+([CVE-2026-34041](https://github.com/nektos/act/security/advisories/GHSA-j5j2-9v57-2vfw)). Check
+with `act --version`; `winget upgrade nektos.act` / `choco upgrade act-cli` (elevated) fixes an old
+one.
 
 `pnpm` is installed with `npx get-pnpm`, the npm-based installer from <https://pnpm.io/installation>.
 On Windows, run it from PowerShell rather than Git Bash. It needs Node 22.13 or newer.
 
 `gitleaks` is required: without it the pre-commit hook cannot scan for secrets and will warn on
 every commit.
+
+`act` needs Docker (already a prerequisite above) for the repo's Linux jobs, which run in
+containers built from `.actrc`'s image mapping. A Windows-only job — such as the desktop app's
+packaging job — can't be emulated in a Linux container; test one of those by running `act` on an
+actual Windows machine with `-P windows-latest=-self-hosted`, which skips Docker and runs the
+job's steps on the host directly.
 
 Each `winget` install and `get-pnpm` edits `PATH`; open a new shell before the tools resolve.
 

@@ -1,0 +1,4 @@
+# Image for the repo's Linux jobs (detect, python, typescript, proto, backend/frontend lint).
+# windows-latest is deliberately left unmapped: it's only meaningful when act itself runs on a
+# Windows host with `-P windows-latest=-self-hosted`, passed per-invocation, not defaulted here.
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
