@@ -1,7 +1,7 @@
 [project]
 name = "backend-server"
 # major.minor.maintenance, optionally -postfix (e.g. "0.1.0-rc1") for special releases
-version = "0.1.0"
+version = "0.1.1"
 description = "Hosted server for handling requests from the frontend webapp"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -17,7 +17,12 @@ dependencies = [
 proto-utils = { path = "../../packages/proto/utils" }
 
 [dependency-groups]
-dev = ["ruff", "pyright", "pytest"]
+dev = [
+  "ruff",
+  "pyright",
+  "pytest",
+  "httpx2",  # https://github.com/pydantic/httpx2, BSD-3-Clause -- HTTP client Starlette's TestClient requires
+]
 
 [tool.ruff]
 line-length = 100
@@ -31,3 +36,7 @@ typeCheckingMode = "strict"
 pythonVersion = "3.13"
 include = ["api"]
 exclude = ["gen"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

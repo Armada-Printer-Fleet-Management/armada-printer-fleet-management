@@ -88,6 +88,7 @@ The current expected layout: `.githooks/pre-push` is a thin dispatcher; shared h
 | `pyproject.toml` exists | `uv sync` |
 | `pnpm-workspace.yaml` exists | `pnpm install` |
 | `apps/desktop/backend/pyproject.toml` exists | `uv sync --project apps/desktop/backend` |
+| `apps/server/pyproject.toml` exists | `uv sync --project apps/server` |
 | `apps/desktop/frontend/package.json` exists | `pnpm install` (cwd `apps/desktop/frontend`), then `pnpm approve-builds --all` (cwd `apps/desktop/frontend`) once, to allow esbuild's postinstall script -- pnpm blocks build scripts by default |
 
 ## 5. Generate API code
@@ -97,8 +98,9 @@ Each template covers one language and is invoked through the shared script rathe
 
 | Condition | Command |
 |---|---|
-| `buf.gen.python.yaml` exists | `python scripts/generate_proto.py buf.gen.python.yaml` |
-| `buf.gen.ts.yaml` exists and `apps/desktop/frontend/node_modules` exists | `python scripts/generate_proto.py buf.gen.ts.yaml --node-modules apps/desktop/frontend/node_modules` |
+| `buf.gen.desktop_python.yaml` exists | `python scripts/generate_proto.py buf.gen.desktop_python.yaml` |
+| `buf.gen.desktop_ts.yaml` exists and `apps/desktop/frontend/node_modules` exists | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` |
+| `buf.gen.server.yaml` exists | `python scripts/generate_proto.py buf.gen.server.yaml` |
 
 (Step 4 installs dependencies before this step generates code, so the frontend's local
 `protoc-gen-es` plugin is already present by the time the second row runs.)
@@ -201,9 +203,12 @@ uv run alembic upgrade head
 Run whichever apply, and report results honestly — including failures:
 
 ```
-uv run pytest -q
+uv run --directory apps/server pytest -q
 pnpm -r test --run
 ```
+
+The second command applies when `apps/server/pyproject.toml` exists; the root-level `uv run pytest`
+does not reach the server, which has its own project.
 
 A fresh clone should have passing tests. If they fail, that is a real problem worth surfacing, not
 something to skip past.
@@ -214,12 +219,12 @@ Skip this step if `--skip-app` was passed.
 
 | App | Condition | Command |
 |---|---|---|
-| Server | `apps/server/pyproject.toml` exists | not yet -- report not applicable |
+| Server | `apps/server/pyproject.toml` exists | `python apps/server/dev_run.py` (serves `http://127.0.0.1:8000`; check `/health`) |
 | Web | `apps/web/package.json` exists | not yet -- report not applicable |
 | Desktop | `apps/desktop/backend/pyproject.toml` exists | `python apps/desktop/dev_run.py` |
 
-`python apps/desktop/dev_run.py --dev` is the hot-reload alternative for active development, not
-needed for this verification run. Report the URL for the web/server apps once they exist; the
+`python apps/desktop/dev_run.py --dev` and `python apps/server/dev_run.py --dev` are the
+hot-reload alternatives for active development, not needed for this verification run. Report the URL for the web/server apps once they exist; the
 desktop app opens its own native window. Leave everything running.
 
 ## 10. Open the documentation

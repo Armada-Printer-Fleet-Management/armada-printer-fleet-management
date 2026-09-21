@@ -12,7 +12,7 @@ import subprocess
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("template", help="e.g. buf.gen.python.yaml")
+    parser.add_argument("template", help="e.g. buf.gen.desktop_python.yaml")
     parser.add_argument("--node-modules", help="dir whose .bin/ is prepended to PATH")
     args = parser.parse_args()
 

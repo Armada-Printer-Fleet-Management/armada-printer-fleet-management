@@ -20,7 +20,7 @@ jobs:
       - run: uv sync --all-extras --dev
         working-directory: apps/desktop/backend
       - name: Generate API code
-        run: python scripts/generate_proto.py buf.gen.python.yaml
+        run: python scripts/generate_proto.py buf.gen.desktop_python.yaml
       - run: uv run ruff check .
         working-directory: apps/desktop/backend
       - run: uv run ruff format --check .
@@ -44,7 +44,7 @@ jobs:
         working-directory: apps/desktop/frontend
       - uses: ./.github/actions/setup-buf
       - name: Generate API code
-        run: python scripts/generate_proto.py buf.gen.ts.yaml --node-modules apps/desktop/frontend/node_modules
+        run: python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules
       - run: pnpm exec tsc --noEmit
         working-directory: apps/desktop/frontend
       - run: pnpm exec eslint .

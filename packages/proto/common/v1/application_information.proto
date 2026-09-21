@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package desktop.v1;
+package common.v1;
 
-// The desktop app's version
+// The application's version
 // Semantic versioning: major.minor.maintenance, with an optional postfix
 // reserved for special releases (e.g. "rc1", "beta"). postfix is typically unused
 message VersionInfo {

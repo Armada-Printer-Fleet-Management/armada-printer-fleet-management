@@ -1,0 +1,10 @@
+version: v2
+inputs:
+  - directory: packages/proto
+plugins:
+  - protoc_builtin: python
+    protoc_path: protoc
+    out: apps/server/api/gen
+  - protoc_builtin: pyi
+    protoc_path: protoc
+    out: apps/server/api/gen

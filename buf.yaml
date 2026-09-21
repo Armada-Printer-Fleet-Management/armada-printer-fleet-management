@@ -7,3 +7,5 @@ lint:
 breaking:
   use:
     - FILE
+  ignore:
+    - packages/proto/desktop/v1/application_information.proto
