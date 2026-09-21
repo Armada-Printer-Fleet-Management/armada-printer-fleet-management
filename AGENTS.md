@@ -247,6 +247,10 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Generate proto code            | `python scripts/generate_proto.py <template> [--node-modules <dir>]` |
 | Run desktop app (build mode)   | `python apps/desktop/dev_run.py`                                     |
 | Run desktop app (hot reload)   | `python apps/desktop/dev_run.py --dev`                               |
+| Server Python deps             | `uv sync --project apps/server`                                      |
+| Server tests                   | `uv run --directory apps/server pytest`                                |
+| Run server                     | `python apps/server/dev_run.py`                                      |
+| Run server (hot reload)        | `python apps/server/dev_run.py --dev`                                |
 
 Full environment setup is `/onboarding`.
 

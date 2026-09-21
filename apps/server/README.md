@@ -20,6 +20,7 @@ apps/server/
 │   ├── routers/     # ASGI routes for endpoints that don't fit the ConnectRPC model*
 │   ├── services/    # Implementations of the generated ConnectRPC service interfaces
 │   └── main.py      # ASGI entry point
+├── dev_run.py       # runs the server locally; see "Running it"
 ├── tests/
 │   ├── unit/
 │   └── integration/
@@ -27,3 +28,25 @@ apps/server/
 ```
 
 *Ideally every endpoint should be implemented using the connectRPC protocol, however there may be cases where this is not possible.  In this case, you can make a regular REST api routing endpoint in the routers folder.
+
+# Running it
+
+From the repo root:
+
+```
+uv sync --project apps/server
+python scripts/generate_proto.py buf.gen.server.yaml
+python apps/server/dev_run.py
+```
+
+- `python apps/server/dev_run.py` — serves `api.main:app` on `http://127.0.0.1:8000`.
+- `python apps/server/dev_run.py --dev` — the same, reloading on changes under `api/`.
+
+The script stops with a pointer to `/onboarding` if `uv` is missing or `api/gen` has not been
+generated.
+
+`GET /health` returns the server's status and version, built from the shared `common.v1.VersionInfo`
+contract. Tests: `uv run --directory apps/server pytest`.
+
+The version is read from `pyproject.toml` at startup, so that file must be deployed beside `api/`.
+This can be updated to follow whatever convention decided by the CI/CD deployment pipeline once that's implemented

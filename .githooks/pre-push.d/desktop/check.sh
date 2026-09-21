@@ -1,8 +1,8 @@
 # ── Desktop: backend (Python) ───────────────────────────────────────────────
 if [ -f apps/desktop/backend/pyproject.toml ]; then
-  require "backend: generate" buf python scripts/generate_proto.py buf.gen.python.yaml
+  require "backend: generate" buf python scripts/generate_proto.py buf.gen.desktop_python.yaml
   require "backend: ruff" uv run_in apps/desktop/backend uv run ruff check .
-  require "backend: pyright" uv run_in apps/desktop/backend uv run pyright
+  require "backend: pyright" uv run_in apps/desktop/backend uv run python -m pyright
 else
   NA+=("desktop-backend")
 fi
@@ -16,7 +16,7 @@ if [ -f apps/desktop/frontend/package.json ]; then
     FAILED=1
   else
     require "frontend: generate" buf bash -c \
-      'PATH="$(pwd)/apps/desktop/frontend/node_modules/.bin:$PATH" python scripts/generate_proto.py buf.gen.ts.yaml --node-modules apps/desktop/frontend/node_modules'
+      'PATH="$(pwd)/apps/desktop/frontend/node_modules/.bin:$PATH" python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules'
     require "frontend: tsc" pnpm pnpm --dir apps/desktop/frontend exec tsc --noEmit
     require "frontend: eslint" pnpm pnpm --dir apps/desktop/frontend exec eslint .
   fi

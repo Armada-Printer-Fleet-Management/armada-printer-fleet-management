@@ -3,7 +3,7 @@ from importlib.metadata import version as pkg_version
 from packaging.version import Version
 from proto_utils import message_to_dict
 
-from backend.gen.desktop.v1 import application_information_pb2
+from backend.gen.common.v1 import application_information_pb2
 from backend.ipc._base import IpcModule
 
 

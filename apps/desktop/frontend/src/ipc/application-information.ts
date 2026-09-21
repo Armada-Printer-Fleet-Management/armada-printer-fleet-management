@@ -1,5 +1,5 @@
 import { type JsonValue, fromJson } from "@bufbuild/protobuf";
-import { VersionInfoSchema } from "../gen/desktop/v1/application_information_pb";
+import { VersionInfoSchema } from "../gen/common/v1/application_information_pb";
 import { waitForPywebviewIpc } from "./pywebview";
 
 declare global {
