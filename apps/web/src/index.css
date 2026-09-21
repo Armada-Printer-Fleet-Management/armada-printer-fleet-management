@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0f172a;
+  --fg: #e6eef8;
+  --accent: #3b82f6;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app {
+  padding: 2rem;
+}
+
+h1 {
+  color: var(--accent);
+  margin: 0 0 1rem 0;
+}
