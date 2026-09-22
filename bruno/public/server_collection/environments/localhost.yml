@@ -1,0 +1,4 @@
+name: localhost
+variables:
+  - name: baseUrl
+    value: localhost:8000
