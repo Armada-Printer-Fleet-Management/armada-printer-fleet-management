@@ -34,6 +34,12 @@ Report the version of each, and stop with installation guidance if one is missin
 | Python | `python --version` (3.13 or newer) |
 | Docker | `docker --version` |
 
+**Bruno is optional.** It's the desktop app used to exercise the server's API by hand from
+`bruno/` — not every developer needs it. Check whether it's installed (e.g. `bruno --version` if
+it's on PATH, or whether the desktop app is present) and report the result, but don't stop
+onboarding if it's missing. Point them at <https://www.usebruno.com/downloads> if they want it
+later; the collections are set up for them regardless in step 6e.
+
 ## 2. Install the toolchain
 
 Check each before installing — never reinstall something already present.
@@ -185,6 +191,28 @@ complain later.
 
 Neither value is ever committed. The repository holds only the generic endpoint.
 
+## 6e. Set up Bruno collections
+
+Not applicable if `bruno/` doesn't exist in the repository. Otherwise, run this regardless of
+whether Bruno itself is installed (see step 1) — it's cheap, and it leaves the collections ready
+the moment the developer opens the app, rather than the first time they need it.
+
+1. Create `bruno/.env` from `bruno/.env.example` if it's missing, same rule as step 6: never
+   overwrite an existing one.
+2. Copy every collection under `bruno/public/` into `bruno/private/`, using the repo's own
+   script for each:
+
+   ```sh
+   bash bruno/copy_collection.sh <collection-name>
+   ```
+
+   Run it once per subdirectory of `bruno/public/`. It overwrites any existing private copy of
+   that collection, renames it with a `_private` suffix, and copies `bruno/.env` into it — see
+   `bruno/README.md`.
+
+On Windows, run this from Git Bash, or invoke `bash` explicitly from PowerShell/cmd.exe — the
+script won't run directly from either.
+
 ## 7. Start backing services
 
 If `infra/compose/` contains a compose file:
@@ -252,3 +280,5 @@ Tell the developer:
   audit log exported successfully
 - Whether Jira is connected, and that decision history is found by running `git blame` on the
   code and looking up the ticket from the commit message
+- Whether Bruno is installed, and that its collections were copied into `bruno/private/` ready
+  to use either way
