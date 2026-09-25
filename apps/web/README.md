@@ -24,6 +24,10 @@ Commands:
    cd apps/web
    pnpm install
 
+   Then, from the repo root, generate the protobuf code the app imports (gitignored):
+
+   python scripts/generate_proto.py buf.gen.web_ts.yaml --node-modules apps/web/node_modules
+
 2. Start the development server (Vite)
 
    pnpm run dev

@@ -92,6 +92,7 @@ The current expected layout: `.githooks/pre-push` is a thin dispatcher; shared h
 | `apps/desktop/backend/pyproject.toml` exists | `uv sync --project apps/desktop/backend` |
 | `apps/server/pyproject.toml` exists | `uv sync --project apps/server` |
 | `apps/desktop/frontend/package.json` exists | `pnpm install` (cwd `apps/desktop/frontend`), then `pnpm approve-builds --all` (cwd `apps/desktop/frontend`) once, to allow esbuild's postinstall script -- pnpm blocks build scripts by default |
+| `apps/web/package.json` exists | `pnpm install` (cwd `apps/web`) |
 
 ## 5. Generate API code
 
@@ -103,9 +104,10 @@ Each template covers one language and is invoked through the shared script rathe
 | `buf.gen.desktop_python.yaml` exists | `python scripts/generate_proto.py buf.gen.desktop_python.yaml` |
 | `buf.gen.desktop_ts.yaml` exists and `apps/desktop/frontend/node_modules` exists | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` |
 | `buf.gen.server.yaml` exists | `python scripts/generate_proto.py buf.gen.server.yaml` |
+| `buf.gen.web_ts.yaml` exists and `apps/web/node_modules` exists | `python scripts/generate_proto.py buf.gen.web_ts.yaml --node-modules apps/web/node_modules` |
 
-(Step 4 installs dependencies before this step generates code, so the frontend's local
-`protoc-gen-es` plugin is already present by the time the second row runs.)
+(Step 4 installs dependencies before this step generates code, so the frontends' local
+`protoc-gen-es` plugin is already present by the time the TypeScript rows run.)
 
 This produces the Python server interfaces and TypeScript clients from `packages/proto`. The output
 is gitignored and must exist before anything type-checks.

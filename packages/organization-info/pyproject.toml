@@ -1,0 +1,36 @@
+[project]
+name = "organization-info"
+version = "0.1.0"
+description = "Reads packages/organization-info/organization.json, the identity shared by every application."
+requires-python = ">=3.13"
+dependencies = [
+  "protobuf>=7,<8",
+]
+
+[dependency-groups]
+dev = ["ruff", "pyright"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+# uv installs this as a built copy, so it must notice organization.json changes, not only pyproject.toml ones.
+cache-keys = [{ file = "pyproject.toml" }, { file = "organization.json" }, { file = "src/**/*.py" }]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/organization_info"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"organization.json" = "organization_info/organization.json"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+include = ["src"]

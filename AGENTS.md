@@ -251,6 +251,8 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Server tests                   | `uv run --directory apps/server pytest`                                |
 | Run server                     | `python apps/server/dev_run.py`                                      |
 | Run server (hot reload)        | `python apps/server/dev_run.py --dev`                                |
+| Build desktop app (Windows)    | `python apps/desktop/build_run.py`                                   |
+| Run CI job locally             | `act -W .github/workflows/<file>.yml -j <job>` (Windows job: add `-P windows-latest=-self-hosted`) |
 
 Full environment setup is `/onboarding`.
 
@@ -266,6 +268,36 @@ Full environment setup is `/onboarding`.
 >
 > The same applies to the commands in the table above and to `/review-branch` if the dependency
 > layout changes.
+
+---
+
+## Shared organization identity: `packages/organization-info/organization.json`
+
+The title, description, license and source repository live in exactly one place:
+`packages/organization-info/organization.json`, typed by `OrganizationInfo` in
+`packages/proto/common/v1/organization_info.proto`. **Never hardcode them** in an application —
+window and page titles, headings and executable names all read it.
+
+- **Python:** `organization_info.read(OrganizationInfo())` (a local path dependency; the caller
+  passes its own generated message).
+- **TypeScript:** `read(OrganizationInfoSchema)` from `@organization-info/organization-info`, an
+  alias set in the app's `vite.config.ts` and `tsconfig.json`.
+
+Add a field only if every application needs it; anything specific to one deployment is
+configuration under `config/`. Each app's own `application_info` is the app-specific superset of
+this base information.
+
+`uv` installs path dependencies as built copies, so `packages/organization-info/pyproject.toml`
+lists `organization.json` in `cache-keys`. Keep that when editing the file.
+
+---
+
+## Desktop packaging
+
+The Windows executable is built with `python apps/desktop/build_run.py`. New assets, dynamic
+imports and packages that PyInstaller cannot see are linked in `apps/desktop/backend/desktop_backend.spec`.
+Read runtime paths through `backend.environment.Environment`, never `sys.frozen`. Tests do not
+catch a missing bundle entry, so run the build after changing backend dependencies or runtime-read files.
 
 ---
 

@@ -1,13 +1,16 @@
 // TODO TEMP DOCUMENT, PLEASE REPLACE BUT KEEP VERSION API CALL EXAMPLE
 // THAT IS INSIDE AN ABOUT PAGE
 
+import { read } from "@organization-info/organization-info";
+import { AboutBox } from "@ui-kit/about-box";
 import { useEffect, useState } from "react";
-import { version } from "./ipc/application-information";
+import { OrganizationInfoSchema } from "./gen/common/v1/organization_info_pb";
+import { version } from "./ipc/application-info";
 
 type VersionState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; text: string };
+  | { status: "ready"; version: Awaited<ReturnType<typeof version>> };
 
 export function App() {
   const [state, setState] = useState<VersionState>({ status: "loading" });
@@ -17,8 +20,7 @@ export function App() {
     version()
       .then((info) => {
         if (cancelled) return;
-        const text = `${info.major}.${info.minor}.${info.maintenance}${info.postfix ? `-${info.postfix}` : ""}`;
-        setState({ status: "ready", text });
+        setState({ status: "ready", version: info });
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -31,11 +33,12 @@ export function App() {
 
   return (
     <main>
-      <h1>About</h1>
-      <h3>Armada - Printer Fleet Management</h3>
+      <AboutBox
+        organization={read(OrganizationInfoSchema)}
+        version={state.status === "ready" ? state.version : undefined}
+      />
       {state.status === "loading" && <p>Loading backend version…</p>}
       {state.status === "error" && <p>Failed to reach the backend: {state.message}</p>}
-      {state.status === "ready" && <p>Backend version: {state.text}</p>}
     </main>
   );
 }
