@@ -32,3 +32,10 @@ class ApplicationInformation:
             **({"postfix": postfix} if postfix else {}),
         )
         return message_to_dict(info)
+
+    def version_string(self) -> str:
+        version_json = self.version()
+        version = f"{version_json['major']}.{version_json['minor']}.{version_json['maintenance']}"
+        if postfix := version_json.get("postfix"):
+            version += f"-{postfix}"
+        return version

@@ -4,5 +4,6 @@ from pydantic import BaseModel
 
 
 class HealthResponse(BaseModel):
-    status: Literal["ok"]
-    version: str
+    status: Literal["pass", "fail"]
+    version: str | None = None
+    dependencies: dict[str, str] | None = None
