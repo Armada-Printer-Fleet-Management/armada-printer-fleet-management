@@ -1,18 +1,30 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Response, status
+from fastapi.responses import JSONResponse, PlainTextResponse
 
+from api.common.dependencies import ApplicationInformationDep, DependencyChecksDep
+from api.common.health import check_health
 from api.common.models import HealthResponse
-from api.services.application_information import ApplicationInformation
+
+router = APIRouter()
 
 
-def health_router(application_information: ApplicationInformation) -> APIRouter:
-    router = APIRouter()
+@router.get("/health_check", response_model=None)
+async def health(
+    application_information: ApplicationInformationDep,
+    checks: DependencyChecksDep,
+    full: bool = False,
+    check_dependencies: bool = False,
+) -> Response:
+    report = await check_health(
+        application_information, checks, full=full, check_dependencies=check_dependencies
+    )
+    status_word = "pass" if report.healthy else "fail"
+    status_code = status.HTTP_200_OK if report.healthy else status.HTTP_503_SERVICE_UNAVAILABLE
 
-    @router.get("/health")
-    async def health() -> HealthResponse:
-        version_json = application_information.version()
-        version = f"{version_json['major']}.{version_json['minor']}.{version_json['maintenance']}"
-        if postfix := version_json.get("postfix"):
-            version += f"-{postfix}"
-        return HealthResponse(status="ok", version=version)
+    if not full:
+        return PlainTextResponse(status_word, status_code=status_code)
 
-    return router
+    body = HealthResponse(
+        status=status_word, version=report.version, dependencies=report.dependencies
+    )
+    return JSONResponse(body.model_dump(exclude_none=True), status_code=status_code)

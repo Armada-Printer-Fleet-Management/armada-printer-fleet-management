@@ -5,7 +5,18 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/health"
+  url: "{{baseUrl}}/health_check"
+  params:
+    - name: full
+      value: "true"
+      type: query
+      description: Shows detailed information
+      disabled: true
+    - name: check_dependencies
+      value: "true"
+      type: query
+      description: Runs depedency health check functions
+      disabled: true
   auth: inherit
 
 settings:

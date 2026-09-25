@@ -245,6 +245,7 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Desktop Python deps           | `uv sync --project apps/desktop/backend`                              |
 | Desktop JS deps                | `pnpm install` (in `apps/desktop/frontend`)                          |
 | Generate proto code            | `python scripts/generate_proto.py <template> [--node-modules <dir>]` |
+| Generate server proto code     | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` |
 | Run desktop app (build mode)   | `python apps/desktop/dev_run.py`                                     |
 | Run desktop app (hot reload)   | `python apps/desktop/dev_run.py --dev`                               |
 | Server Python deps             | `uv sync --project apps/server`                                      |
@@ -320,7 +321,7 @@ statement format is `.integrity/AI-USE-STATEMENT.md`. In summary:
 
 - **Do not add a dependency** without stating what it is for, why the standard library or an
   existing dependency cannot do it, a link to its repository, and its maintenance signals.
-  `connectrpc` is pinned to `0.4.*` deliberately. Do not upgrade it.
+  `connectrpc` is pinned to `>=0.12.1,<0.13` deliberately. Do not upgrade it.
 - **Build exactly what was asked.** Adjacent ideas go in a follow-ups list, not into the code.
 - **Never guess file paths.** Search first, then read.
 - Update `HANDOFF.md` (gitignored, dev-local) before ending a working session: current phase,

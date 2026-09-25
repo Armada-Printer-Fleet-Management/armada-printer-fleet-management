@@ -70,6 +70,16 @@ job's steps on the host directly.
 
 Each `winget` install and `get-pnpm` edits `PATH`; open a new shell before the tools resolve.
 
+**Windows 11 Smart App Control blocks `buf.exe`.** `buf` is unsigned, so with Smart App Control
+on, running it fails with "An Application Control policy has blocked this file" (Code Integrity
+events 3033/3077 name the policy). Smart App Control has no per-app exceptions. Explain the
+choice and let the developer make it — never change their security settings for them:
+
+- turn Smart App Control off (Windows Security → App & browser control); on some Windows builds
+  that cannot be undone without reinstalling Windows, so have them read that screen first, or
+- run `buf` inside WSL or the `bufbuild/buf` Docker image, which Smart App Control does not
+  inspect.
+
 If a package manager is unavailable, point the user at the project's releases page rather than
 guessing an alternative install path.
 
@@ -106,10 +116,13 @@ Each template covers one language and is invoked through the shared script rathe
 |---|---|
 | `buf.gen.desktop_python.yaml` exists | `python scripts/generate_proto.py buf.gen.desktop_python.yaml` |
 | `buf.gen.desktop_ts.yaml` exists and `apps/desktop/frontend/node_modules` exists | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` |
-| `buf.gen.server.yaml` exists | `python scripts/generate_proto.py buf.gen.server.yaml` |
+| `buf.gen.server.yaml` exists | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` |
 
-(Step 4 installs dependencies before this step generates code, so the frontend's local
-`protoc-gen-es` plugin is already present by the time the second row runs.)
+(Step 4 installs dependencies before this step generates code, so the local plugins are already
+present: the frontend's `protoc-gen-es` for the second row, and the server's
+`protoc-gen-connectrpc` for the third. The server's plugin is a dev dependency in its virtualenv,
+which is why that row runs through `uv run`: it puts the virtualenv's executables on `PATH` for
+`buf` to find.)
 
 This produces the Python server interfaces and TypeScript clients from `packages/proto`. The output
 is gitignored and must exist before anything type-checks.
@@ -247,7 +260,7 @@ Skip this step if `--skip-app` was passed.
 
 | App | Condition | Command |
 |---|---|---|
-| Server | `apps/server/pyproject.toml` exists | `python apps/server/dev_run.py` (serves `http://127.0.0.1:8000`; check `/health`) |
+| Server | `apps/server/pyproject.toml` exists | `python apps/server/dev_run.py` (serves `http://127.0.0.1:8000`; check `/health_check`) |
 | Web | `apps/web/package.json` exists | not yet -- report not applicable |
 | Desktop | `apps/desktop/backend/pyproject.toml` exists | `python apps/desktop/dev_run.py` |
 

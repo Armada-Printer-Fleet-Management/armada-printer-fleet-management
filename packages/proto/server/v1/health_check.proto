@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package server.v1;
+
+message HealthCheckRequest {
+    bool full = 1;
+    bool check_dependencies = 2;
+}
+
+message HealthCheckResponse {
+    enum Status {
+        STATUS_UNSPECIFIED = 0;
+        STATUS_PASS = 1;
+        STATUS_FAIL = 2;
+    }
+    Status status = 1;
+    // Set only when the request asks for a full report.
+    optional string version = 2;
+    // Populated only when the request asks for both a full report and dependency checks.
+    map<string, string> dependencies = 3;
+}
+
+service HealthCheckService {
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}

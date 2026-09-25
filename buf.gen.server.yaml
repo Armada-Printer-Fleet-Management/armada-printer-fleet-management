@@ -8,3 +8,6 @@ plugins:
   - protoc_builtin: pyi
     protoc_path: protoc
     out: apps/server/api/gen
+  - local: protoc-gen-connectrpc
+    out: apps/server/api/gen
+    opt: protobuf=google
