@@ -12,11 +12,12 @@
     "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\" --max-warnings=0"
   },
   "dependencies": {
+    "@armada/ui-kit": "workspace:*",
     "react": "^19",
     "react-dom": "^19"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/vite": "^4",
     "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",

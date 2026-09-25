@@ -19,24 +19,23 @@ Prerequisites:
 - Node.js (16+ recommended) and pnpm installed globally. See https://pnpm.io/installation
 
 Commands:
-1. Install dependencies
+1. Install dependencies from the repository root
 
-   cd apps/web
    pnpm install
 
 2. Start the development server (Vite)
 
-   pnpm run dev
+   pnpm --filter apps-web dev
 
-   The dev server serves the app at http://localhost:5173 by default.
+   The dev server serves the app at http://localhost:5174 by default.
 
 3. Build for production
 
-   pnpm run build
+   pnpm --filter apps-web build
 
 4. Preview the production build locally
 
-   pnpm run preview
+   pnpm --filter apps-web preview
 
 Notes:
 - The web frontend talks to the backend in `apps/server/` via `packages/api-client/`. Start the

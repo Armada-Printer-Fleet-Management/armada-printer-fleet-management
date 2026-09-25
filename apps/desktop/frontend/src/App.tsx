@@ -2,6 +2,7 @@
 // THAT IS INSIDE AN ABOUT PAGE
 
 import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@armada/ui-kit";
 import { version } from "./ipc/application-information";
 
 type VersionState =
@@ -30,9 +31,17 @@ export function App() {
   }, []);
 
   return (
-    <main>
-      <h1>About</h1>
-      <h3>Armada - Printer Fleet Management</h3>
+    <main className="min-h-full bg-background p-8 text-foreground">
+      <h1 className="mb-6 text-3xl font-bold">About</h1>
+      <Card className="max-w-xl">
+        <CardHeader>
+          <CardTitle>Printer fleet</CardTitle>
+          <CardDescription>This card is rendered by the shared UI kit.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm">The desktop application consumes the same component as the web application.</p>
+        </CardContent>
+      </Card>
       {state.status === "loading" && <p>Loading backend version…</p>}
       {state.status === "error" && <p>Failed to reach the backend: {state.message}</p>}
       {state.status === "ready" && <p>Backend version: {state.text}</p>}

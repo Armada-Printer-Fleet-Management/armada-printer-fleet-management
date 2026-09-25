@@ -1,0 +1,13 @@
+{
+  // Type-checks the React source that Vite bundles for the browser.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "noUncheckedIndexedAccess": true
+  },
+  "include": ["src", "../../packages/ui-kit/src"]
+}
