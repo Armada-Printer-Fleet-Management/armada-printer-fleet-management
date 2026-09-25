@@ -1,10 +1,10 @@
 import { type JsonValue, fromJson } from "@bufbuild/protobuf";
-import { VersionInfoSchema } from "../gen/common/v1/application_information_pb";
+import { VersionInfoSchema } from "../gen/common/v1/application_info_pb";
 import { waitForPywebviewIpc } from "./pywebview";
 
 declare global {
   interface PywebviewIpc {
-    application_information: {
+    application_info: {
       version(): Promise<JsonValue>;
     };
   }
@@ -12,6 +12,6 @@ declare global {
 
 export async function version() {
   const ipc = await waitForPywebviewIpc();
-  const raw = await ipc.application_information.version();
+  const raw = await ipc.application_info.version();
   return fromJson(VersionInfoSchema, raw);
 }

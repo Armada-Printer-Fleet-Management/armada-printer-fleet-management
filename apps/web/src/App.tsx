@@ -1,11 +1,14 @@
+import { read } from "@organization-info/organization-info";
+import { AboutBox } from "@ui-kit/about-box";
 import React from "react";
+import { OrganizationInfoSchema } from "./gen/common/v1/organization_info_pb";
+import { version } from "./lib/version";
 
 const App: React.FC = () => {
   return (
     <div className="app">
       <header>
-        <h1>Armada Printer Fleet</h1>
-        <div style={{fontSize: '0.9rem', marginTop: '0.5rem'}}>v{ /* version injected by protobuf store */ } <span id="app-version">Example Version</span></div>
+        <AboutBox organization={read(OrganizationInfoSchema)} version={version()} />
       </header>
       <main>
         <p>Welcome to the web application. Replace this with real pages and routes.</p>

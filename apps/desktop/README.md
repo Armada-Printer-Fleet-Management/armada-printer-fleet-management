@@ -22,16 +22,16 @@ HTTP, no ConnectRPC. Simple and Efficient.
 
 ## Why protobuf, given IPC and not API
 
-Message shapes live once in `packages/proto/desktop/v1/`. `buf generate` produces a matching
+Message shapes live once in `packages/proto/common/v1/`. `buf generate` produces a matching
 Python class and TypeScript class from that same source, so the two sides of the bridge can't
 quietly drift apart even without an RPC framework sitting between them.
 
 ## The `ipc/` pattern
 
-One file per capability, named after it, mirrored between `backend/src/backend/ipc/application_information.py` and
-`frontend/src/ipc/application-information.ts`. Every concrete backend module extends the shared
+One file per capability, named after it, mirrored between `backend/src/backend/ipc/application_info.py` and
+`frontend/src/ipc/application-info.ts`. Every concrete backend module extends the shared
 `IpcModule` base; pywebview walks nested class instances automatically, so each module becomes its
-own namespace in JS (`window.pywebview.api.application_information.version()`) rather than one
+own namespace in JS (`window.pywebview.api.application_info.version()`) rather than one
 flat bag of methods. Adding a new domain means adding a new file, not changing an existing one. This improves maintainability and discoverability.
 
 ## Running it
@@ -39,6 +39,8 @@ flat bag of methods. Adding a new domain means adding a new file, not changing a
 - `python apps/desktop/dev_run.py` — builds the frontend and loads it via `file://`, the closest
   thing to the installed app.
 - `python apps/desktop/dev_run.py --dev` — hot-reloading Vite dev server instead.
+- `python apps/desktop/build_run.py` — packages the Windows executable, named after the
+  organization title (`backend/dist/<Title-Case-Name>/`).
 
 See `docs/desktop.html` for the full picture with diagrams.
 
