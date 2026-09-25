@@ -1,9 +1,9 @@
 // TODO TEMP DOCUMENT, PLEASE REPLACE BUT KEEP VERSION API CALL EXAMPLE
 // THAT IS INSIDE AN ABOUT PAGE
 
-import { read } from "@organization-info/organization-info";
-import { AboutBox } from "@ui-kit/about-box";
+import { read } from "@armada/organization-info";
 import { useEffect, useState } from "react";
+import { AboutBox, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@armada/ui-kit";
 import { OrganizationInfoSchema } from "./gen/common/v1/organization_info_pb";
 import { version } from "./ipc/application-info";
 
@@ -32,10 +32,20 @@ export function App() {
   }, []);
 
   return (
-    <main>
+    <main className="min-h-full bg-background p-8 text-foreground">
+      <h1 className="mb-6 text-3xl font-bold">About</h1>
+      <Card className="max-w-xl">
+        <CardHeader>
+          <CardTitle>Printer fleet</CardTitle>
+          <CardDescription>This card is rendered by the shared UI kit.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm">The desktop application consumes the same component as the web application.</p>
+        </CardContent>
+      </Card>
       <AboutBox
-        organization={read(OrganizationInfoSchema)}
-        version={state.status === "ready" ? state.version : undefined}
+          organization={read(OrganizationInfoSchema)}
+          version={state.status === "ready" ? state.version : undefined}
       />
       {state.status === "loading" && <p>Loading backend version…</p>}
       {state.status === "error" && <p>Failed to reach the backend: {state.message}</p>}

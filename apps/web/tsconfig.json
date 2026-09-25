@@ -1,27 +1,11 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["DOM", "DOM.Iterable", "ES2020"],
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "jsx": "react-jsx",
-    "strict": true,
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "baseUrl": "./",
+    "types": ["vite/client", "node"],
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@organization-info/*": ["../../packages/organization-info/*"],
-      "@ui-kit/*": ["../../packages/ui-kit/*"],
-      "@bufbuild/protobuf": ["./node_modules/@bufbuild/protobuf"],
-      "react": ["./node_modules/@types/react"],
-      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"]
-    },
-    "types": ["vite/client", "node"]
+      "@/*": ["./src/*"]
+    }
   },
-  "include": ["src"],
-  "references": []
+  "include": ["src", "vite.config.ts"]
 }
