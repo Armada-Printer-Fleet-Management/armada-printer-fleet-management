@@ -1,5 +1,5 @@
 name: Setup buf
-description: Install a pinned buf release onto a Linux runner.
+description: Install a pinned buf release onto a Linux or Windows runner.
 
 inputs:
   version:
@@ -10,7 +10,8 @@ inputs:
 runs:
   using: composite
   steps:
-    - shell: bash
+    - if: runner.os == 'Linux'
+      shell: bash
       run: |
         set -euo pipefail
         version="${{ inputs.version }}"
@@ -19,3 +20,12 @@ runs:
         chmod +x "${RUNNER_TEMP}/buf"
         sudo mv "${RUNNER_TEMP}/buf" /usr/local/bin/buf
         buf --version
+    - if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        $version = "${{ inputs.version }}"
+        $dir = Join-Path $env:RUNNER_TEMP "buf-bin"
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        Invoke-WebRequest "https://github.com/bufbuild/buf/releases/download/v$version/buf-Windows-x86_64.exe" -OutFile (Join-Path $dir "buf.exe")
+        $dir | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        & (Join-Path $dir "buf.exe") --version

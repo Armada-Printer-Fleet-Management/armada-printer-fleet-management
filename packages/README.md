@@ -5,6 +5,7 @@ Code shared by more than one application.
 | Directory | What it is |
 |---|---|
 | `proto/` | The `.proto` API contract |
+| `organization-info/` | The organization's title, description, license and repository, and the readers every app uses |
 | `core-domain/` | Domain logic, with no I/O and no framework |
 | `plugin-api/` | The ports that adapters implement |
 | `ui-kit/` | Presentational React components, shared by both frontends |

@@ -1,5 +1,6 @@
 {
   "name": "apps-web",
+  "version": "0.1.0-alpha",
   "packageManager": "pnpm@12.3.4",
   "private": true,
   "type": "module",
@@ -12,10 +13,12 @@
     "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\" --max-warnings=0"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2",
     "react": "^19",
     "react-dom": "^19"
   },
   "devDependencies": {
+    "@bufbuild/protoc-gen-es": "^2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^26",
     "@types/react": "^19",
