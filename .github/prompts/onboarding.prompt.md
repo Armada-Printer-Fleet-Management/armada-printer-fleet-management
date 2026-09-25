@@ -108,14 +108,18 @@ Each template covers one language and is invoked through the shared script rathe
 |---|---|
 | `buf.gen.desktop_python.yaml` exists | `python scripts/generate_proto.py buf.gen.desktop_python.yaml` |
 | `buf.gen.desktop_ts.yaml` exists and `apps/desktop/frontend/node_modules` exists | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` |
-| `buf.gen.server.yaml` exists | `python scripts/generate_proto.py buf.gen.server.yaml` |
+| `buf.gen.server.yaml` exists | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` |
 | `buf.gen.web_ts.yaml` exists and `apps/web/node_modules` exists | `python scripts/generate_proto.py buf.gen.web_ts.yaml --node-modules apps/web/node_modules` |
 
-(Step 4 installs dependencies before this step generates code, so the frontends' local
-`protoc-gen-es` plugin is already present by the time the TypeScript rows run.)
+(Step 4 installs dependencies before this step generates code, so the local plugins are already
+present: the frontends' `protoc-gen-es` for the TypeScript rows, and the server's
+`protoc-gen-connectrpc` for the server row. The server's plugin is a dev dependency in its
+virtualenv, which is why that row runs through `uv run`: it puts the virtualenv's executables on
+`PATH` for `buf` to find.)
 
 This produces the Python server interfaces and TypeScript clients from `packages/proto`. The output
-is gitignored and must exist before anything type-checks.
+is gitignored and must exist before anything type-checks. Every template sets `clean: true`, so each
+run deletes that template's output folders before regenerating them; re-running a row is always safe.
 
 ## 6. Prepare configuration
 
@@ -250,7 +254,7 @@ Skip this step if `--skip-app` was passed.
 
 | App | Condition | Command |
 |---|---|---|
-| Server | `apps/server/pyproject.toml` exists | `python apps/server/dev_run.py` (serves `http://127.0.0.1:8000`; check `/health`) |
+| Server | `apps/server/pyproject.toml` exists | `python apps/server/dev_run.py` (serves `http://127.0.0.1:8000`; check `/health_check`) |
 | Web | `apps/web/package.json` exists | not yet -- report not applicable |
 | Desktop | `apps/desktop/backend/pyproject.toml` exists | `python apps/desktop/dev_run.py` |
 

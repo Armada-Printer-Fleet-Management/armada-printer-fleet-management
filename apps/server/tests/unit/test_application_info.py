@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from api.services.application_info import ApplicationInfo
+from api.common.application_info import ApplicationInfo
 
 
 def write_pyproject(tmp_path: Path, body: str) -> Path:

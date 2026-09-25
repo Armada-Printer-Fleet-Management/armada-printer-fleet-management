@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 """Runs `buf generate` for one template, optionally adding a local npm
 plugin's bin directory to PATH first. onboarding, CI, pre-push, and app runner scripts all call
-this instead of duplicating it."""
+this instead of duplicating it.
+
+*Note: for using this script, you may need to run it with the uv environment of the target service you're trying to generate protos for.  See examples
+
+Usage:
+    python scripts/generate_proto.py <template> [--node-modules <dir>]
+Examples:
+    uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml
+    python scripts/generate_proto.py buf.gen.desktop_python.yaml
+    python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules
+"""
 from __future__ import annotations
 
 import argparse

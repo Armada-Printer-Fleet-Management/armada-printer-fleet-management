@@ -35,9 +35,12 @@ From the repo root:
 
 ```
 uv sync --project apps/server
-python scripts/generate_proto.py buf.gen.server.yaml
+uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml
 python apps/server/dev_run.py
 ```
+
+Code generation runs through `uv run` because the ConnectRPC code generator,
+`protoc-gen-connectrpc`, is a dev dependency installed in the server's virtualenv.
 
 - `python apps/server/dev_run.py` — serves `api.main:app` on `http://127.0.0.1:8000`.
 - `python apps/server/dev_run.py --dev` — the same, reloading on changes under `api/`.
@@ -45,8 +48,18 @@ python apps/server/dev_run.py
 The script stops with a pointer to `/onboarding` if `uv` is missing or `api/gen` has not been
 generated.
 
-`GET /health` returns the server's status and version, built from the shared `common.v1.VersionInfo`
-contract. Tests: `uv run --directory apps/server pytest`.
+Health is exposed twice, from the same logic in `api/common/health.py`:
+
+- `GET /health_check` (REST) returns plain `pass`/`degraded`/`fail` text; `?full=true` returns JSON
+  with the version, and `?check_dependencies=true` runs the dependency checks. Only `fail` is a 503.
+- `POST /server.v1.HealthCheckService/HealthCheck` (ConnectRPC) takes the same two options in its
+  request message and reports `STATUS_PASS`/`STATUS_DEGRADED`/`STATUS_FAIL` in the response.
+
+A failing dependency fails the service unless its `DependencyCheck` is marked `critical=False`,
+in which case the service is reported as degraded instead.
+
+ConnectRPC services are mounted at their generated `path`, so every service shares one base URL.
+Tests: `uv run --directory apps/server pytest`.
 
 The version is read from `pyproject.toml` at startup, so that file must be deployed beside `api/`.
 This can be updated to follow whatever convention decided by the CI/CD deployment pipeline once that's implemented

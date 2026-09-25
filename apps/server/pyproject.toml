@@ -1,7 +1,7 @@
 [project]
 name = "backend-server"
 # major.minor.maintenance, optionally -postfix (e.g. "0.1.0-rc1") for special releases
-version = "0.1.1"
+version = "0.1.2"
 description = "Hosted server for handling requests from the frontend webapp"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -12,6 +12,7 @@ dependencies = [
   "packaging>=24",      # https://github.com/pypa/packaging, the reference PEP 440 parser (also a transitive dep of pip/setuptools/hatchling)
   "proto-utils",        # packages/proto/utils -- shared protobuf helpers
   "organization-info",  # packages/organization-info -- reads the shared organization identity (organization.json)
+  "connectrpc>=0.12.1,<0.13",
 ]
 
 [tool.uv.sources]
@@ -24,6 +25,7 @@ dev = [
   "pyright",
   "pytest",
   "httpx2",  # https://github.com/pydantic/httpx2, BSD-3-Clause -- HTTP client Starlette's TestClient requires
+  "protoc-gen-connectrpc>=0.12.1,<0.13",
 ]
 
 [tool.ruff]
@@ -37,7 +39,7 @@ select = ["E", "F", "I", "UP", "B"]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
 include = ["api"]
-exclude = ["gen"]
+exclude = ["api/gen"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
