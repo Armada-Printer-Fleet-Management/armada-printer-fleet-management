@@ -2,7 +2,21 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist/**", "src/gen/**"] },
+  {
+    ignores: [
+      "**/node_modules/**",
+      "**/gen/**",
+      "**/*_gen/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/coverage/**",
+      "**/.idea/**",
+      "**/.vscode/**",
+      "**/.env",
+      "**/.env.*",
+      "../../../packages/organization-info/**",
+    ],
+  },
   js.configs.recommended,
   {
     files: ["src/**/*.{ts,tsx}"],

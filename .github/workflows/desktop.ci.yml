@@ -42,7 +42,7 @@ jobs:
         with:
           node-version: "22"
           cache: pnpm
-          cache-dependency-path: apps/desktop/frontend/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
         working-directory: apps/desktop/frontend
       - uses: ./.github/actions/setup-buf
@@ -72,7 +72,7 @@ jobs:
         with:
           node-version: "22"
           cache: pnpm
-          cache-dependency-path: apps/desktop/frontend/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - uses: ./.github/actions/setup-buf
       - name: Install protoc
         shell: powershell
