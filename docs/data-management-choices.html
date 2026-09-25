@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Data management choices</title>
+    <link rel="stylesheet" href="shared/docs.css" />
+  </head>
+  <body data-depth="0">
+    <div class="layout">
+      <nav></nav>
+      <main>
+        <h1>Data management choices</h1>
+        <p class="lede">
+          A conceptual data-flow design for the print farm management system,
+          including service responsibilities, core entities, and endpoint
+          groupings.
+        </p>
+
+        <h2>1. Purpose</h2>
+        <p>
+          This document outlines how data will flow between the services that
+          make up the new print farm management system. It identifies the
+          services involved, the core data entities each owns, the major data
+          flows between them, and a high-level grouping of the endpoints each
+          flow will need.
+        </p>
+
+        <h2>2. System overview</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Responsibility</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Client App</td>
+                <td>
+                  Single application with role-gated views (Student, Staff,
+                  Moderator, Admin, Guest). Separate staff desktop
+                  client sharing the same components for common functionality.
+                </td>
+              </tr>
+              <tr>
+                <td>Backend API</td>
+                <td>
+                  Core business logic: auth, users, queues, fleet/printers/tags
+                  /sections, print jobs, filament tracking, notifications,
+                  reporting.
+                </td>
+              </tr>
+              <tr>
+                <td>Primary Database</td>
+                <td>
+                  Relational store backing the backend (users, jobs, queues,
+                  printers, tags, sections, filament ledger, etc.).
+                </td>
+              </tr>
+              <tr>
+                <td>File Storage</td>
+                <td>
+                  Separate store for GCODE and model files, kept apart from the
+                  relational DB since these are large binary objects, not rows.
+                </td>
+              </tr>
+              <tr>
+                <td>Prusa Connect Local (PCL)</td>
+                <td>
+                  Runs on university infrastructure. Dispatches jobs to
+                  printers and reports printer status back.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p><strong>Notes on decisions already made:</strong></p>
+        <ul>
+          <li>
+            The system will not integrate with the existing Makerspace
+            database. Users create separate credentials, stored in this
+            system's own database, holding only what's needed for
+            user-print-management.
+          </li>
+          <li>
+            Fleet partitioning uses Fleet Sections, and each printer belongs to
+            exactly one section (e.g. self-service, general use).
+          </li>
+        </ul>
+
+        <h2>3. Core data entities</h2>
+        <p>These are described at a conceptual level.</p>
+        <ul>
+          <li>
+            <strong>User:</strong> account with a role (Student, Staff,
+            Moderator, Admin, Guest) and, for students, a filament allocation
+            balance.
+          </li>
+          <li>
+            <strong>Printer:</strong> a physical printer: id, model/type,
+            capabilities, current status, and the Fleet Section it belongs to.
+          </li>
+          <li>
+            <strong>Tag:</strong> a flexible label on printers (e.g. self-serve,
+            mk4s, room-204) used for search/filtering (dependent on PCL).
+          </li>
+          <li>
+            <strong>Fleet Section:</strong> a named partition of the fleet.
+            Staff/admin clients subscribe to a section to see and manage only
+            the printers within it.
+          </li>
+          <li>
+            <strong>Queue:</strong> a logical line for print jobs, organized
+            around courses, clubs, or events. Targets a type of job, not a
+            specific printer.
+          </li>
+          <li>
+            <strong>PrintJob:</strong> a submitted print including student,
+            file reference, queue, current status, assigned printer (structure
+            dependent on PCL).
+          </li>
+          <li>
+            <strong>Filament Ledger:</strong> tracks each student's allocation
+            and usage over time.
+          </li>
+          <li>
+            <strong>Notification:</strong> a triggered message (per-job status
+            update, or a staff-initiated mass email to a group/queue).
+          </li>
+        </ul>
+
+        <h2>4. Data flows</h2>
+
+        <h3>4.1 Account creation and auth</h3>
+        <p>
+          Client → Backend → Database. Backend issues and validates credentials
+          against its own user store.
+        </p>
+
+        <h3>4.2 Print submission</h3>
+        <ul>
+          <li>
+            Student uploads a GCODE (or sliceable model) file through the Client
+            App.
+          </li>
+          <li>
+            File is stored in File Storage; the Backend stores a reference to
+            it (not the file itself) on a new PrintJob record.
+          </li>
+          <li>
+            Backend places the PrintJob into the appropriate Queue.
+          </li>
+        </ul>
+        <p>
+          <strong>Endpoint cluster:</strong> GCODE/model upload (create/list/
+          delete uploaded files), job submission.
+        </p>
+
+        <h3>4.3 Job dispatch and file transfer to printer</h3>
+        <p>
+          First step: staff pull a job from a Queue in the Client App and
+          assign it to a printer within a Fleet Section they're operating.
+          This triggers a dispatch request from Client → Backend.
+        </p>
+
+        <h4>PCL fetches directly from File Storage</h4>
+        <p>
+          The Backend only passes PCL a reference to the file (an ID or
+          pre-signed URL) via a lightweight REST call. PCL fetches the file
+          bytes from File Storage.
+        </p>
+        <p>
+          <strong>Endpoint cluster:</strong> Job dispatch (assign to printer,
+          cancel, restart).
+        </p>
+
+        <h3>4.4 Printer status reporting</h3>
+        <p>
+          PCL reports status via periodic webhook calls to a backend endpoint,
+          or the backend polls a PCL status endpoint on an interval. Less
+          real-time and more request/response overhead than a persistent stream.
+        </p>
+
+        <h3>4.5 Real-time status delivery to clients</h3>
+        <ul>
+          <li>
+            <strong>Staff/Admin (section views):</strong> Server-Sent Events
+            (SSE) from backend to client. The backend sends updates to the Fleet
+            Section the client is subscribed to, so a client only receives
+            updates for printers it's actually watching.
+          </li>
+          <li>
+            <strong>Students:</strong> a polling endpoint returning the status
+            of all jobs belonging to the requesting student, backed by the
+            backend's cached current-state (not a direct DB hit per poll) to
+            keep this cheap at scale. Students don't need too many push
+            notifications; prints run over hours, and they aren't continuously
+            watching.
+          </li>
+        </ul>
+
+        <h3>4.6 Filament allocation and usage tracking</h3>
+        <p>
+          Backend deducts from a student's filament balance as jobs are
+          dispatched/completed and logs usage to the Filament Ledger for
+          reporting. Triggers an automatic low-balance notification.
+        </p>
+
+        <h3>4.7 Notifications</h3>
+        <p>
+          Backend triggers a single, consolidated status notification per
+          meaningful job event (addressing the email-spam issue in the current
+          system). This includes staff-initiated mass emails to a queue, course,
+          or group.
+        </p>
+
+        <h3>4.8 Reporting</h3>
+        <p>
+          Backend aggregates filament usage, print time, and user counts from
+          the Database to produce admin-facing reports, replacing the PrinterOS
+          statistics page.
+        </p>
+
+        <h2>5. Fleet partitioning recap</h2>
+        <p>
+          Printers are organized into Fleet Sections, with each printer
+          belonging to exactly one section. Tags remain available for flexible
+          search/filtering within and across sections, but sections are the
+          primary unit for both access partitioning and SSE subscription scope.
+          This is what lets a client (e.g. the self-serve kiosk) only receive
+          updates for the printers it cares about, addressing the performance
+          problems of the current system rendering and holding state for the
+          entire fleet regardless of view.
+        </p>
+
+        <h2>6. Endpoint cluster summary</h2>
+        <p>High-level groupings:</p>
+        <ul>
+          <li><strong>Auth / Account:</strong> credential creation, login, session management</li>
+          <li><strong>GCODE/Model Upload:</strong> CRUD for uploaded files</li>
+          <li><strong>Queue Management:</strong> create/list queues, manage student access</li>
+          <li><strong>Job Submission &amp; Dispatch:</strong> submit job, assign to printer, cancel, restart</li>
+          <li><strong>Fleet / Printer Management:</strong> CRUD for printers, tags, Fleet Sections</li>
+          <li><strong>Filament Allocation:</strong> balance queries, allocation adjustments, usage logs</li>
+          <li><strong>Notifications:</strong> per-job notification triggers, mass email</li>
+          <li><strong>Reporting:</strong> usage, print time, and user-count aggregation</li>
+          <li><strong>Real-Time Status:</strong> SSE subscription endpoint (staff), polling endpoint (students)</li>
+        </ul>
+
+        <section class="ai-statement">
+          <h2>AI Use Statement</h2>
+          <dl>
+            <dt>Tool</dt><dd>Copilot CLI (Auto mode)</dd>
+            <dt>Mode</dt><dd>Local</dd>
+            <dt>Output</dt><dd>converted the source DOCX into HTML and integrated it with the documentation navigation</dd>
+            <dt>Data</dt><dd>none</dd>
+            <dt>Verified</dt><dd>Reviewed the rendered html version of the data management document.</dd>
+          </dl>
+          <p>
+            Required by the project's <a href="../.integrity/POLICY.md">AI use policy</a>. The
+            verification field is written by a developer, never by an agent.
+          </p>
+        </section>
+      </main>
+    </div>
+    <script src="shared/nav.js"></script>
+  </body>
+</html>
