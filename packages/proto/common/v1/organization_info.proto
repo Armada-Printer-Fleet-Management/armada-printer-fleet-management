@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package common.v1;
+
+// The organization-wide identity every application shares.
+// packages/organization-info/organization.json holds the values; each application parses it
+// into this message with its own generated code.
+message OrganizationInfo {
+  // Display title, e.g. for window titles and the packaged executable's name.
+  string title = 1;
+  // What the organization does
+  string description = 2;
+  // SPDX license identifier.
+  string license = 3;
+  // Where the source code lives.
+  string repository_url = 4;
+}

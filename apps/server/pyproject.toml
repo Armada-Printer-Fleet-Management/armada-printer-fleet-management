@@ -11,10 +11,12 @@ dependencies = [
   "protobuf>=7,<8",     # runtime for the buf-generated _pb2 classes; must track protoc's own version line
   "packaging>=24",      # https://github.com/pypa/packaging, the reference PEP 440 parser (also a transitive dep of pip/setuptools/hatchling)
   "proto-utils",        # packages/proto/utils -- shared protobuf helpers
+  "organization-info",  # packages/organization-info -- reads the shared organization identity (organization.json)
 ]
 
 [tool.uv.sources]
 proto-utils = { path = "../../packages/proto/utils" }
+organization-info = { path = "../../packages/organization-info" }
 
 [dependency-groups]
 dev = [

@@ -6,25 +6,14 @@ from __future__ import annotations
 
 import argparse
 import pathlib
-import shutil
 import subprocess
 import sys
+
+from _build_common import resolve, run
 
 ROOT = pathlib.Path(__file__).resolve().parent
 FRONTEND = ROOT / "frontend"
 BACKEND = ROOT / "backend"
-
-
-def resolve(tool: str) -> str:
-    """finds the given tool on PATH, or exits with an error message if not found"""
-    found = shutil.which(tool)
-    if not found:
-        sys.exit(f"'{tool}' is not on PATH. Run /onboarding to set up your environment.")
-    return found
-
-
-def run(cmd: list[str], cwd: pathlib.Path) -> None:
-    subprocess.run([resolve(cmd[0]), *cmd[1:]], cwd=cwd, check=True)
 
 
 def main() -> None:

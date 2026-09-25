@@ -1,6 +1,6 @@
 // Waits for pywebview's `pywebviewready` event (fired once window.pywebview.api
 // is injected) and returns the raw IPC root. Each ipc/*.ts module reaches into
-// its own namespace off of this -- e.g. ipc.application_information.version().
+// its own namespace off of this -- e.g. ipc.application_info.version().
 export async function waitForPywebviewIpc(): Promise<NonNullable<Window["pywebview"]>["api"]> {
   const existing = window.pywebview;
   if (existing) return existing.api;
