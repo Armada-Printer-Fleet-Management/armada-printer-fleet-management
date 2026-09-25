@@ -1,0 +1,14 @@
+{
+  // Type-checks Vite's Node-side configuration separately from browser source.
+  "compilerOptions": {
+    "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "esModuleInterop": true
+  },
+  "include": ["vite.config.ts"]
+}

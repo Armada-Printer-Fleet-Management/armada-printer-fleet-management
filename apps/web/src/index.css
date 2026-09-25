@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "@armada/ui-kit/styles.css";
+
+@source "../../../packages/ui-kit/src";
 
 :root {
   --bg: #0f172a;

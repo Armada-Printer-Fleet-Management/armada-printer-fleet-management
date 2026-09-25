@@ -1,0 +1,11 @@
+{
+  "name": "armada-printer-fleet-management",
+  "private": true,
+  "packageManager": "pnpm@12.3.4",
+  "scripts": {
+    "build": "pnpm --recursive --if-present run build",
+    "typecheck": "pnpm --recursive --if-present run typecheck",
+    "test": "pnpm --recursive --if-present run test",
+    "lint": "pnpm --recursive --if-present run lint"
+  }
+}

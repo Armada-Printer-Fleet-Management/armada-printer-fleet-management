@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@source "../../../../packages/ui-kit/src";
+@import "@armada/ui-kit/styles.css";
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}

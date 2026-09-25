@@ -92,10 +92,11 @@ The current expected layout: `.githooks/pre-push` is a thin dispatcher; shared h
 | Condition | Command |
 |---|---|
 | `pyproject.toml` exists | `uv sync` |
-| `pnpm-workspace.yaml` exists | `pnpm install` |
+| root `pnpm-workspace.yaml` exists | `pnpm install` from the repository root |
 | `apps/desktop/backend/pyproject.toml` exists | `uv sync --project apps/desktop/backend` |
 | `apps/server/pyproject.toml` exists | `uv sync --project apps/server` |
-| `apps/desktop/frontend/package.json` exists | `pnpm install` (cwd `apps/desktop/frontend`), then `pnpm approve-builds --all` (cwd `apps/desktop/frontend`) once, to allow esbuild's postinstall script -- pnpm blocks build scripts by default |
+| `apps/desktop/frontend/package.json` exists | included by the root workspace install; run `pnpm approve-builds --all` from the repository root once if pnpm blocks esbuild's postinstall script |
+| `apps/web/package.json` exists | included by the root workspace install; run `pnpm approve-builds --all` from the repository root once if pnpm blocks esbuild's postinstall script |
 
 ## 5. Generate API code
 
