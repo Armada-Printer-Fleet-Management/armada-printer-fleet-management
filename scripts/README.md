@@ -9,5 +9,17 @@ Maintenance scripts that run outside the applications.
 | `apply_rulesets.sh` | Applies branch protection rulesets to the GitHub repository. Needs admin rights. |
 | `generate_proto.py` | Runs `buf generate` for one template, prepending a local npm plugin's `.bin/` to `PATH` when `--node-modules` is given. Shared by every app/service that generates code from `packages/proto`. |
 
+## `generate_proto.py` usage
+
+Run from the repo root. `buf` finds each template's local plugins on `PATH`, so the command
+depends on where those plugins are installed. Every template sets `clean: true`, so buf deletes the
+template's output folders before generating and removed protos leave no stale code behind.
+
+| Template | Command | Why |
+|---|---|---|
+| `buf.gen.server.yaml` | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` | `protoc-gen-connectrpc` is a dev dependency in the server's virtualenv; `uv run` puts it on `PATH`. |
+| `buf.gen.desktop_python.yaml` | `python scripts/generate_proto.py buf.gen.desktop_python.yaml` | Uses only protoc's built-in plugins. |
+| `buf.gen.desktop_ts.yaml` | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` | `protoc-gen-es` is an npm package in the frontend. |
+
 **Standard library only.** These run from git hooks and on fresh clones, before `uv sync` has
 installed anything, so a script that imports a dependency fails exactly when it is most needed.
