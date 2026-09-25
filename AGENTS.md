@@ -250,7 +250,7 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | JS deps                       | `pnpm install`                                                        |
 | Regenerate API types          | `buf generate`                                                        |
 | Python types                  | `pyright`                                                             |
-| TS types                      | `pnpm -r exec tsc --noEmit`                                           |
+| TS types                      | `pnpm typecheck`                                                      |
 | Python tests                  | `pytest`                                                              |
 | JS tests                      | `pnpm -r test`                                                        |
 | Layer contracts               | `lint-imports`                                                        |
@@ -258,7 +258,7 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Export AI audit log           | `python scripts/export_ai_audit.py`                                   |
 | Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
 | Desktop Python deps           | `uv sync --project apps/desktop/backend`                              |
-| Desktop JS deps                | `pnpm install` (in `apps/desktop/frontend`)                          |
+| Desktop JS deps                | `pnpm install` (in `root`)                          |
 | Desktop backend tests          | `uv run --directory apps/desktop/backend pytest`                     |
 | Desktop frontend tests         | `pnpm --dir apps/desktop/frontend exec vitest run`                   |
 | Generate proto code            | `python scripts/generate_proto.py <template> [--node-modules <dir>]` |
@@ -278,6 +278,13 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Build desktop installer        | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test]` |
 | Install NSIS (Windows)         | `python scripts/install_nsis.py`                                     |
 | Run CI job locally             | `act -W .github/workflows/<file>.yml -j <job>` (Windows job: add `-P windows-latest=-self-hosted`) |
+
+New frontend dependencies added for this branch:
+
+- `tailwindcss` and `@tailwindcss/vite` are required in the web and desktop frontends so Vite can
+  process Tailwind's utility classes and the styling pipeline stays consistent across both apps.
+- `clsx` and `tailwind-merge` are required in `packages/ui-kit` so shared components can build
+  composable class names and resolve conflicting Tailwind utilities without custom merge logic.
 
 Full environment setup is `/onboarding`.
 

@@ -1,0 +1,8 @@
+packages:
+  - "apps/web"
+  - "apps/desktop/frontend"
+  - "packages/*"
+
+allowBuilds:
+  esbuild: true
+  pnpm: true

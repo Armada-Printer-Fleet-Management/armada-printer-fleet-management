@@ -100,7 +100,7 @@ jobs:
       - run: uv sync --all-extras --dev
       - name: Generate API code
         if: needs.detect.outputs.proto == 'true'
-        run: buf generate
+        run: buf generate --template buf.gen.server.yaml
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pyright
@@ -117,6 +117,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: 12.3.4
+          run_install: false
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -126,10 +127,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Generate API code
         if: needs.detect.outputs.proto == 'true'
-        run: buf generate
-      - run: pnpm -r exec tsc --noEmit
-      - run: pnpm -r exec eslint .
-      - run: pnpm -r test --run
+        run: python scripts/generate_proto.py buf.gen.web_ts.yaml --node-modules apps/web/node_modules
+      - name: Generate desktop API code
+        if: needs.detect.outputs.proto == 'true'
+        run: python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules
+      - run: pnpm typecheck
 
   desktop:
     needs: detect

@@ -1,17 +1,17 @@
 import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import react from '@vitejs/plugin-react';
 import * as path from 'path';
+import tailwindcss from '@tailwindcss/vite';
 import { read } from '../../packages/organization-info/organization-info';
 import { OrganizationInfoSchema } from './src/gen/common/v1/organization_info_pb';
 import pkg from './package.json';
 
-const organizationInfoDir = path.resolve(__dirname, '../../packages/organization-info');
-const uiKitDir = path.resolve(__dirname, '../../packages/ui-kit');
 const { title } = read(OrganizationInfoSchema);
 
 export default defineConfig({
   plugins: [
     react(),
+    tailwindcss(),
     {
       name: 'organization-title',
       transformIndexHtml: {
@@ -26,14 +26,12 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@organization-info': organizationInfoDir,
-      '@ui-kit': uiKitDir,
     },
     // packages/ sits outside this project, so its files would not find this project's installs.
     dedupe: ['@bufbuild/protobuf', 'react', 'react-dom'],
   },
   server: {
     port: 5174,
-    fs: { allow: [searchForWorkspaceRoot(process.cwd()), organizationInfoDir, uiKitDir] },
+    fs: { allow: [searchForWorkspaceRoot(process.cwd())] },
   },
 });

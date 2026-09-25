@@ -1,0 +1,22 @@
+# Generated code
+**/gen/
+**/*_gen/
+
+# Dependencies and generated build output
+**/node_modules/
+.pnpm-store/
+**/dist/
+**/build/
+**/coverage/
+
+# IDE files
+**/.idea/
+**/.vscode/
+
+# Environment files
+**/.env
+**/.env.*
+!**/.env.example
+
+# Packages excluded from linting
+packages/organization-info/**
