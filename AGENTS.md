@@ -287,7 +287,7 @@ enabled it, enable it rather than starting to implement. Judge by the work, not 
 the request: "add OAuth" is a design decision, "fix this typo" is not. When genuinely unsure,
 plan mode costs one round trip and implementing the wrong design costs a session.
 
-When planning, `./DATAFLOW.md` can be referenced for a high-level understanding of our system
+When planning, `./data-management-choices.md` can be referenced for a high-level understanding of our system
 design and how data is transferred throughout it. This file is subject to change and must be
 checked for updates if reference is made to the system architecture.  
 
