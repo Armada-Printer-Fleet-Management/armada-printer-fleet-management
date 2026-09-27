@@ -39,9 +39,14 @@
               <tr>
                 <td>Client App</td>
                 <td>
-                  Single application with role-gated views (Student, Staff,
-                  Moderator, Admin, Guest). Separate staff desktop
-                  client sharing the same components for common functionality.
+                  Single web application with role-gated views (Student, Staff,
+                  Admin, Guest). Students upload/slice/submit jobs and view their own job status.
+                </td>
+              </tr>
+              <tr>
+                <td>Desktop App</td>
+                <td>
+                  Desktop application used by staff to manage printer fleets, view reports and send notifications.
                 </td>
               </tr>
               <tr>
@@ -109,7 +114,7 @@
           </li>
           <li>
             <strong>Fleet Section:</strong> a named partition of the fleet.
-            Staff/admin clients subscribe to a section to see and manage only
+            Staff/admin users subscribe to a section to see and manage only
             the printers within it.
           </li>
           <li>
@@ -136,22 +141,21 @@
 
         <h3>4.1 Account creation and auth</h3>
         <p>
-          Client → Backend → Database. Backend issues and validates credentials
+          Web App → Backend → Database. Backend issues and validates credentials
           against its own user store.
         </p>
 
         <h3>4.2 Print submission</h3>
         <ul>
           <li>
-            Student uploads a GCODE (or sliceable model) file through the Client
-            App.
+            Student uploads a GCODE (or sliceable model) file through the Web App.
           </li>
           <li>
             File is stored in File Storage; the Backend stores a reference to
             it (not the file itself) on a new PrintJob record.
           </li>
           <li>
-            Backend places the PrintJob into the appropriate Queue.
+            Staff places the PrintJob into the appropriate Queue.
           </li>
         </ul>
         <p>
@@ -161,9 +165,9 @@
 
         <h3>4.3 Job dispatch and file transfer to printer</h3>
         <p>
-          First step: staff pull a job from a Queue in the Client App and
+          First step: staff pull a job from a backend Queue represented in the Desktop App and
           assign it to a printer within a Fleet Section they're operating.
-          This triggers a dispatch request from Client → Backend.
+          This triggers a dispatch request from Desktop App → Backend.
         </p>
 
         <h4>PCL fetches directly from File Storage</h4>
@@ -184,13 +188,13 @@
           real-time and more request/response overhead than a persistent stream.
         </p>
 
-        <h3>4.5 Real-time status delivery to clients</h3>
+        <h3>4.5 Real-time status delivery to users</h3>
         <ul>
           <li>
             <strong>Staff/Admin (section views):</strong> Server-Sent Events
-            (SSE) from backend to client. The backend sends updates to the Fleet
-            Section the client is subscribed to, so a client only receives
-            updates for printers it's actually watching.
+            (SSE) from backend to user. The backend sends updates to the Fleet
+            Section the user is subscribed to, so a user only receives
+            updates for printers they're actually watching.
           </li>
           <li>
             <strong>Students:</strong> a polling endpoint returning the status
@@ -237,6 +241,7 @@
         </p>
 
         <h2>6. Endpoint cluster summary</h2>
+        <p>All core-domain logic should follow Domain-Driven Design (DDD) architecture and these are our suggested first domains. It may be subject to change</p>
         <p>High-level groupings:</p>
         <ul>
           <li><strong>Auth / Account:</strong> credential creation, login, session management</li>
