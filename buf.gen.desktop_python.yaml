@@ -5,7 +5,7 @@ inputs:
 plugins:
   - protoc_builtin: python
     protoc_path: protoc
-    out: apps/desktop/backend/src/backend/gen
+    out: apps/desktop/backend/src/armada_gen
   - protoc_builtin: pyi
     protoc_path: protoc
-    out: apps/desktop/backend/src/backend/gen
+    out: apps/desktop/backend/src/armada_gen

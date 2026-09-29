@@ -2,7 +2,7 @@
 #
 # When something works from source but not in the packaged app, the fix usually lands here:
 #   - a file the app reads at runtime          -> add it to `datas`, and read it through
-#                                                  backend.environment.Environment.resource_path()
+#                                                  armada_runtime.environment.Environment.resource_path()
 #   - a package that is imported dynamically   -> add it to `hiddenimports`
 #   - a package that reads its own version      -> copy_metadata("<dist name>") into `datas`
 #     or entry points via importlib.metadata
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_data_files, copy_metadata
 
-from backend.packaging import executable_name
+from armada_runtime.packaging import executable_name
 
 BACKEND = Path(SPECPATH)  # noqa: F821 -- SPECPATH is injected by PyInstaller
 FRONTEND_DIST = BACKEND.parent / "frontend" / "dist"
@@ -26,7 +26,7 @@ datas += collect_data_files("organization_info")  # organization.json, read thro
 hiddenimports: list[str] = []
 
 analysis = Analysis(  # noqa: F821
-    [str(BACKEND / "src" / "backend" / "__main__.py")],
+    [str(BACKEND / "src" / "armada_app" / "__main__.py")],
     pathex=[str(BACKEND / "src")],
     datas=datas,
     hiddenimports=hiddenimports,

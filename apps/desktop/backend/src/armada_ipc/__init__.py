@@ -1,4 +1,4 @@
-from backend.ipc.application_info import ApplicationInfo
+from armada_ipc.application_info import ApplicationInfo
 
 
 class Ipc:

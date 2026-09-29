@@ -1,7 +1,7 @@
 import argparse
 
-from backend.environment import Environment
-from backend.window import run
+from armada_app.window import run
+from armada_runtime.environment import Environment
 
 
 def main() -> None:

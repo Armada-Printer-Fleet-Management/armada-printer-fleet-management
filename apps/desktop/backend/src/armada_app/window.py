@@ -1,8 +1,8 @@
 import webview
 from organization_info import read
 
-from backend.gen.common.v1 import organization_info_pb2
-from backend.ipc import Ipc
+from armada_gen.common.v1 import organization_info_pb2
+from armada_ipc import Ipc
 
 
 def run(target: str) -> None:

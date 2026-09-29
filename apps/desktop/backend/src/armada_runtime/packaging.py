@@ -4,7 +4,7 @@ from importlib.metadata import version
 from organization_info import read
 from packaging.version import Version
 
-from backend.gen.common.v1 import organization_info_pb2
+from armada_gen.common.v1 import organization_info_pb2
 
 
 def executable_name() -> str:
