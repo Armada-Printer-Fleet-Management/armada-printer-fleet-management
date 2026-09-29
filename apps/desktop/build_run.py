@@ -19,7 +19,7 @@ def executable_name() -> str:
     """The packaged name, from the backend's own reader so the spec and this script agree."""
     result = subprocess.run(
         [resolve("uv"), "run", "--project", str(BACKEND), "python", "-c",
-         "from backend.packaging import executable_name; print(executable_name())"],
+         "from armada_runtime.packaging import executable_name; print(executable_name())"],
         capture_output=True, text=True, check=True,
     )
     return result.stdout.strip()
@@ -30,7 +30,7 @@ def main() -> None:
         fail("the desktop build is Windows only")
 
     with step("Checking generated code"):
-        for generated in (BACKEND / "src" / "backend" / "gen", FRONTEND / "src" / "gen"):
+        for generated in (BACKEND / "src" / "armada_gen", FRONTEND / "src" / "gen"):
             if not any(path.is_file() for path in generated.rglob("*")):
                 fail(
                     f"{generated} has no generated files. Run 'python scripts/generate_proto.py' "

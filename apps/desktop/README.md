@@ -28,7 +28,7 @@ quietly drift apart even without an RPC framework sitting between them.
 
 ## The `ipc/` pattern
 
-One file per capability, named after it, mirrored between `backend/src/backend/ipc/application_info.py` and
+One file per capability, named after it, mirrored between `backend/src/armada_ipc/application_info.py` and
 `frontend/src/ipc/application-info.ts`. Every concrete backend module extends the shared
 `IpcModule` base; pywebview walks nested class instances automatically, so each module becomes its
 own namespace in JS (`window.pywebview.api.application_info.version()`) rather than one

@@ -31,6 +31,7 @@ coverage/
 # Generated from packages/proto — never hand-edit, never commit.
 # Run `buf generate` (or `/onboarding`) to produce these.
 **/gen/
+**/*_gen/
 
 # ─── Runtime configuration: ignored by default ───────────────────────────────
 # All application logic here is generic. Anything specific to a deployment —

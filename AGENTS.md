@@ -198,7 +198,7 @@ in the pull request when you do.
 - No `any`. Use `unknown` and narrow.
 - No non-null assertions (`!`) without a comment justifying it.
 
-**Generated code** (`**/gen/`) is never hand-edited and never committed. Regenerate with
+**Generated code** (`**/*_gen/` such as the desktop's `armada_gen/`) is never hand-edited and never committed. Regenerate with
 `scripts/generate_proto.py` (see _Toolchain_). Each template sets `clean: true`, so every run deletes
 its output folders first: stale files cannot linger, and anything else put there is lost.
 
@@ -302,7 +302,7 @@ lists `organization.json` in `cache-keys`. Keep that when editing the file.
 
 The Windows executable is built with `python apps/desktop/build_run.py`. New assets, dynamic
 imports and packages that PyInstaller cannot see are linked in `apps/desktop/backend/desktop_backend.spec`.
-Read runtime paths through `backend.environment.Environment`, never `sys.frozen`. Tests do not
+Read runtime paths through `armada_runtime.environment.Environment`, never `sys.frozen`. Tests do not
 catch a missing bundle entry, so run the build after changing backend dependencies or runtime-read files.
 
 The installer is built with `python apps/desktop/installer_run.py`, which wraps that bundle using

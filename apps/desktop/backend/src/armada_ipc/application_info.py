@@ -5,8 +5,8 @@ from importlib.metadata import version as pkg_version
 from packaging.version import Version
 from proto_utils import message_to_dict
 
-from backend.gen.common.v1 import application_info_pb2
-from backend.ipc._base import IpcModule
+from armada_gen.common.v1 import application_info_pb2
+from armada_ipc._base import IpcModule
 
 
 class ApplicationInfo(IpcModule):

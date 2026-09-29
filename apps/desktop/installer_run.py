@@ -25,7 +25,10 @@ LICENSE = ROOT.parents[1] / "LICENSE"
 
 
 def installer_info() -> dict[str, str]:
-    code = "import json; from backend.packaging import installer_info as i; print(json.dumps(i()))"
+    code = (
+        "import json; from armada_runtime.packaging import installer_info as i; "
+        "print(json.dumps(i()))"
+    )
     result = subprocess.run(
         [resolve("uv"), "run", "--project", str(BACKEND), "python", "-c", code],
         capture_output=True, text=True, check=True,
