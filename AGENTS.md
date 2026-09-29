@@ -256,6 +256,8 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Run server                     | `python apps/server/dev_run.py`                                      |
 | Run server (hot reload)        | `python apps/server/dev_run.py --dev`                                |
 | Build desktop app (Windows)    | `python apps/desktop/build_run.py`                                   |
+| Build desktop installer        | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test]` |
+| Install NSIS (Windows)         | `python scripts/install_nsis.py`                                     |
 | Run CI job locally             | `act -W .github/workflows/<file>.yml -j <job>` (Windows job: add `-P windows-latest=-self-hosted`) |
 
 Full environment setup is `/onboarding`.
@@ -302,6 +304,14 @@ The Windows executable is built with `python apps/desktop/build_run.py`. New ass
 imports and packages that PyInstaller cannot see are linked in `apps/desktop/backend/desktop_backend.spec`.
 Read runtime paths through `backend.environment.Environment`, never `sys.frozen`. Tests do not
 catch a missing bundle entry, so run the build after changing backend dependencies or runtime-read files.
+
+The installer is built with `python apps/desktop/installer_run.py`, which wraps that bundle using
+NSIS and `apps/desktop/installer/installer.nsi`. The script holds no names: `installer_run.py`
+passes them in from `organization.json` and the backend's version. It copies the whole bundle, so
+new files need no installer change. Its uninstaller deletes only the exe and `_internal/`, so
+update it if the bundle gains another top-level entry. NSIS is pinned by version and SHA-256 in
+`scripts/install_nsis.py`; change both together, and take the hash from a source independent of
+your own download.
 
 ---
 

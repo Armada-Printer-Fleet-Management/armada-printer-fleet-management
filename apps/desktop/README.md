@@ -41,6 +41,8 @@ flat bag of methods. Adding a new domain means adding a new file, not changing a
 - `python apps/desktop/dev_run.py --dev` — hot-reloading Vite dev server instead.
 - `python apps/desktop/build_run.py` — packages the Windows executable, named after the
   organization title (`backend/dist/<Title-Case-Name>/`).
+- `python apps/desktop/installer_run.py` — builds that, then wraps it in a Windows setup wizard
+  (`installer/dist/<Title-Case-Name>-Setup-<version>.exe`). Needs NSIS: `python scripts/install_nsis.py`.
 
 See `docs/desktop.html` for the full picture with diagrams.
 
