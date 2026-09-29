@@ -51,6 +51,11 @@ Check each before installing — never reinstall something already present.
 | `protoc` | Python protobuf codegen (buf's `protoc_builtin` plugin type needs the real compiler, not a hosted one) | `winget install Google.Protobuf` | apt: `sudo apt-get install protobuf-compiler`, brew: `brew install protobuf` |
 | `gitleaks` | Secret scanning in the pre-commit hook | `winget install gitleaks.gitleaks` | `brew install gitleaks` |
 | `act` | Run GitHub Actions workflows locally, without pushing | `winget install nektos.act` (or `choco install act-cli`) | `brew install act` |
+| NSIS | Builds the desktop app's Windows installer | `python scripts/install_nsis.py` | not needed |
+
+**Before running `scripts/install_nsis.py`, tell the developer that Windows is about to show an
+administrator (UAC) prompt, and wait for them to confirm.** The script downloads NSIS's setup
+program, checks it against a pinned SHA-256, and installs it to `C:\Program Files (x86)\NSIS`.
 
 **`act` must be 0.2.86 or newer** — older versions carry known advisories fixed in that release
 ([CVE-2026-34041](https://github.com/nektos/act/security/advisories/GHSA-j5j2-9v57-2vfw)). Check

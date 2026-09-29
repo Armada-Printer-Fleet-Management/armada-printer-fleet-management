@@ -8,6 +8,7 @@ Maintenance scripts that run outside the applications.
 | `export_ai_audit.py` | Exports agent session transcripts to the team's audit log. |
 | `apply_rulesets.sh` | Applies branch protection rulesets to the GitHub repository. Needs admin rights. |
 | `generate_proto.py` | Runs `buf generate` for one template, prepending a local npm plugin's `.bin/` to `PATH` when `--node-modules` is given. Shared by every app/service that generates code from `packages/proto`. |
+| `install_nsis.py` | Installs the pinned NSIS version that builds the desktop app's Windows installer, after checking its SHA-256. Windows only; shows one administrator prompt. Used by `/onboarding` and CI. |
 
 ## `generate_proto.py` usage
 
@@ -20,6 +21,10 @@ template's output folders before generating and removed protos leave no stale co
 | `buf.gen.server.yaml` | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` | `protoc-gen-connectrpc` is a dev dependency in the server's virtualenv; `uv run` puts it on `PATH`. |
 | `buf.gen.desktop_python.yaml` | `python scripts/generate_proto.py buf.gen.desktop_python.yaml` | Uses only protoc's built-in plugins. |
 | `buf.gen.desktop_ts.yaml` | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` | `protoc-gen-es` is an npm package in the frontend. |
+
+## `install_nsis.py` usage
+
+Run from the repo root on Windows. `python scripts/install_nsis.py --help` prints the full usage.
 
 **Standard library only.** These run from git hooks and on fresh clones, before `uv sync` has
 installed anything, so a script that imports a dependency fails exactly when it is most needed.
