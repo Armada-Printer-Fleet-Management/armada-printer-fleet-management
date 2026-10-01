@@ -12,3 +12,10 @@ plugins:
   - local: protoc-gen-connectrpc
     out: apps/server/api/gen
     opt: protobuf=google
+  - local: protoc-gen-connect-openapi
+    out: apps/server/api/gen/openapi
+    opt:
+      - format=json
+      - features=connectrpc
+      - content-types=json
+      - trim-unused-types

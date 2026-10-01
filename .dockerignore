@@ -1,0 +1,17 @@
+# Fallback for any build from the repo root whose Dockerfile has no <Dockerfile>.dockerignore of its
+# own beside it. It only keeps secrets and host state out; each Dockerfile allow-lists what it needs.
+.git
+config/
+**/private
+**/*.private.*
+**/*.local.*
+**/.env
+**/.env.*
+HANDOFF.md
+.integrity/transcripts/
+**/node_modules
+**/.venv
+**/gen
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache

@@ -25,6 +25,7 @@ const SECTIONS = [
   {
     title: "Reference",
     links: [
+      { href: "api.html", text: "API reference" },
       { href: "../AGENTS.md", text: "Agent instructions" },
       { href: "../.integrity/POLICY.md", text: "AI use policy" },
     ],

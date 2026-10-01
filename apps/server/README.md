@@ -19,8 +19,15 @@ apps/server/
 │   ├── common/      # contains any shared files that are fully internal to the api server (ex. consts and internal models)
 │   ├── routers/     # ASGI routes for endpoints that don't fit the ConnectRPC model*
 │   ├── services/    # Implementations of the generated ConnectRPC service interfaces
+│   ├── middleware/  # ASGI middleware wrapping every request, REST and ConnectRPC alike
+│   ├── lifespan.py  # startup and shutdown: configures logging
+│   ├── logging_config.py  # logging setup and processors; see "Logging"
 │   └── main.py      # ASGI entry point
-├── dev_run.py       # runs the server locally; see "Running it"
+├── compose.yaml     # runs the server in Docker with live reload; see "Running it"
+├── Dockerfile       # the `dev` image compose.yaml builds, from host-generated api/gen
+├── Dockerfile.dockerignore  # allow-list for that image's build context (the repo root)
+├── dev_run.py       # runs the server natively; see "Running natively"
+├── export_openapi.py  # writes the API spec into docs/api/; see "API reference"
 ├── tests/
 │   ├── unit/
 │   └── integration/
@@ -31,7 +38,35 @@ apps/server/
 
 # Running it
 
-From the repo root:
+The server runs in Docker by default. The image uses the `api/gen` already generated on the host,
+so generate it first (and again after changing a `.proto` file). From the repo root, with Docker
+running:
+
+```
+uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml
+docker compose -f apps/server/compose.yaml up --watch
+```
+
+This serves `http://127.0.0.1:8000`, reachable from this machine only, and follows the logs.
+`Ctrl+C` stops it.
+
+- `docker compose -f apps/server/compose.yaml up -d --wait` — the same in the background, returning
+  once `/health_check` passes. No live reload.
+- `docker compose -f apps/server/compose.yaml down` — stops and removes it.
+
+With `--watch`, saving a file under `api/` copies it into the container and uvicorn reloads. That
+includes `api/gen`, so rerunning codegen on the host after a `.proto` change is enough. Changing
+`pyproject.toml`, `uv.lock` or one of the two path packages (`packages/proto/utils`,
+`packages/organization-info`) rebuilds the image instead, which reinstalls dependencies. The image
+holds only runtime dependencies; tests, lint and codegen run on the host.
+
+The build context is the repo root, allow-listed in `Dockerfile.dockerignore`, which Docker uses
+in place of the root `.dockerignore` for this Dockerfile. A new path dependency must be added there
+as well as to `pyproject.toml`.
+
+## Running natively
+
+Tests, lint and type checks run on the host, and the server can too:
 
 ```
 uv sync --project apps/server
@@ -46,7 +81,7 @@ Code generation runs through `uv run` because the ConnectRPC code generator,
 - `python apps/server/dev_run.py --dev` — the same, reloading on changes under `api/`.
 
 The script stops with a pointer to `/onboarding` if `uv` is missing or `api/gen` has not been
-generated.
+generated. Both ways use port 8000, so run one at a time.
 
 Health is exposed twice, from the same logic in `api/common/health.py`:
 
@@ -63,3 +98,53 @@ Tests: `uv run --directory apps/server pytest`.
 
 The version is read from `pyproject.toml` at startup, so that file must be deployed beside `api/`.
 This can be updated to follow whatever convention decided by the CI/CD deployment pipeline once that's implemented
+# API reference
+
+The server publishes one OpenAPI spec covering both kinds of endpoint:
+
+- **ConnectRPC services** are described by `protoc-gen-connect-openapi`, which runs during server
+  codegen and writes one document per `.proto` file into `api/gen/openapi/`.
+- **REST routes** are described by FastAPI as usual.
+
+`api/common/openapi.py` merges the two, and FastAPI serves the result at `/openapi.json`, `/docs`
+(Swagger UI, with "Try it out") and `/redoc`. The version shown is the one in `pyproject.toml`.
+
+`export_openapi.py` writes the same spec into `docs/api/`, which `docs/api.html` renders. The
+pre-commit hook runs codegen and the export whenever files under `api/`, `packages/proto/`,
+`pyproject.toml` or `buf.gen.server.yaml` are staged, and stages the result; it blocks the commit
+if it cannot. To run it by hand:
+
+```
+uv run --project apps/server python apps/server/export_openapi.py          # write
+uv run --project apps/server python apps/server/export_openapi.py --check  # report stale files
+```
+
+`docs/api/` is generated, so never edit it by hand. A unit test fails if it does not match what
+the server serves. Descriptions come from comments in the `.proto` files and docstrings on REST
+routes.
+
+# Logging
+
+Logs go through [structlog](https://www.structlog.org/). Log with key-value pairs, not formatted
+strings, so the values stay searchable:
+
+```python
+import structlog
+
+log = structlog.stdlib.get_logger(__name__)
+
+log.info("printer claimed", printer_id=printer_id, queue=queue_name)
+```
+
+Every line logged while a request is handled carries `request_id`, `method` and `path` (for
+ConnectRPC, the path is the procedure, e.g. `/server.v1.HealthCheckService/HealthCheck`).
+`RequestContextMiddleware` binds them, and logs one `request finished` line per request with its
+`status` and `duration_ms`, in place of uvicorn's access log. The request ID is a fresh UUID
+generated per request, used only for logging: it is not read from or returned in any header.
+
+`LOG_FORMAT` chooses the output: `console` for readable lines, `json` for one JSON object per line.
+It defaults to `json`; `compose.yaml` and `dev_run.py` set `console`.
+
+`api/logging_config.py` holds the configuration. Processors added to `SHARED_PROCESSORS` run on
+every line, including those from uvicorn and other libraries. `lifespan.py` applies the
+configuration at startup, so the few lines uvicorn prints before that keep its own format.

@@ -1,0 +1,37 @@
+services:
+  server:
+    build:
+      # The repo root, which the server's path dependencies need.
+      context: ../..
+      dockerfile: apps/server/Dockerfile
+      target: dev
+    image: armada-server-dev
+    environment:
+      LOG_FORMAT: console
+    # Bound to localhost so the dev server is not reachable from the network.
+    ports:
+      - 127.0.0.1:8000:8000
+    healthcheck:
+      # The slim image has no curl.
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health_check')
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    develop:
+      watch:
+        # Includes api/gen, so rerunning server codegen on the host reaches the container too.
+        - action: sync
+          path: ./api
+          target: /repo/apps/server/api
+        - action: rebuild
+          path: ./pyproject.toml
+        - action: rebuild
+          path: ./uv.lock
+        - action: rebuild
+          path: ../../packages/proto/utils
+        - action: rebuild
+          path: ../../packages/organization-info

@@ -253,8 +253,11 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Run desktop app (hot reload)   | `python apps/desktop/dev_run.py --dev`                               |
 | Server Python deps             | `uv sync --project apps/server`                                      |
 | Server tests                   | `uv run --directory apps/server pytest`                                |
-| Run server                     | `python apps/server/dev_run.py`                                      |
-| Run server (hot reload)        | `python apps/server/dev_run.py --dev`                                |
+| Run server (Docker, live reload) | `docker compose -f apps/server/compose.yaml up --watch`            |
+| Stop server (Docker)           | `docker compose -f apps/server/compose.yaml down`                    |
+| Run server natively            | `python apps/server/dev_run.py`                                      |
+| Run server natively (hot reload) | `python apps/server/dev_run.py --dev`                              |
+| Regenerate API docs (`docs/api/`) | `uv run --project apps/server python apps/server/export_openapi.py` (pre-commit runs it; never hand-edit `docs/api/`) |
 | Build desktop app (Windows)    | `python apps/desktop/build_run.py`                                   |
 | Build desktop installer        | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test]` |
 | Install NSIS (Windows)         | `python scripts/install_nsis.py`                                     |

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
 # pre-commit — scans staged changes for secrets, and keeps generated agent
-# config in step with its source.
+# config and the published API spec (docs/api/) in step with their sources.
 #
 # Which files may be committed is .gitignore's job: configuration is ignored by
 # default and only `.example` siblings are tracked. This hook covers the one
@@ -48,6 +48,34 @@ if printf '%s' "$STAGED" | grep -qE '(^\.claude/|AGENTS\.md$)'; then
       printf '%s\n' "$REGEN" | sed 's/^/    /'
     fi
   fi
+fi
+
+# ── Keep the published API spec in step with the server ──────────────────────
+# docs/api/ is generated from the server's routes and the .proto contract. Unlike
+# the steps above, a missing tool blocks the commit: skipping it would let the
+# published API reference go stale without anyone noticing.
+if printf '%s\n' "$STAGED" | grep -qE '^(apps/server/(api/|pyproject\.toml)|packages/proto/|buf\.gen\.server\.yaml)'; then
+  LOG=$(mktemp)
+  if ! have uv; then
+    red "✗ uv is not installed, so the API docs in docs/api/ cannot be regenerated."
+    dim "  Run /onboarding to install it."
+    FAILED=1
+  elif ! (cd "$REPO_ROOT" \
+      && uv run --quiet --project apps/server python scripts/generate_proto.py buf.gen.server.yaml \
+      && uv run --quiet --project apps/server python apps/server/export_openapi.py) >"$LOG" 2>&1; then
+    red "✗ Could not regenerate the API docs in docs/api/:"
+    sed 's/^/    /' "$LOG"
+    dim "  If buf, protoc or protoc-gen-connect-openapi is missing, run /onboarding."
+    FAILED=1
+  else
+    REGEN=$(git -C "$REPO_ROOT" status --porcelain --untracked-files=all -- docs/api)
+    if [ -n "$REGEN" ]; then
+      git -C "$REPO_ROOT" add docs/api
+      yell "⚠ Regenerated the API docs and staged them:"
+      printf '%s\n' "$REGEN" | sed 's/^/    /'
+    fi
+  fi
+  rm -f "$LOG"
 fi
 
 if [ $FAILED -ne 0 ]; then

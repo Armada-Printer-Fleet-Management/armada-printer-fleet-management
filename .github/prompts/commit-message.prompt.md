@@ -99,6 +99,10 @@ tree rather than a prepared commit. If the tree is entirely clean, say so and st
 - **Title**: imperative mood, no trailing period, **whole subject line ≤ 72 characters**.
 - **Bullets**: explain each change *to a human in simple terms* — what changed and why it matters,
   not which lines moved. One per meaningful change; skip formatting and other trivia.
+- **No backticks (`` ` ``) or double quotes (`"`) anywhere in the message.** Developers commit with
+  `git commit -m "..."`, where a backtick runs its contents as a shell command and a double quote
+  ends the message early. Name commands, files and flags in plain text instead, and rephrase
+  rather than quote.
 - **Trailer**: the ticket ID and title as the final line, preceded by a blank line.
 - **Never emit a `Co-Authored-By` trailer.** The `commit-msg` hook rejects it. Agent involvement
   is declared in the AI Use Statement instead — disclosure of use and claim of authorship are
