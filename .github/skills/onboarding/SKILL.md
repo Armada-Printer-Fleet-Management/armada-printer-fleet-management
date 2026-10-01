@@ -51,12 +51,18 @@ Check each before installing — never reinstall something already present.
 | `buf` | Protobuf codegen and linting | `winget install bufbuild.buf` | `curl -sSL https://github.com/bufbuild/buf/releases/latest/download/buf-$(uname -s)-$(uname -m) -o /usr/local/bin/buf && chmod +x /usr/local/bin/buf` |
 | `protoc` | Python protobuf codegen (buf's `protoc_builtin` plugin type needs the real compiler, not a hosted one) | `winget install Google.Protobuf` | apt: `sudo apt-get install protobuf-compiler`, brew: `brew install protobuf` |
 | `gitleaks` | Secret scanning in the pre-commit hook | `winget install gitleaks.gitleaks` | `brew install gitleaks` |
+| `protoc-gen-connect-openapi` | OpenAPI for the ConnectRPC services, generated with the server code; the pre-commit hook needs it to regenerate `docs/api/` | No winget package. Download `protoc-gen-connect-openapi_<version>_windows_amd64.tar.gz` from [its releases](https://github.com/sudorandom/protoc-gen-connect-openapi/releases), check it against `checksums.txt`, extract `protoc-gen-connect-openapi.exe` into `%LOCALAPPDATA%\Programs\protoc-gen-connect-openapi\`, and add that folder to the user `PATH` | The matching `linux_amd64` / `linux_arm64` / `darwin_all` archive from the same releases page, extracted onto `PATH` (e.g. `/usr/local/bin`) |
 | `act` | Run GitHub Actions workflows locally, without pushing | `winget install nektos.act` (or `choco install act-cli`) | `brew install act` |
 | NSIS | Builds the desktop app's Windows installer | `python scripts/install_nsis.py` | not needed |
 
 **Before running `scripts/install_nsis.py`, tell the developer that Windows is about to show an
 administrator (UAC) prompt, and wait for them to confirm.** The script downloads NSIS's setup
 program, checks it against a pinned SHA-256, and installs it to `C:\Program Files (x86)\NSIS`.
+
+**`protoc-gen-connect-openapi` must be v0.28.0**, so every developer's committed API spec
+(`docs/api/`) comes out the same. Check with `protoc-gen-connect-openapi --version`. Codegen runs
+only on the host — the server image copies the host's generated `api/gen` — so this is the one
+place the version is pinned; bump it here when upgrading.
 
 **`act` must be 0.2.86 or newer** — older versions carry known advisories fixed in that release
 ([CVE-2026-34041](https://github.com/nektos/act/security/advisories/GHSA-j5j2-9v57-2vfw)). Check
@@ -221,8 +227,7 @@ the moment the developer opens the app, rather than the first time they need it.
    that collection, renames it with a `_private` suffix, and copies `bruno/.env` into it — see
    `bruno/README.md`.
 
-On Windows, run this from Git Bash, or invoke `bash` explicitly from PowerShell/cmd.exe — the
-script won't run directly from either.
+On Windows, run this in Git Bash.
 
 ## 7. Start backing services
 
@@ -260,12 +265,12 @@ Skip this step if `--skip-app` was passed.
 
 | App | Condition | Command |
 |---|---|---|
-| Server | `apps/server/pyproject.toml` exists | `python apps/server/dev_run.py` (serves `http://127.0.0.1:8000`; check `/health_check`) |
+| Server | `apps/server/compose.yaml` exists | `docker compose -f apps/server/compose.yaml up -d --build --wait`, which copies in the `api/gen` that step 5 generated (serves `http://127.0.0.1:8000`; check `/health_check`). Needs the Docker daemon running; if it can't run, `python apps/server/dev_run.py` is the native fallback |
 | Web | `apps/web/package.json` exists | not yet -- report not applicable |
 | Desktop | `apps/desktop/backend/pyproject.toml` exists | `python apps/desktop/dev_run.py` |
 
-`python apps/desktop/dev_run.py --dev` and `python apps/server/dev_run.py --dev` are the
-hot-reload alternatives for active development, not needed for this verification run. Report the URL for the web/server apps once they exist; the
+`python apps/desktop/dev_run.py --dev` and `docker compose -f apps/server/compose.yaml up --watch`
+are the hot-reload alternatives for active development, not needed for this verification run. Report the URL for the web/server apps once they exist; the
 desktop app opens its own native window. Leave everything running.
 
 ## 10. Open the documentation

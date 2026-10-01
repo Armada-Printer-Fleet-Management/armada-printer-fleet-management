@@ -25,6 +25,8 @@ if [ ! -d "$SRC_DIR" ]; then
     exit 1
 fi
 
+# private/ is gitignored, so a fresh clone does not have it yet.
+mkdir -p "$SCRIPT_DIR/private"
 rm -rf "$DEST_DIR"
 cp -r "$SRC_DIR" "$DEST_DIR"
 

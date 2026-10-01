@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import shutil
 import subprocess
@@ -32,6 +33,8 @@ def main() -> None:
     cmd = [resolve("uv"), "run", "uvicorn", "api.main:app"]
     if args.dev:
         cmd += ["--reload", "--reload-dir", "api"]
+
+    os.environ.setdefault("LOG_FORMAT", "console")
 
     try:
         sys.exit(subprocess.run(cmd, cwd=ROOT).returncode)

@@ -28,9 +28,7 @@ to create `bruno/.env` if you don't have one yet — Bruno itself is optional, b
 copies are there and ready the moment you install it. Come back here when you need to refresh a
 collection after `public/` changes, or if you're setting this up by hand.
 
-> **Windows:** `copy_collection.sh` is a Bash script, and Command Prompt can't run it — `./` and
-> `.sh` files aren't things cmd.exe understands. Run it from **Git Bash**, or from
-> cmd.exe/PowerShell with `bash copy_collection.sh <collection-name>`.
+> **Windows:** `copy_collection.sh` is a Bash script, so run it in **Git Bash**.
 
 1. Copy the collection you want out of `public/` and into `private/`:
 
