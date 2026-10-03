@@ -4,18 +4,21 @@
   "type": "module",
   "packageManager": "pnpm@12.3.4",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "vite --configLoader runner",
+    "build": "vite build --configLoader runner",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest"
   },
   "dependencies": {
+    "@armada/ui-kit": "workspace:*",
+    "@armada/organization-info": "workspace:*",
     "react": "^19",
     "react-dom": "^19",
     "@bufbuild/protobuf": "^2"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4",
     "@bufbuild/protoc-gen-es": "^2",
     "@eslint/js": "^9",
     "@types/react": "^19",
@@ -23,6 +26,7 @@
     "@vitejs/plugin-react": "^4",
     "eslint": "^9",
     "typescript": "^5",
+    "tailwindcss": "^4",
     "typescript-eslint": "^8",
     "vite": "^6",
     "vitest": "^5"

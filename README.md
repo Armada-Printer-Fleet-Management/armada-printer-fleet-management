@@ -27,6 +27,10 @@ hooks, prepares configuration, and opens the documentation.
 Everything it does is also written out in `.claude/skills/onboarding/SKILL.md` if you would
 rather follow it by hand.
 
+JavaScript dependencies are installed once from the repository root with `pnpm install`; the
+root workspace links `apps/web`, `apps/desktop/frontend`, and shared packages such as
+`packages/ui-kit`.
+
 ## Documentation
 
 | Where                  | What                                                                  |
