@@ -3,6 +3,7 @@ if [ -f apps/desktop/backend/pyproject.toml ]; then
   require "backend: generate" buf python scripts/generate_proto.py buf.gen.desktop_python.yaml
   require "backend: ruff" uv run_in apps/desktop/backend uv run ruff check .
   require "backend: pyright" uv run_in apps/desktop/backend uv run python -m pyright
+  require "backend: pytest" uv run_in apps/desktop/backend uv run pytest -q
 else
   NA+=("desktop-backend")
 fi
@@ -19,6 +20,7 @@ if [ -f apps/desktop/frontend/package.json ]; then
       'PATH="$(pwd)/apps/desktop/frontend/node_modules/.bin:$PATH" python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules'
     require "frontend: tsc" pnpm pnpm --dir apps/desktop/frontend exec tsc --noEmit
     require "frontend: eslint" pnpm pnpm --dir apps/desktop/frontend exec eslint .
+    require "frontend: vitest" pnpm pnpm --dir apps/desktop/frontend exec vitest run
   fi
 else
   NA+=("desktop-frontend")
