@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{baseUrl}}/health_check"
+  url: "{{baseUrl}}/api/health_check"
   params:
     - name: full
       value: "true"
