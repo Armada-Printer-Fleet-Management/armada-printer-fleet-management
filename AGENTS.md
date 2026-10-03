@@ -10,6 +10,20 @@ Skills in `.claude/skills/` are the source for the Copilot skill and prompt file
 `.github/skills/` and `.github/prompts/`, which `scripts/sync_agent_config.py` generates. Edit
 the skill, never the generated file.
 
+### Adding agent instructions for one directory
+
+This is the standard for agent files below the root. Instructions that apply to only part of the
+tree, such as one app, go in an `AGENTS.md` in that directory. `apps/desktop/AGENTS.md` is the
+reference example.
+
+1. Write `<dir>/AGENTS.md`. Keep it to what is specific to that directory; this root file still
+   applies in full, so do not repeat it.
+2. Run `python scripts/sync_agent_config.py`. It generates the `<dir>/CLAUDE.md` import stub
+   that Claude Code needs. Never write or edit that stub by hand.
+3. Commit both. CI runs the script with `--check` and fails if a stub is missing or stale.
+
+If the directory also has human-facing documentation under `docs/`, update both in the same change.
+
 > **Finding why code is the way it is.** Decisions are not recorded in this repository. Every
 > commit carries the ticket it was made under, so the history is the index: `git log` or
 > `git blame` the code, read the commit message, take the ticket ID from its final line, and
