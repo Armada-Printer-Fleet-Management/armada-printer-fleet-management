@@ -92,11 +92,15 @@ Code generation runs through `uv run` because the ConnectRPC code generator,
 The script stops with a pointer to `/onboarding` if `uv` is missing or `api/gen` has not been
 generated. Both ways use port 8000, so run one at a time.
 
+Every route, REST and ConnectRPC, is served under `/api`, so Connect clients use
+`http://<host>:8000/api` as their base URL. Mount new RPC services with `mount_rpc` in
+`api/main.py`; a plain `app.mount` under the prefix returns 404.
+
 Health is exposed twice, from the same logic in `api/common/health.py`:
 
-- `GET /health_check` (REST) returns plain `pass`/`degraded`/`fail` text; `?full=true` returns JSON
+- `GET /api/health_check` (REST) returns plain `pass`/`degraded`/`fail` text; `?full=true` returns JSON
   with the version, and `?check_dependencies=true` runs the dependency checks. Only `fail` is a 503.
-- `POST /server.v1.HealthCheckService/HealthCheck` (ConnectRPC) takes the same two options in its
+- `POST /api/server.v1.HealthCheckService/HealthCheck` (ConnectRPC) takes the same two options in its
   request message and reports `STATUS_PASS`/`STATUS_DEGRADED`/`STATUS_FAIL` in the response.
 
 A failing dependency fails the service unless its `DependencyCheck` is marked `critical=False`,
@@ -146,7 +150,7 @@ log.info("printer claimed", printer_id=printer_id, queue=queue_name)
 ```
 
 Every line logged while a request is handled carries `request_id`, `method` and `path` (for
-ConnectRPC, the path is the procedure, e.g. `/server.v1.HealthCheckService/HealthCheck`).
+ConnectRPC, the path is the procedure, e.g. `/api/server.v1.HealthCheckService/HealthCheck`).
 `RequestContextMiddleware` binds them, and logs one `request finished` line per request with its
 `status` and `duration_ms`, in place of uvicorn's access log. The request ID is a fresh UUID
 generated per request, used only for logging: it is not read from or returned in any header.

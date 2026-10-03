@@ -39,5 +39,5 @@ EXPOSE 8000
 # The same check as deploy.Dockerfile, run more often so the stack reports ready sooner. The slim
 # image has no curl.
 HEALTHCHECK --interval=5s --timeout=3s --retries=10 \
-    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health_check')"]
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health_check')"]
 CMD ["uv", "run", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "api"]

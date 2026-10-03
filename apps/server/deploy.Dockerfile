@@ -87,5 +87,5 @@ EXPOSE 8000
 # Declared in the image, not only in compose: deployment tooling reads it to decide whether an
 # update came up healthy. The slim image has no curl.
 HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=3 \
-    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health_check')"]
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health_check')"]
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

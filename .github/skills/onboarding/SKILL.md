@@ -279,7 +279,7 @@ Skip this step if `--skip-app` was passed.
 
 | App | Condition | Command |
 |---|---|---|
-| Server | `infra/dev/compose.yaml` exists | Already running from step 7: `http://127.0.0.1:8000`; check `/health_check`. If Docker can't run, `python apps/server/dev_run.py` is the native fallback |
+| Server | `infra/dev/compose.yaml` exists | Already running from step 7: `http://127.0.0.1:8000`; check `/api/health_check`. If Docker can't run, `python apps/server/dev_run.py` is the native fallback |
 | Web | `infra/dev/compose.yaml` exists | Already running from step 7: `http://127.0.0.1:5174` |
 | Desktop | `apps/desktop/backend/pyproject.toml` exists | `python apps/desktop/dev_run.py` |
 

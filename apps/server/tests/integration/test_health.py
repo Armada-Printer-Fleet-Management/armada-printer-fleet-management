@@ -51,14 +51,14 @@ def _use_checks(checks: Mapping[str, DependencyCheck]) -> None:
 
 
 def test_health_defaults_to_plain_pass(client: TestClient) -> None:
-    response = client.get("/health_check")
+    response = client.get("/api/health_check")
 
     assert response.status_code == 200
     assert response.text == "pass"
 
 
 def test_health_full_reports_version_without_dependencies(client: TestClient) -> None:
-    response = client.get("/health_check", params={"full": True})
+    response = client.get("/api/health_check", params={"full": True})
 
     assert response.status_code == 200
     assert response.json() == {"status": "pass", "version": _expected_version()}
@@ -67,7 +67,7 @@ def test_health_full_reports_version_without_dependencies(client: TestClient) ->
 def test_health_full_with_dependencies_reports_each(client: TestClient) -> None:
     _use_checks({"database": _passing, "cache": _passing})
 
-    response = client.get("/health_check", params={"full": True, "check_dependencies": True})
+    response = client.get("/api/health_check", params={"full": True, "check_dependencies": True})
 
     assert response.status_code == 200
     assert response.json()["dependencies"] == {"database": "pass", "cache": "pass"}
@@ -76,7 +76,7 @@ def test_health_full_with_dependencies_reports_each(client: TestClient) -> None:
 def test_health_failing_dependency_returns_503_plain(client: TestClient) -> None:
     _use_checks({"database": _passing, "cache": _failing})
 
-    response = client.get("/health_check", params={"check_dependencies": True})
+    response = client.get("/api/health_check", params={"check_dependencies": True})
 
     assert response.status_code == 503
     assert response.text == "fail"
@@ -85,7 +85,7 @@ def test_health_failing_dependency_returns_503_plain(client: TestClient) -> None
 def test_health_raising_dependency_is_reported_as_fail(client: TestClient) -> None:
     _use_checks({"database": _raising})
 
-    response = client.get("/health_check", params={"full": True, "check_dependencies": True})
+    response = client.get("/api/health_check", params={"full": True, "check_dependencies": True})
 
     assert response.status_code == 503
     assert response.json()["status"] == "fail"
@@ -96,7 +96,7 @@ def test_health_raising_dependency_is_reported_as_fail(client: TestClient) -> No
 def test_health_failing_optional_dependency_is_degraded(client: TestClient) -> None:
     _use_checks({"database": _passing, "metrics": _optional_failing})
 
-    response = client.get("/health_check", params={"full": True, "check_dependencies": True})
+    response = client.get("/api/health_check", params={"full": True, "check_dependencies": True})
 
     assert response.status_code == 200
     assert response.json()["status"] == "degraded"
@@ -106,7 +106,7 @@ def test_health_failing_optional_dependency_is_degraded(client: TestClient) -> N
 def test_health_degraded_plain(client: TestClient) -> None:
     _use_checks({"metrics": _optional_failing})
 
-    response = client.get("/health_check", params={"check_dependencies": True})
+    response = client.get("/api/health_check", params={"check_dependencies": True})
 
     assert response.status_code == 200
     assert response.text == "degraded"
@@ -115,7 +115,7 @@ def test_health_degraded_plain(client: TestClient) -> None:
 def test_health_raising_optional_dependency_is_degraded(client: TestClient) -> None:
     _use_checks({"metrics": _optional_raising})
 
-    response = client.get("/health_check", params={"check_dependencies": True})
+    response = client.get("/api/health_check", params={"check_dependencies": True})
 
     assert response.status_code == 200
     assert response.text == "degraded"
@@ -124,7 +124,7 @@ def test_health_raising_optional_dependency_is_degraded(client: TestClient) -> N
 def test_health_critical_failure_outranks_degraded(client: TestClient) -> None:
     _use_checks({"database": _failing, "metrics": _optional_failing})
 
-    response = client.get("/health_check", params={"check_dependencies": True})
+    response = client.get("/api/health_check", params={"check_dependencies": True})
 
     assert response.status_code == 503
     assert response.text == "fail"
@@ -133,7 +133,7 @@ def test_health_critical_failure_outranks_degraded(client: TestClient) -> None:
 def test_health_skips_dependencies_unless_asked(client: TestClient) -> None:
     _use_checks({"database": _failing})
 
-    response = client.get("/health_check")
+    response = client.get("/api/health_check")
 
     assert response.status_code == 200
 
@@ -146,7 +146,7 @@ def _rpc_client(checks: Mapping[str, DependencyCheck]) -> TestClient:
 
 
 def test_rpc_is_mounted_on_the_app(client: TestClient) -> None:
-    response = client.post(_RPC_PATH, json={})
+    response = client.post("/api" + _RPC_PATH, json={})
 
     assert response.status_code == 200
     assert response.json() == {"status": "STATUS_PASS"}
