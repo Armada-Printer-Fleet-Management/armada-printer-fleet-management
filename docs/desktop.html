@@ -44,11 +44,204 @@
 
         <p>
           Both sides depend on <code>packages/proto/</code> for their message
-          shapes, but nothing else is shared between them — no root workspace,
-          no linked dependency graph. Each side has its own manifest and
-          lockfile; the only thing tying them together is generated code
-          produced from the same <code>.proto</code> source.
+          shapes, but they share no dependency graph: the backend is a uv
+          project and the frontend a pnpm project, each with its own manifest.
+          The only thing tying them together is generated code produced from the
+          same <code>.proto</code> source.
         </p>
+
+        <h2 id="tech-stack">Tech stack</h2>
+
+        <p>
+          Version ranges are the ones declared in each manifest
+          (<code>backend/pyproject.toml</code>,
+          <code>frontend/package.json</code>); the lockfiles hold the exact
+          versions installed.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Layer</th>
+                <th>Technology</th>
+                <th>Version</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td rowspan="5">Backend</td>
+                <td>Python</td>
+                <td><code>&gt;=3.13</code></td>
+                <td>The host process</td>
+              </tr>
+              <tr>
+                <td><a href="https://github.com/r0x0r/pywebview">pywebview</a></td>
+                <td><code>&gt;=6.2,&lt;7</code></td>
+                <td>Native window, WebView2 renderer, and the JS↔Python bridge</td>
+              </tr>
+              <tr>
+                <td>protobuf</td>
+                <td><code>&gt;=7,&lt;8</code></td>
+                <td>Runtime for the generated <code>_pb2</code> classes</td>
+              </tr>
+              <tr>
+                <td>packaging</td>
+                <td><code>&gt;=24</code></td>
+                <td>Parses the backend's own version string (PEP 440)</td>
+              </tr>
+              <tr>
+                <td>uv, hatchling</td>
+                <td>—</td>
+                <td>Environment and lockfile; wheel build of the <code>armada_*</code> packages</td>
+              </tr>
+              <tr>
+                <td rowspan="5">Frontend</td>
+                <td>React</td>
+                <td><code>^19</code></td>
+                <td>The UI</td>
+              </tr>
+              <tr>
+                <td>TypeScript</td>
+                <td><code>^5</code></td>
+                <td><code>strict</code> plus <code>noUncheckedIndexedAccess</code></td>
+              </tr>
+              <tr>
+                <td>Vite</td>
+                <td><code>^6</code></td>
+                <td>Dev server on <code>:5173</code> and the static build; <code>base: "./"</code> so it loads over <code>file://</code></td>
+              </tr>
+              <tr>
+                <td>@bufbuild/protobuf</td>
+                <td><code>^2</code></td>
+                <td>Runtime for the generated TypeScript; <code>fromJson</code> decodes bridge replies</td>
+              </tr>
+              <tr>
+                <td>pnpm, Node</td>
+                <td><code>12.3.4</code>, 22 in CI</td>
+                <td>Package manager, pinned in <code>packageManager</code></td>
+              </tr>
+              <tr>
+                <td rowspan="3">Contract</td>
+                <td>buf</td>
+                <td>—</td>
+                <td>Runs the two codegen templates</td>
+              </tr>
+              <tr>
+                <td>protoc</td>
+                <td>matches protobuf 7's line</td>
+                <td>Python codegen (<code>protoc_builtin</code>)</td>
+              </tr>
+              <tr>
+                <td>protoc-gen-es</td>
+                <td><code>^2</code></td>
+                <td>TypeScript codegen, run from <code>node_modules/.bin</code></td>
+              </tr>
+              <tr>
+                <td rowspan="2">Quality</td>
+                <td>ruff, pyright</td>
+                <td>—</td>
+                <td>Lint/format and <code>strict</code> type checking for the backend</td>
+              </tr>
+              <tr>
+                <td>ESLint, typescript-eslint</td>
+                <td><code>^9</code>, <code>^8</code></td>
+                <td>Lint for the frontend</td>
+              </tr>
+              <tr>
+                <td rowspan="3">Packaging</td>
+                <td>PyInstaller</td>
+                <td><code>&gt;=6,&lt;7</code></td>
+                <td>Windows "onedir" bundle (the <code>build</code> dependency group)</td>
+              </tr>
+              <tr>
+                <td>NSIS</td>
+                <td><code>3.12</code>, hash-pinned</td>
+                <td>Setup wizard, see <a href="#installer">Installer</a></td>
+              </tr>
+              <tr>
+                <td>WebView2 Runtime</td>
+                <td>—</td>
+                <td>Required on the target machine; never bundled</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Shared code from <code>packages/</code></h3>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Package</th>
+                <th>Used by</th>
+                <th>How it is wired in</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>packages/proto/</code></td>
+                <td>both</td>
+                <td>Generated into <code>backend/src/armada_gen/</code> and <code>frontend/src/gen/</code></td>
+              </tr>
+              <tr>
+                <td><code>packages/proto/utils</code> (<code>proto-utils</code>)</td>
+                <td>backend</td>
+                <td>uv path dependency; provides <code>message_to_dict</code></td>
+              </tr>
+              <tr>
+                <td><code>packages/organization-info/</code></td>
+                <td>both</td>
+                <td>uv path dependency in the backend; imported as TypeScript source by the frontend</td>
+              </tr>
+              <tr>
+                <td><code>packages/ui-kit/</code></td>
+                <td>frontend</td>
+                <td>Imported as TypeScript source; supplies <code>AboutBox</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          The shared packages sit outside the frontend project, so
+          <code>vite.config.ts</code> dedupes <code>react</code>,
+          <code>react-dom</code> and <code>@bufbuild/protobuf</code>. Without
+          that, a shared file could load a second copy of them.
+        </p>
+
+        <h3>Backend packages</h3>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Package</th>
+                <th>Owns</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>armada_app</code></td>
+                <td>The entry point (<code>desktop-backend</code>, <code>--target</code>) and window lifecycle</td>
+              </tr>
+              <tr>
+                <td><code>armada_ipc</code></td>
+                <td>The <code>Ipc</code> root, the <code>IpcModule</code> base, and one module per capability</td>
+              </tr>
+              <tr>
+                <td><code>armada_runtime</code></td>
+                <td><code>Environment</code> (dev versus packaged paths) and packaging names</td>
+              </tr>
+              <tr>
+                <td><code>armada_gen</code></td>
+                <td>Generated protobuf code. Gitignored, never hand-edited</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <h2>System architecture</h2>
 
@@ -88,13 +281,13 @@
               stroke="currentColor"
               class="label-muted"
             />
-            <text x="40" y="112" class="label-muted">window.py</text>
+            <text x="40" y="112" class="label-muted">armada_app/window.py</text>
             <text x="52" y="130" font-size="0.72rem">
               window lifecycle, js_api=Ipc()
             </text>
-            <text x="40" y="155" class="label-muted">ipc/</text>
+            <text x="40" y="155" class="label-muted">armada_ipc/</text>
             <text x="52" y="173" font-size="0.72rem">
-              IpcModule, application_information.py
+              Ipc, IpcModule, application_info.py
             </text>
 
             <rect x="360" y="30" width="260" height="170" rx="8" class="box" />
@@ -114,11 +307,11 @@
             />
             <text x="380" y="112" class="label-muted">App.tsx</text>
             <text x="392" y="130" font-size="0.72rem">
-              renders the version once fetched
+              About box, version once fetched
             </text>
-            <text x="380" y="155" class="label-muted">ipc/</text>
+            <text x="380" y="155" class="label-muted">src/ipc/</text>
             <text x="392" y="173" font-size="0.72rem">
-              pywebview.ts, application-information.ts
+              pywebview.ts, application-info.ts
             </text>
 
             <line
@@ -146,7 +339,7 @@
           pywebview walks nested class instances on that object automatically
           (verified directly against pywebview 6.2.1), so each concrete module
           becomes its own namespace in JS —
-          <code>window.pywebview.api .application_information.version()</code> —
+          <code>window.pywebview.api.application_info.version()</code> —
           instead of one flat bag of methods on the root object. Adding a
           capability means adding one attribute to <code>Ipc</code>, never
           restructuring it.
@@ -197,9 +390,9 @@
               y="53"
               text-anchor="middle"
               class="label-title"
-              font-size="0.82rem"
+              font-size="0.72rem"
             >
-              application_information.proto
+              application_info.proto, organization_info.proto
             </text>
 
             <line
@@ -279,7 +472,7 @@
             />
 
             <text x="150" y="268" text-anchor="middle" font-size="0.7rem">
-              backend/src/backend/gen/
+              backend/src/armada_gen/
             </text>
             <text x="490" y="268" text-anchor="middle" font-size="0.7rem">
               frontend/src/gen/
@@ -309,12 +502,7 @@
           Both templates run fully offline: <code>protoc_builtin</code> uses the
           real <code>protoc</code> compiler installed locally (an onboarding
           prerequisite, like <code>buf</code> itself), and
-          <code>local: protoc-gen-es</code> uses the plugin binary
-          <code>pnpm install</code> puts in
-          <code>apps/desktop/frontend/node_modules/.bin/</code>. Neither needs
-          network access or the Buf Schema Registry. Two templates rather than
-          one shared <code>buf.gen.yaml</code>, so a job that only sets up one
-          language never has to also satisfy the other's plugin.
+          <code>local: protoc-gen-es</code>.
         </p>
 
         <h2>A version request, end to end</h2>
@@ -346,7 +534,7 @@
             <text x="320" y="20" text-anchor="middle" class="label-title" font-size="0.76rem">window.pywebview.api</text>
             <line x1="320" y1="30" x2="320" y2="280" stroke="currentColor" class="label-muted" stroke-dasharray="3 3"/>
 
-            <text x="545" y="20" text-anchor="middle" class="label-title" font-size="0.76rem">ApplicationInformation</text>
+            <text x="545" y="20" text-anchor="middle" class="label-title" font-size="0.76rem">ApplicationInfo</text>
             <line x1="545" y1="30" x2="545" y2="280" stroke="currentColor" class="label-muted" stroke-dasharray="3 3"/>
 
             <!-- 1: mount -->
@@ -358,12 +546,12 @@
             <line x1="75" y1="90" x2="320" y2="90" class="flow" marker-end="url(#arrow-3)"/>
 
             <!-- 3: nested namespace call -->
-            <text x="432" y="118" text-anchor="middle" font-size="0.64rem">.application_information.version()</text>
+            <text x="432" y="118" text-anchor="middle" font-size="0.64rem">.application_info.version()</text>
             <line x1="320" y1="125" x2="545" y2="125" class="flow" marker-end="url(#arrow-3)"/>
             <text x="432" y="140" text-anchor="middle" class="label-muted" font-size="0.6rem">crosses the process boundary</text>
 
-            <!-- notes on the ApplicationInformation lane, right-anchored so long text grows leftward and never clips -->
-            <text x="535" y="163" text-anchor="end" font-size="0.62rem">parse pyproject.toml version</text>
+            <!-- notes on the ApplicationInfo lane, right-anchored so long text grows leftward and never clips -->
+            <text x="535" y="163" text-anchor="end" font-size="0.62rem">read installed "backend" version</text>
             <text x="535" y="177" text-anchor="end" font-size="0.62rem">build VersionInfo message</text>
             <text x="535" y="191" text-anchor="end" font-size="0.62rem">message_to_dict(info)</text>
 
@@ -378,14 +566,6 @@
             <text x="80" y="272" font-size="0.62rem">fromJson(VersionInfoSchema, raw) → render</text>
           </svg>
         </div>
-
-        <h2>CI and git hooks</h2>
-
-        <p>
-          Both follow the same dispatcher-delegates-to-per-service pattern, so
-          <code>apps/server</code> and <code>apps/web</code> add their own
-          siblings later without touching what's here.
-        </p>
 
         <div class="table-wrap">
           <table>
@@ -432,8 +612,8 @@
                 <td>
                   <code>pnpm build</code> → the backend loads
                   <code>dist/index.html</code> via <code>file://</code>. No dev
-                  server process — the closest thing to how a packaged build
-                  will eventually load its assets.
+                  server process — the same way the packaged build loads its
+                  assets (see <a href="#packaging">Packaging</a>).
                 </td>
               </tr>
               <tr>
@@ -450,17 +630,252 @@
           </table>
         </div>
 
+        <h2 id="packaging">Packaging</h2>
+
+        <p>
+          <code>python apps/desktop/build_run.py</code> turns the two halves
+          into one Windows program: it runs <code>pnpm build</code> for the
+          frontend, then PyInstaller packages the backend and bundles that
+          frontend build with it. The result is a folder,
+          <code>apps/desktop/backend/dist/&lt;title&gt;/</code>, holding
+          <code>&lt;title&gt;.exe</code> and an <code>_internal/</code> folder
+          beside it (PyInstaller's "onedir" layout). Windows only. The script
+          prints collapsible groups when it runs inside GitHub Actions and plain
+          step banners in a terminal.
+        </p>
+
+        <h3>Development versus packaged: <code>Environment</code></h3>
+
+        <p>
+          The backend runs in two situations that look the same to the user but not to the filesystem:
+          from source (<code>uv run</code>, <code>dev_run.py</code>), where
+          files live in the repo tree, and from the packaged
+          <code>.exe</code>, where files live in the folder PyInstaller unpacks
+          them into. <code>Environment.is_dev</code> tells them apart.
+        </p>
+
+        <div class="diagram">
+          <svg
+            viewBox="0 0 640 250"
+            width="100%"
+            role="img"
+            aria-label="Environment resolving the frontend build path from source and from the packaged app"
+          >
+            <defs>
+              <marker
+                id="arrow-4"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M0,0 L10,5 L0,10 z" class="arrowhead" />
+              </marker>
+            </defs>
+
+            <rect x="170" y="10" width="300" height="46" rx="8" class="box-accent" />
+            <text x="320" y="30" text-anchor="middle" class="label-title" font-size="0.82rem">
+              Environment.default_frontend_target()
+            </text>
+            <text x="320" y="47" text-anchor="middle" class="label-title" font-size="0.7rem">
+              resource_path("frontend", "dist", "index.html")
+            </text>
+
+            <line x1="270" y1="56" x2="150" y2="95" class="flow" marker-end="url(#arrow-4)" />
+            <line x1="370" y1="56" x2="490" y2="95" class="flow" marker-end="url(#arrow-4)" />
+
+            <rect x="10" y="98" width="280" height="140" rx="8" class="box" />
+            <text x="150" y="120" text-anchor="middle" class="label-title" font-size="0.8rem">
+              from source
+            </text>
+            <text x="150" y="138" text-anchor="middle" class="label-muted" font-size="0.68rem">
+              is_dev = true
+            </text>
+            <text x="24" y="166" class="label-muted" font-size="0.66rem">resource_root()</text>
+            <text x="36" y="182" font-size="0.68rem">apps/desktop/</text>
+            <text x="24" y="206" class="label-muted" font-size="0.66rem">loads</text>
+            <text x="36" y="222" font-size="0.66rem">apps/desktop/frontend/dist/index.html</text>
+
+            <rect x="350" y="98" width="280" height="140" rx="8" class="box" />
+            <text x="490" y="120" text-anchor="middle" class="label-title" font-size="0.8rem">
+              packaged
+            </text>
+            <text x="490" y="138" text-anchor="middle" class="label-muted" font-size="0.68rem">
+              is_dev = false
+            </text>
+            <text x="364" y="166" class="label-muted" font-size="0.66rem">resource_root()</text>
+            <text x="376" y="182" font-size="0.68rem">the bundle's _internal/ folder</text>
+            <text x="364" y="206" class="label-muted" font-size="0.66rem">loads</text>
+            <text x="376" y="222" font-size="0.66rem">_internal/frontend/dist/index.html</text>
+          </svg>
+        </div>
+
+        <h3>The spec file</h3>
+
+        <p>
+          PyInstaller bundles what it can see by reading the code's imports.
+          <code>apps/desktop/backend/desktop_backend.spec</code> is where anything
+          it cannot see gets linked, and it is the file to change when a feature
+          works from source but not from the <code>.exe</code>. Type checks and
+          tests will not catch these, so run the build and launch the program
+          after changing backend dependencies or files read at runtime.
+        </p>
+
+
+        <p>
+          PyInstaller lists what it could not resolve in
+          <code>backend/build/desktop_backend/warn-desktop_backend.txt</code>;
+          most entries are harmless conditional imports, so look for the package
+          you just added. Set <code>console=True</code> in the spec to see
+          start-up errors in a terminal.
+        </p>
+
+        
+        <h3>Getting a build</h3>
+
+        <ol>
+          <li>
+            <strong>On your machine:</strong>
+            <code>python apps/desktop/build_run.py</code>.
+          </li>
+          <li>
+            <strong>Exactly as CI runs it, without pushing:</strong> on a Windows
+            machine,
+            <code
+              >act workflow_dispatch -W .github/workflows/desktop.ci.yml -j
+              package -P windows-latest=-self-hosted</code
+            >
+            runs the real <code>package</code> job on your own machine instead of
+            in a Linux container. <code>act</code> also runs the job's
+            <code>needs</code> (<code>backend</code> and <code>frontend</code>)
+            unless you point it at a copy of the workflow without them. It
+            cannot run the final artifact upload (it has no artifact service),
+            so that step fails at the very end; the executable it built is
+            under <code>~/.cache/act/</code>.
+          </li>
+          <li>
+            <strong>A build of a pull request, from GitHub, without merging:</strong>
+            the <code>package</code> job never runs on pull requests, but it can
+            be started by hand. Open the Actions tab, choose
+            <strong>CI (desktop)</strong>, press <strong>Run workflow</strong>
+            and pick the PR's branch. The build appears on that run as the
+            <code>desktop-windows</code> artifact.
+          </li>
+          <li>
+            <strong>Automatically:</strong> every push to <code>main</code> or
+            <code>release/**</code> builds and uploads the same artifact.
+          </li>
+        </ol>
+
+        <h2 id="installer">Installer</h2>
+
+        <p>
+          <code>python apps/desktop/installer_run.py</code> runs the build above,
+          then wraps the bundle in a setup wizard with
+          <a href="https://nsis.sourceforge.io/">NSIS</a>, a free, zlib-licensed
+          installer compiler. The result is
+          <code>apps/desktop/installer/dist/&lt;title&gt;-Setup-&lt;version&gt;.exe</code>.
+          <code>--skip-build</code> reuses an existing bundle.
+          <code>--smoke-test</code> installs the result silently for the current
+          user, checks that the app landed, and uninstalls it again.
+        </p>
+
+        <div class="diagram">
+          <svg
+            viewBox="0 0 640 120"
+            width="100%"
+            role="img"
+            aria-label="build_run.py produces the bundle, installer_run.py passes it with names from organization.json to makensis, which writes the setup program"
+          >
+            <defs>
+              <marker
+                id="arrow-5"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M0,0 L10,5 L0,10 z" class="arrowhead" />
+              </marker>
+            </defs>
+
+            <rect x="10" y="10" width="140" height="46" rx="8" class="box" />
+            <text x="80" y="30" text-anchor="middle" class="label-title" font-size="0.78rem">build_run.py</text>
+            <text x="80" y="47" text-anchor="middle" class="label-muted" font-size="0.64rem">PyInstaller bundle</text>
+
+            <rect x="10" y="66" width="140" height="46" rx="8" class="box" />
+            <text x="80" y="86" text-anchor="middle" class="label-title" font-size="0.78rem">organization.json</text>
+            <text x="80" y="103" text-anchor="middle" class="label-muted" font-size="0.64rem">+ backend version</text>
+
+            <line x1="150" y1="33" x2="206" y2="52" class="flow" marker-end="url(#arrow-5)" />
+            <line x1="150" y1="89" x2="206" y2="70" class="flow" marker-end="url(#arrow-5)" />
+
+            <rect x="210" y="38" width="170" height="46" rx="8" class="box-accent" />
+            <text x="295" y="58" text-anchor="middle" class="label-title" font-size="0.78rem">makensis</text>
+            <text x="295" y="75" text-anchor="middle" class="label-title" font-size="0.64rem">installer.nsi + /D names</text>
+
+            <line x1="380" y1="61" x2="436" y2="61" class="flow" marker-end="url(#arrow-5)" />
+
+            <rect x="440" y="38" width="190" height="46" rx="8" class="box" />
+            <text x="535" y="58" text-anchor="middle" class="label-title" font-size="0.78rem">&lt;title&gt;-Setup-&lt;version&gt;.exe</text>
+            <text x="535" y="75" text-anchor="middle" class="label-muted" font-size="0.64rem">installer/dist/</text>
+          </svg>
+        </div>
+
+        <p>
+          <code>installer/installer.nsi</code> names nothing itself. Every name,
+          the version and the paths arrive as <code>/D</code> defines from
+          <code>installer_run.py</code>, which reads them through
+          <code>armada_runtime.packaging.installer_info()</code>. It copies the whole
+          bundle, so new files in it need no installer change.
+        </p>
+
+        
+        <p>
+          The uninstaller deletes only the exe, <code>_internal/</code> and
+          itself, so an install into a shared folder cannot take unrelated files
+          with it. If the bundle ever gains another top-level entry, add it to the
+          <code>Uninstall</code> section.
+        </p>
+
+        <h3>NSIS itself</h3>
+
+        <p>
+          <code>python scripts/install_nsis.py</code> installs NSIS on a
+          developer's machine and in CI alike. It downloads the official setup
+          program from SourceForge, refuses it unless its SHA-256 matches the
+          value pinned in the script, and installs it silently. On a developer's
+          machine Windows shows one administrator prompt. The setup program is not
+          code-signed and SourceForge publishes no checksums, so the pinned hash
+          was checked against winget's reviewed <code>NSIS.NSIS</code> manifest.
+          To move to a new version, change <code>VERSION</code> and
+          <code>SHA256</code> together, and take the hash from a source other than
+          your own download.
+        </p>
+
+        <p>
+          In CI the <code>package</code> job runs the installer build with
+          <code>--smoke-test</code>, and uploads the result as the
+          <code>desktop-windows-installer</code> artifact beside
+          <code>desktop-windows</code>.
+        </p>
+
         <section class="ai-statement">
           <h2>AI Use Statement</h2>
           <dl>
             <dt>Tool</dt>
-            <dd>Claude Code (Sonnet 5)</dd>
+            <dd>Claude Code (Sonnet 5, Opus 5.5)</dd>
             <dt>Mode</dt>
             <dd>Local</dd>
             <dt>Output</dt>
             <dd>
-              drafted this page, including the diagrams, from the implementation
-              built in this session
+              drafted this page, including the diagrams, from the implementation;
+              later added the tech stack section and brought names in line with
+              the current code
             </dd>
             <dt>Data</dt>
             <dd>none</dd>
