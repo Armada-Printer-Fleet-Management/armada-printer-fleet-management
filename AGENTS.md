@@ -259,6 +259,8 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
 | Desktop Python deps           | `uv sync --project apps/desktop/backend`                              |
 | Desktop JS deps                | `pnpm install` (in `apps/desktop/frontend`)                          |
+| Desktop backend tests          | `uv run --directory apps/desktop/backend pytest`                     |
+| Desktop frontend tests         | `pnpm --dir apps/desktop/frontend exec vitest run`                   |
 | Generate proto code            | `python scripts/generate_proto.py <template> [--node-modules <dir>]` |
 | Generate server proto code     | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` |
 | Generate desktop Python proto  | `python scripts/generate_proto.py buf.gen.desktop_python.yaml`       |

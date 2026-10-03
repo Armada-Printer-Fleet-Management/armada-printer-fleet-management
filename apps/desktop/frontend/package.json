@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest"
   },
   "dependencies": {
     "react": "^19",
@@ -23,6 +24,7 @@
     "eslint": "^9",
     "typescript": "^5",
     "typescript-eslint": "^8",
-    "vite": "^6"
+    "vite": "^6",
+    "vitest": "^5"
   }
 }

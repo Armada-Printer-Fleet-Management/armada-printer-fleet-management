@@ -250,11 +250,13 @@ Run whichever apply, and report results honestly — including failures:
 
 ```
 uv run --directory apps/server pytest -q
+uv run --directory apps/desktop/backend pytest -q
+pnpm --dir apps/desktop/frontend exec vitest run
 pnpm -r test --run
 ```
 
-The second command applies when `apps/server/pyproject.toml` exists; the root-level `uv run pytest`
-does not reach the server, which has its own project.
+The server and desktop each have their own project, which the root-level `uv run pytest` does not
+reach. The desktop tests import generated code, so step 5 must have run.
 
 A fresh clone should have passing tests. If they fail, that is a real problem worth surfacing, not
 something to skip past.
