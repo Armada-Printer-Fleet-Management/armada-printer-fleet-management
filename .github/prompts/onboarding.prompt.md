@@ -264,7 +264,7 @@ Skip this step if `--skip-app` was passed.
 
 | App | Condition | Command |
 |---|---|---|
-| Server | `apps/server/compose.yaml` exists | `docker compose -f apps/server/compose.yaml up -d --build --wait`, which copies in the `api/gen` that step 5 generated (serves `http://127.0.0.1:8000`; check `/health_check`). Needs the Docker daemon running; if it can't run, `python apps/server/dev_run.py` is the native fallback |
+| Server | `apps/server/compose.yaml` exists | `docker compose -f apps/server/compose.yaml up -d --build --wait`, which copies in the `api/gen` that step 5 generated (serves `http://127.0.0.1:8000`; check `/api/health_check`). Needs the Docker daemon running; if it can't run, `python apps/server/dev_run.py` is the native fallback |
 | Web | `apps/web/package.json` exists | not yet -- report not applicable |
 | Desktop | `apps/desktop/backend/pyproject.toml` exists | `python apps/desktop/dev_run.py` |
 

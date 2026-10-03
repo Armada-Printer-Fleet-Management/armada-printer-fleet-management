@@ -4,6 +4,8 @@ from typing import cast
 
 from fastapi import FastAPI
 
+from api.common.consts import API_PREFIX
+
 # Written by protoc-gen-connect-openapi during server codegen, one document per .proto file.
 CONNECT_OPENAPI_DIR = Path(__file__).resolve().parents[1] / "gen" / "openapi"
 
@@ -46,7 +48,9 @@ def openapi_schema(app: FastAPI) -> JsonObject:
     tags = cast(list[JsonObject], schema.setdefault("tags", []))
 
     for document in _connect_documents():
-        _merge(paths, cast(JsonObject, document.get("paths", {})), "path")
+        # The generated documents only know the proto paths, not the prefix they are mounted under.
+        connect_paths = cast(JsonObject, document.get("paths", {}))
+        _merge(paths, {API_PREFIX + path: item for path, item in connect_paths.items()}, "path")
         components = cast(JsonObject, document.get("components", {}))
         _merge(schemas, cast(JsonObject, components.get("schemas", {})), "schema")
         tags.extend(
