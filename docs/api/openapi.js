@@ -248,9 +248,9 @@ window.OPENAPI_SPEC = {
   },
   "openapi": "3.1.0",
   "paths": {
-    "/health_check": {
+    "/api/health_check": {
       "get": {
-        "operationId": "health_health_check_get",
+        "operationId": "health_api_health_check_get",
         "parameters": [
           {
             "in": "query",
@@ -304,7 +304,7 @@ window.OPENAPI_SPEC = {
         ]
       }
     },
-    "/server.v1.HealthCheckService/HealthCheck": {
+    "/api/server.v1.HealthCheckService/HealthCheck": {
       "post": {
         "operationId": "server.v1.HealthCheckService.HealthCheck",
         "parameters": [

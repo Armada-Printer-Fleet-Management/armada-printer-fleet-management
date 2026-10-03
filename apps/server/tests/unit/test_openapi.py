@@ -10,8 +10,8 @@ from api.main import app
 def test_spec_covers_rest_and_connect_routes() -> None:
     paths = TestClient(app).get("/openapi.json").json()["paths"]
 
-    assert "/health_check" in paths
-    assert "/server.v1.HealthCheckService/HealthCheck" in paths
+    assert "/api/health_check" in paths
+    assert "/api/server.v1.HealthCheckService/HealthCheck" in paths
 
 
 def test_spec_reports_the_server_version() -> None:
