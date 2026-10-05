@@ -1,0 +1,8 @@
+# Shared exclusions for generated and non-source files during workspace formatting.
+**/node_modules/
+**/.pnpm-store/
+**/gen/
+**/*_gen/
+**/dist/
+**/build/
+**/coverage/

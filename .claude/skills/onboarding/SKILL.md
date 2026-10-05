@@ -132,6 +132,21 @@ This produces the Python server interfaces and TypeScript clients from `packages
 is gitignored and must exist before anything type-checks. Every template sets `clean: true`, so each
 run deletes that template's output folders before regenerating them; re-running a row is always safe.
 
+## 5b. Check TypeScript style
+
+The root ESLint and Prettier configurations cover the web app, desktop frontend, and TypeScript
+workspace packages. After generating API code, run:
+
+```
+pnpm lint
+pnpm format:check
+```
+
+Use `pnpm format` to apply the shared formatting rules.
+
+The pre-commit hook also formats staged TypeScript files and stages the formatted result. It stops
+if a selected file has additional unstaged edits, so those edits are not accidentally included.
+
 ## 6. Prepare configuration
 
 For every `*.example.*` file under `config/`, and for `.env.example` at the root, create the real

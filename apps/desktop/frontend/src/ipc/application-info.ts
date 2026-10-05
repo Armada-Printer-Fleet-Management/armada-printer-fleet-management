@@ -1,6 +1,6 @@
-import { type JsonValue, fromJson } from "@bufbuild/protobuf";
-import { VersionInfoSchema } from "../gen/common/v1/application_info_pb";
-import { waitForPywebviewIpc } from "./pywebview";
+import { type JsonValue, fromJson } from '@bufbuild/protobuf';
+import { VersionInfoSchema } from '../gen/common/v1/application_info_pb';
+import { waitForPywebviewIpc } from './pywebview';
 
 declare global {
   interface PywebviewIpc {

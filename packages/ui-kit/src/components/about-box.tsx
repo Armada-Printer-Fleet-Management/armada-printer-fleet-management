@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "./card";
+} from './card';
 
 export interface AboutBoxProps {
   organization: {
@@ -21,11 +21,10 @@ export interface AboutBoxProps {
   };
 }
 
-
 export function AboutBox({ organization, version }: AboutBoxProps) {
   const versionText = version
-    ? `${version.major}.${version.minor}.${version.maintenance}${version.postfix ? `-${version.postfix}` : ""}`
-    : "unavailable";
+    ? `${version.major}.${version.minor}.${version.maintenance}${version.postfix ? `-${version.postfix}` : ''}`
+    : 'unavailable';
 
   return (
     <Card className="w-full max-w-xl">

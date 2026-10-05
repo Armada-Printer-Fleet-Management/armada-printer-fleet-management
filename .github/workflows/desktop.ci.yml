@@ -1,3 +1,4 @@
+# Desktop-specific CI; frontend lint uses the repository-wide shared ESLint configuration.
 name: CI (desktop)
 
 on:

@@ -3,13 +3,13 @@
   "name": "@armada/organization-info",
   "private": true,
   "type": "module",
+  "scripts": {
+    "lint": "eslint index.ts organization-info.ts --max-warnings=0"
+  },
   "exports": {
     ".": "./index.ts"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2"
-  },
-  "devDependencies": {
-    "eslint": "^8"
   }
 }

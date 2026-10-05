@@ -251,6 +251,8 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Regenerate API types          | `buf generate`                                                        |
 | Python types                  | `pyright`                                                             |
 | TS types                      | `pnpm typecheck`                                                      |
+| TS lint                       | `pnpm lint`                                                           |
+| TS formatting check           | `pnpm format:check`                                                   |
 | Python tests                  | `pytest`                                                              |
 | JS tests                      | `pnpm -r test`                                                        |
 | Layer contracts               | `lint-imports`                                                        |
