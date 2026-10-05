@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package common.v1;
+
+// Asks for one page of a list. Every List RPC request carries this as its page field.
+message PageRequest {
+  // How many items to return. The server applies a default when unset and caps large values.
+  uint32 page_size = 1;
+  // Where to continue from: the previous response's next_page_token. Empty for the first page.
+  // Opaque; never parse or build one.
+  string page_token = 2;
+}
+
+// Describes the page returned. Every List RPC response carries this as its page field.
+message PageResponse {
+  // Pass as page_token to get the next page. Empty when this is the last page.
+  string next_page_token = 1;
+}

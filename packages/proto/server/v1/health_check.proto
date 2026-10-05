@@ -2,18 +2,28 @@ syntax = "proto3";
 
 package server.v1;
 
+// Asks how healthy the server is.
 message HealthCheckRequest {
+    // Include the version, and dependency results when they are checked.
     bool full = 1;
+    // Probe dependencies such as the database. Slower than a plain liveness check.
     bool check_dependencies = 2;
 }
 
+// The server's health.
 message HealthCheckResponse {
+    // Overall health.
     enum Status {
+        // Not set. Never valid; treat as an error.
         STATUS_UNSPECIFIED = 0;
+        // Healthy.
         STATUS_PASS = 1;
+        // A critical dependency failed.
         STATUS_FAIL = 2;
+        // Only non-critical dependencies failed.
         STATUS_DEGRADED = 3;
     }
+    // Overall health.
     Status status = 1;
     // Set only when the request asks for a full report.
     optional string version = 2;
@@ -21,6 +31,8 @@ message HealthCheckResponse {
     map<string, string> dependencies = 3;
 }
 
+// Reports server health, for monitoring and deployment checks.
 service HealthCheckService {
+    // Reports the server's health.
     rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
 }

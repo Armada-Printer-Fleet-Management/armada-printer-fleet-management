@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package user.v1;
+
+// What a user may do, from least to most access. Permissions are enforced by the server,
+// never by the client.
+enum UserRole {
+  // Not set. Never a valid role; treat as an error.
+  USER_ROLE_UNSPECIFIED = 0;
+  // Temporary access with an expiry.
+  USER_ROLE_GUEST = 1;
+  // Submits and tracks their own print jobs.
+  USER_ROLE_STUDENT = 2;
+  // Reviews, approves and dispatches jobs, and operates printers.
+  USER_ROLE_STAFF = 3;
+  // Manages the system and its users.
+  USER_ROLE_ADMIN = 4;
+}

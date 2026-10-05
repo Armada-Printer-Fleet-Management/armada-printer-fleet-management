@@ -200,6 +200,7 @@ requires-dist = [{ name = "protobuf", specifier = ">=7,<8" }]
 [package.metadata.requires-dev]
 dev = [
     { name = "pyright" },
+    { name = "pytest", specifier = ">=9,<10" },
     { name = "ruff" },
 ]
 

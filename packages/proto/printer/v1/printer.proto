@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package printer.v1;
+
+import "common/v1/time_status.proto";
+import "id/v1/print_job_id.proto";
+import "id/v1/printer_id.proto";
+
+// A printer's normalized state. Adapters map each vendor's states onto these.
+enum PrinterStatus {
+  // Not set. Never valid; treat as an error.
+  PRINTER_STATUS_UNSPECIFIED = 0;
+  // Not reachable.
+  PRINTER_STATUS_OFFLINE = 1;
+  // Reachable and ready for a job.
+  PRINTER_STATUS_IDLE = 2;
+  // Running a job.
+  PRINTER_STATUS_PRINTING = 3;
+  // Finished a job and waiting for the bed to be cleared. Cannot start another yet.
+  PRINTER_STATUS_FINISHED = 4;
+  // Reported a fault that needs attention.
+  PRINTER_STATUS_ERROR = 5;
+}
+
+// A physical printer.
+message Printer {
+  // This printer.
+  id.v1.PrinterId id = 1;
+  // Display name, stable across restarts.
+  string name = 2;
+  // The printer's model.
+  string model = 3;
+  // Latest observed status.
+  PrinterStatus status = 4;
+  // The job it is running. Unset when idle.
+  id.v1.PrintJobId print_job_id = 5;
+  // Progress of the current job, 0 to 100, when the printer reports it.
+  optional uint32 progress_percent = 6;
+  // When the printer was added. updated_at is when its status was last observed, which
+  // clients use to show stale data.
+  common.v1.TimeStatus time_status = 7;
+}

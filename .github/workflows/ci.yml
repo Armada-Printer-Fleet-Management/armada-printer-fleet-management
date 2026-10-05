@@ -74,6 +74,11 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup-buf
       - run: buf lint
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Typed-ID contract rules
+        run: uv run --project packages/proto/utils pytest packages/proto/utils/tests
       - name: Reject breaking API changes
         if: github.event_name == 'pull_request'
         run: |

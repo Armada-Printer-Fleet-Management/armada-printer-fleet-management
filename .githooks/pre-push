@@ -27,6 +27,7 @@ echo "pre-push checks:"
 # ── Protobuf contract (shared across every service, not per-service) ────────
 if [ -f buf.yaml ]; then
   require "buf lint" buf buf lint
+  require "proto ids" uv uv run --project packages/proto/utils pytest -q packages/proto/utils/tests
 else
   NA+=("protobuf")
 fi

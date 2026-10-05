@@ -8,6 +8,9 @@ from api.common.consts import API_PREFIX
 
 # Written by protoc-gen-connect-openapi during server codegen, one document per .proto file.
 CONNECT_OPENAPI_DIR = Path(__file__).resolve().parents[1] / "gen" / "openapi"
+# Codegen also documents other servers' packages, such as printer_server.v1; this server serves
+# only server.v1, so only those documents are published.
+SERVED_OPENAPI_DIR = CONNECT_OPENAPI_DIR / "server"
 
 type JsonObject = dict[str, object]
 
@@ -32,7 +35,7 @@ def _connect_documents() -> list[JsonObject]:
         )
     return [
         cast(JsonObject, json.loads(path.read_text(encoding="utf-8")))
-        for path in sorted(CONNECT_OPENAPI_DIR.rglob("*.json"))
+        for path in sorted(SERVED_OPENAPI_DIR.rglob("*.json"))
     ]
 
 
