@@ -1,0 +1,37 @@
+# An allow-list: the build context is the repo root, so everything is excluded unless a
+# Dockerfile needs it. A new config or secret file therefore cannot reach an image by accident.
+# When the web app depends on another package from packages/, allow it here and in
+# dev.Dockerfile.dockerignore, and copy its package.json in both Dockerfiles' deps stage.
+*
+
+!apps/web/
+# The root pnpm workspace: its manifest, lock file and settings, and the shared TypeScript config
+# the app's tsconfig extends.
+!package.json
+!pnpm-workspace.yaml
+!pnpm-lock.yaml
+!tsconfig.base.json
+!packages/proto/
+!packages/organization-info/
+!packages/ui-kit/
+!buf.yaml
+!buf.gen.web_ts.yaml
+!scripts/generate_proto.py
+!infra/deploy/Caddyfile
+
+# Re-excluded inside the allowed paths: host-built or host-specific state. src/gen stays out: this
+# image generates its own.
+**/node_modules
+**/dist
+**/gen
+# packages/organization-info and packages/proto/utils are Python packages too, so they can hold
+# Python's local state.
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/*.private.*
+**/*.local.*
+**/private
+**/.env
+**/.env.*

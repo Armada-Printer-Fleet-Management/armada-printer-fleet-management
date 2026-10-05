@@ -58,9 +58,10 @@ administrator (UAC) prompt, and wait for them to confirm.** The script downloads
 program, checks it against a pinned SHA-256, and installs it to `C:\Program Files (x86)\NSIS`.
 
 **`protoc-gen-connect-openapi` must be v0.28.0**, so every developer's committed API spec
-(`docs/api/`) comes out the same. Check with `protoc-gen-connect-openapi --version`. Codegen runs
-only on the host — the server image copies the host's generated `api/gen` — so this is the one
-place the version is pinned; bump it here when upgrading.
+(`docs/api/`) comes out the same. Check with `protoc-gen-connect-openapi --version`. The deploy
+images generate their own code, so `apps/server/deploy.Dockerfile` pins it too, along with `buf`
+and `protoc` (and `apps/web/deploy.Dockerfile` pins `buf`). Bump the versions here and the
+versions and SHA-256s there together.
 
 **`act` must be 0.2.86 or newer** — older versions carry known advisories fixed in that release
 ([CVE-2026-34041](https://github.com/nektos/act/security/advisories/GHSA-j5j2-9v57-2vfw)). Check
@@ -140,6 +141,10 @@ file if it is missing by copying the example.
 
 Afterwards, list every file created and tell the user which values they must fill in themselves.
 Placeholder values such as `REPLACE_ME` will not work.
+
+The exception is `config/compose.*.env`: leave their `REPLACE_ME` values alone.
+`scripts/compose_run.py` replaces each one with a generated secret on first run, and never touches
+a value that is already real.
 
 ## 6b. Configure the AI audit log
 
@@ -227,16 +232,23 @@ the moment the developer opens the app, rather than the first time they need it.
 
 On Windows, run this in Git Bash.
 
-## 7. Start backing services
+## 7. Start the development stack
 
-If `infra/compose/` contains a compose file:
+If `infra/dev/compose.yaml` exists, start it with the Docker daemon running:
 
 ```
-docker compose -f infra/compose/docker-compose.yml up -d
+python scripts/compose_run.py dev
 ```
 
-Wait for the database to accept connections before continuing. If `alembic.ini` exists, apply
-migrations:
+This builds and starts the server and web app with live reload, plus Postgres and Garage, and
+stays in the foreground following the logs, so run it in the background. It copies in the
+generated code from step 5. Wait until `docker compose -p armada-dev ps` shows `db`,
+`garage-s3-storage`, `server` and `web` healthy.
+
+If it fails with "Ports are not available" on 5432, a Postgres installed natively on the machine
+holds that port. Set `DB_PORT` to a free port in `config/compose.dev.env` and run it again.
+
+If `alembic.ini` exists, apply migrations:
 
 ```
 uv run alembic upgrade head
@@ -265,13 +277,13 @@ Skip this step if `--skip-app` was passed.
 
 | App | Condition | Command |
 |---|---|---|
-| Server | `apps/server/compose.yaml` exists | `docker compose -f apps/server/compose.yaml up -d --build --wait`, which copies in the `api/gen` that step 5 generated (serves `http://127.0.0.1:8000`; check `/health_check`). Needs the Docker daemon running; if it can't run, `python apps/server/dev_run.py` is the native fallback |
-| Web | `apps/web/package.json` exists | not yet -- report not applicable |
+| Server | `infra/dev/compose.yaml` exists | Already running from step 7: `http://127.0.0.1:8000`; check `/health_check`. If Docker can't run, `python apps/server/dev_run.py` is the native fallback |
+| Web | `infra/dev/compose.yaml` exists | Already running from step 7: `http://127.0.0.1:5174` |
 | Desktop | `apps/desktop/backend/pyproject.toml` exists | `python apps/desktop/dev_run.py` |
 
-`python apps/desktop/dev_run.py --dev` and `docker compose -f apps/server/compose.yaml up --watch`
-are the hot-reload alternatives for active development, not needed for this verification run. Report the URL for the web/server apps once they exist; the
-desktop app opens its own native window. Leave everything running.
+`python apps/desktop/dev_run.py --dev` is the desktop's hot-reload alternative, not needed for
+this verification run; the dev stack from step 7 already reloads the server and web app. Report the
+server and web URLs; the desktop app opens its own native window. Leave everything running.
 
 ## 10. Open the documentation
 
