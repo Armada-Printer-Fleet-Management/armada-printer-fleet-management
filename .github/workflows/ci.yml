@@ -1,3 +1,4 @@
+# Shared repository CI, including lint and formatting checks for every TypeScript workspace.
 name: CI
 
 on:
@@ -132,6 +133,8 @@ jobs:
         if: needs.detect.outputs.proto == 'true'
         run: python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules
       - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm format:check
 
   desktop:
     needs: detect

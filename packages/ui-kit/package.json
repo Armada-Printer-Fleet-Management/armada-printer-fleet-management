@@ -8,7 +8,8 @@
     "./styles.css": "./src/styles.css"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --max-warnings=0"
   },
   "peerDependencies": {
     "react": "^19",
@@ -21,7 +22,6 @@
   "devDependencies": {
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "typescript": "^5",
-    "eslint": "^8"
+    "typescript": "^5"
   }
 }

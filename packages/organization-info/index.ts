@@ -1,1 +1,1 @@
-export { read } from "./organization-info";
+export { read } from './organization-info';

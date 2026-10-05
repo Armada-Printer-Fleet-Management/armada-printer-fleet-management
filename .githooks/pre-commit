@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# pre-commit — scans staged changes for secrets, and keeps generated agent
-# config and the published API spec (docs/api/) in step with their sources.
+# pre-commit — formats staged TypeScript, scans for secrets, and keeps generated
+# agent config and the published API spec (docs/api/) in step with their sources.
 #
 # Which files may be committed is .gitignore's job: configuration is ignored by
 # default and only `.example` siblings are tracked. This hook covers the one
@@ -20,11 +20,56 @@ yell() { printf '\033[33m%s\033[0m\n' "$*"; }
 dim()  { printf '\033[2m%s\033[0m\n' "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
-STAGED=$(git diff --cached --name-only --diff-filter=ACM)
-[ -z "$STAGED" ] && exit 0
+STAGED_FILES=()
+while IFS= read -r -d '' file; do
+  STAGED_FILES+=("$file")
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+[ ${#STAGED_FILES[@]} -eq 0 ] && exit 0
+
+# ── Format staged TypeScript ─────────────────────────────────────────────────
+FORMAT_FILES=()
+for file in "${STAGED_FILES[@]}"; do
+  case "$file" in
+    apps/*|packages/*)
+      case "$file" in
+        *.ts|*.tsx) FORMAT_FILES+=("$file") ;;
+      esac
+      ;;
+    eslint.config.mjs|prettier.config.cjs)
+      FORMAT_FILES+=("$file")
+      ;;
+  esac
+done
+
+if [ ${#FORMAT_FILES[@]} -gt 0 ]; then
+  if ! have pnpm; then
+    red "✗ pnpm is not installed, so staged TypeScript cannot be formatted."
+    dim "  Run /onboarding to install the workspace toolchain."
+    FAILED=1
+  else
+    for file in "${FORMAT_FILES[@]}"; do
+      if ! git diff --quiet -- "$file"; then
+        red "✗ $file has unstaged edits; refusing to stage them while formatting."
+        dim "  Stage or discard those edits, then retry the commit."
+        FAILED=1
+        break
+      fi
+      if ! pnpm exec prettier --write "$file"; then
+        red "✗ Prettier could not format $file."
+        FAILED=1
+        break
+      fi
+      if ! git add -- "$file"; then
+        red "✗ Could not stage formatted file $file."
+        FAILED=1
+        break
+      fi
+    done
+  fi
+fi
 
 # ── Secret scanning ──────────────────────────────────────────────────────────
-if have gitleaks; then
+if [ ${#STAGED_FILES[@]} -gt 0 ] && have gitleaks; then
   if ! gitleaks protect --staged --no-banner --redact 2>/dev/null; then
     red "✗ gitleaks found a potential secret in staged changes."
     dim "  Nothing has been committed. Use an environment variable instead."
@@ -38,7 +83,7 @@ fi
 # ── Keep generated agent config in step with its source ──────────────────────
 # Skills and nested AGENTS.md files are the source; prompt files and nested
 # CLAUDE.md stubs are generated from them.
-if printf '%s' "$STAGED" | grep -qE '(^\.claude/|AGENTS\.md$)'; then
+if printf '%s\n' "${STAGED_FILES[@]}" | grep -qE '(^\.claude/|AGENTS\.md$)'; then
   PY=$(command -v python3 || command -v python || true)
   if [ -n "$PY" ] && "$PY" "$REPO_ROOT/scripts/sync_agent_config.py" >/dev/null 2>&1; then
     REGEN=$(git diff --name-only -- '.github/prompts' '*/CLAUDE.md')
@@ -54,7 +99,7 @@ fi
 # docs/api/ is generated from the server's routes and the .proto contract. Unlike
 # the steps above, a missing tool blocks the commit: skipping it would let the
 # published API reference go stale without anyone noticing.
-if printf '%s\n' "$STAGED" | grep -qE '^(apps/server/(api/|pyproject\.toml)|packages/proto/|buf\.gen\.server\.yaml)'; then
+if printf '%s\n' "${STAGED_FILES[@]}" | grep -qE '^(apps/server/(api/|pyproject\.toml)|packages/proto/|buf\.gen\.server\.yaml)'; then
   LOG=$(mktemp)
   if ! have uv; then
     red "✗ uv is not installed, so the API docs in docs/api/ cannot be regenerated."

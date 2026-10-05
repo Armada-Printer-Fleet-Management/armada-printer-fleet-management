@@ -6,6 +6,17 @@
     "build": "pnpm --recursive --if-present run build",
     "typecheck": "pnpm --recursive --if-present run typecheck",
     "test": "pnpm --recursive --if-present run test",
-    "lint": "pnpm --recursive --if-present run lint"
+    "lint": "pnpm --recursive --if-present run lint",
+    "format": "prettier --write eslint.config.mjs prettier.config.cjs \"apps/**/*.{ts,tsx}\" \"packages/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check eslint.config.mjs prettier.config.cjs \"apps/**/*.{ts,tsx}\" \"packages/**/*.{ts,tsx}\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@shadcn/lint": "^0.2.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.9",
+    "typescript-eslint": "^8.71.0"
   }
 }
