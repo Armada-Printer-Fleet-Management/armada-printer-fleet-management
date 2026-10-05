@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+// Strongly typed DDD domain ID for the print_job domain. A distinct type per entity makes
+// passing one entity's ID where another's belongs a type error. See packages/proto/AGENTS.md.
+package id.v1;
+
+// Identifies a print_job.v1.PrintJob.
+message PrintJobId {
+  // UUID.
+  string value = 1;
+}

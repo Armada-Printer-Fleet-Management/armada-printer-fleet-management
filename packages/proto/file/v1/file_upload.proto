@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package file.v1;
+
+import "file/v1/file.proto";
+import "id/v1/file_id.proto";
+
+// Upload pair, call 1 of 2: what the client is about to upload. Every domain that accepts
+// large files takes this in its own Create<Thing>Upload request, alongside the ID of the
+// entity the file belongs to.
+message FileUploadMetadata {
+  // The file's name on the client. Display only.
+  string filename = 1;
+  // Exact size of the bytes that will be sent.
+  uint64 size_bytes = 2;
+  // Lower-case hex SHA-256 of those bytes. The server rejects an upload that does not match.
+  string sha256 = 3;
+  // The file's format.
+  FileType file_type = 4;
+}
+
+// Where to send the bytes. Upload pair, call 2 of 2, is an HTTP PUT of the raw file bytes to
+// upload_url. The slot expires a server-configured time after the file's
+// time_status.updated_at.
+message FileUploadSlot {
+  // The file the bytes will become, already linked to its owning entity.
+  id.v1.FileId file_id = 1;
+  // Where to PUT the bytes. Treat it as an opaque, short-lived credential.
+  string upload_url = 2;
+}

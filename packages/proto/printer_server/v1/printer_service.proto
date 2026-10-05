@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package printer_server.v1;
+
+import "common/v1/page.proto";
+import "id/v1/command_id.proto";
+import "id/v1/print_job_id.proto";
+import "id/v1/printer_id.proto";
+import "printer/v1/printer.proto";
+
+// Printer access, served by the on-premise printer server.
+service PrinterService {
+  // Lists printers with their latest status, one page at a time.
+  rpc ListPrinters(ListPrintersRequest) returns (ListPrintersResponse);
+  // Sends an assigned job to its printer and starts it. Idempotent by command_id.
+  rpc DispatchPrintJob(DispatchPrintJobRequest) returns (DispatchPrintJobResponse);
+}
+
+// Lists printers.
+message ListPrintersRequest {
+  // Which page to return.
+  common.v1.PageRequest page = 1;
+}
+
+// One page of printers.
+message ListPrintersResponse {
+  // Printers this server controls.
+  repeated printer.v1.Printer printers = 1;
+  // How to get the next page.
+  common.v1.PageResponse page = 2;
+}
+
+// Starts a job on a printer.
+message DispatchPrintJobRequest {
+  // Chosen by the caller. A retry with the same ID returns the first result instead of
+  // starting the print again.
+  id.v1.CommandId command_id = 1;
+  // The job to start.
+  id.v1.PrintJobId print_job_id = 2;
+  // The printer to start it on.
+  id.v1.PrinterId printer_id = 3;
+}
+
+// The printer after the dispatch.
+message DispatchPrintJobResponse {
+  // The printer's status once the command was accepted.
+  printer.v1.Printer printer = 1;
+}

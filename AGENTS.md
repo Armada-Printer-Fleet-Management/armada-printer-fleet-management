@@ -92,6 +92,47 @@ L4  apps/*                 COMPOSITION ROOTS — wire adapters to ports, expose 
 - Only `apps/*` may construct concrete adapters. Everything else depends on the port.
 - Never add a framework import to `core-domain`. If domain logic seems to need I/O, it needs a port.
 
+### Domain-driven design
+
+Core business logic is organised into domains, whether it is shared in `core-domain` or lives
+inside one application. Not everything is a domain: glue code, UI and infrastructure are not.
+Where something is a domain:
+
+- **Services are the public interface.** Other code calls a domain only through its services.
+- **Entities hold the logic and stay encapsulated.** Their rules and state are not reached into
+  from outside the domain.
+- **Domains couple by ID only.** One domain refers to another's entity by its ID, never by
+  importing or embedding the other domain's types.
+- **Every entity ID is strongly typed.** Each entity has its own ID type, never a bare string or
+  UUID, so passing the wrong entity's ID is a type error rather than a runtime bug.
+
+Every domain has the same shape, in Python and TypeScript alike:
+
+```
+<domain>/
+  ids          typed IDs for this domain's entities
+  entities     state and the rules that change it; no I/O
+  repository   port: get(id) returns an entity, save(entity) persists it
+  service      public interface: one method per use case
+```
+
+A call always flows the same way:
+
+```python
+def approve(self, print_job_id: PrintJobId) -> PrintJob:   # service
+    print_job = self._repository.get(print_job_id)          # load by typed ID
+    print_job.approve()                                      # entity applies its rules
+    self._repository.save(print_job)                         # persist
+    return print_job
+```
+
+Repository implementations are adapters: a database on the server, the API client in a
+frontend. The server is authoritative, so frontend entities are read models and never repeat
+server rules such as which status transitions are allowed.
+
+The wire contract follows the same shape. Its rules are in `packages/proto/AGENTS.md`; read it
+before changing anything under `packages/proto/`.
+
 ---
 
 ## Open core: all logic here is generic

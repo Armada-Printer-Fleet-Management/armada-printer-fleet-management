@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package file.v1;
+
+import "common/v1/time_status.proto";
+import "id/v1/file_id.proto";
+
+// The format of a stored file. Names stay vendor-neutral so any printer brand fits.
+enum FileType {
+  // Not set. Never valid; treat as an error.
+  FILE_TYPE_UNSPECIFIED = 0;
+  // Plain-text, pre-sliced GCODE.
+  FILE_TYPE_GCODE = 1;
+  // Compressed or binary pre-sliced GCODE, in any vendor's format.
+  FILE_TYPE_CGCODE = 2;
+}
+
+// A file held in file storage. Its storage location is server-internal and never sent.
+message File {
+  // This file.
+  id.v1.FileId id = 1;
+  // The name the uploader gave it. Display only.
+  string filename = 2;
+  // The file's format.
+  FileType file_type = 3;
+  // Size of the stored bytes.
+  uint64 size_bytes = 4;
+  // Lower-case hex SHA-256 of the stored bytes, for integrity checks.
+  string sha256 = 5;
+  // When the file was created and last changed.
+  common.v1.TimeStatus time_status = 6;
+}

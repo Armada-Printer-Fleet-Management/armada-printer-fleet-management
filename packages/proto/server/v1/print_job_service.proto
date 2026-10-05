@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+package server.v1;
+
+import "common/v1/page.proto";
+import "file/v1/file.proto";
+import "file/v1/file_upload.proto";
+import "id/v1/print_job_id.proto";
+import "id/v1/printer_id.proto";
+import "print_job/v1/print_job.proto";
+
+// Print job intake and review, served by the remote server. A job is created first, as a
+// DRAFT; its file is then uploaded and attached to it, and the job is submitted.
+service PrintJobService {
+  // Step 1. Creates a DRAFT job to attach a file to.
+  rpc CreatePrintJob(CreatePrintJobRequest) returns (CreatePrintJobResponse);
+  // Step 2, and upload pair call 1 of 2. Creates the job's file record, links it to the job,
+  // and returns where to PUT the bytes (call 2 of 2). Calling it again replaces the file.
+  rpc CreatePrintJobUpload(CreatePrintJobUploadRequest) returns (CreatePrintJobUploadResponse);
+  // Step 3. Submits a DRAFT job whose file has finished uploading, moving it to SUBMITTED.
+  rpc SubmitPrintJob(SubmitPrintJobRequest) returns (SubmitPrintJobResponse);
+  // Lists print jobs with their files, one page at a time.
+  rpc ListPrintJobs(ListPrintJobsRequest) returns (ListPrintJobsResponse);
+  // Gets one print job with its file.
+  rpc GetPrintJob(GetPrintJobRequest) returns (GetPrintJobResponse);
+  // Staff move a job to its next status. Each action carries exactly the fields it needs; the
+  // server rejects an action that is not valid from the job's current status.
+  rpc TransitionPrintJob(TransitionPrintJobRequest) returns (TransitionPrintJobResponse);
+}
+
+// Creates a DRAFT job.
+message CreatePrintJobRequest {
+  // Notes for staff.
+  string user_notes = 1;
+}
+
+// The new job.
+message CreatePrintJobResponse {
+  // The job, in DRAFT with no file yet.
+  print_job.v1.PrintJob print_job = 1;
+}
+
+// Describes the print file about to be uploaded for a job.
+message CreatePrintJobUploadRequest {
+  // The DRAFT job the file belongs to.
+  id.v1.PrintJobId print_job_id = 1;
+  // The file to be uploaded.
+  file.v1.FileUploadMetadata metadata = 2;
+}
+
+// Where to upload the job's print file.
+message CreatePrintJobUploadResponse {
+  // The upload slot. Its file_id is now the job's file_id.
+  file.v1.FileUploadSlot slot = 1;
+}
+
+// Submits a DRAFT job.
+message SubmitPrintJobRequest {
+  // The job to submit. Its file must have finished uploading.
+  id.v1.PrintJobId print_job_id = 1;
+}
+
+// The submitted job.
+message SubmitPrintJobResponse {
+  // The job, now SUBMITTED.
+  print_job.v1.PrintJob print_job = 1;
+  // The job's file.
+  file.v1.File file = 2;
+}
+
+// Lists print jobs.
+message ListPrintJobsRequest {
+  // Which page to return.
+  common.v1.PageRequest page = 1;
+}
+
+// One page of jobs and their files.
+message ListPrintJobsResponse {
+  // The jobs.
+  repeated print_job.v1.PrintJob print_jobs = 1;
+  // The files the jobs refer to, matched by file_id.
+  repeated file.v1.File files = 2;
+  // How to get the next page.
+  common.v1.PageResponse page = 3;
+}
+
+// Gets one print job.
+message GetPrintJobRequest {
+  // The job to get.
+  id.v1.PrintJobId print_job_id = 1;
+}
+
+// One job and its file.
+message GetPrintJobResponse {
+  // The job.
+  print_job.v1.PrintJob print_job = 1;
+  // The job's file. Unset while a DRAFT job has no upload.
+  file.v1.File file = 2;
+}
+
+// Changes a job's status through one staff action.
+message TransitionPrintJobRequest {
+  // Opens a SUBMITTED job for review, moving it to UNDER_REVIEW.
+  message StartReview {}
+  // Approves a job UNDER_REVIEW, moving it to APPROVED.
+  message Approve {}
+  // Rejects a job UNDER_REVIEW, moving it to REJECTED.
+  message Reject {
+    // Why, shown to the student. Required.
+    string reason = 1;
+  }
+  // Chooses the printer for an APPROVED job, moving it to ASSIGNED.
+  message Assign {
+    // The printer to print it on.
+    id.v1.PrinterId printer_id = 1;
+  }
+
+  // The job to change.
+  id.v1.PrintJobId print_job_id = 1;
+  // What to do to it. Exactly one must be set.
+  oneof action {
+    // Start reviewing.
+    StartReview start_review = 2;
+    // Approve.
+    Approve approve = 3;
+    // Reject with a reason.
+    Reject reject = 4;
+    // Assign to a printer.
+    Assign assign = 5;
+  }
+}
+
+// The job after the change.
+message TransitionPrintJobResponse {
+  // The job with its new status.
+  print_job.v1.PrintJob print_job = 1;
+}

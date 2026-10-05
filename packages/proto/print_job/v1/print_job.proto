@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package print_job.v1;
+
+import "common/v1/time_status.proto";
+import "id/v1/file_id.proto";
+import "id/v1/print_job_id.proto";
+import "id/v1/printer_id.proto";
+import "id/v1/queue_id.proto";
+import "id/v1/user_id.proto";
+
+// Where a print job is in its life. The server alone decides transitions.
+enum PrintJobStatus {
+  // Not set. Never valid; treat as an error.
+  PRINT_JOB_STATUS_UNSPECIFIED = 0;
+  // Created and still being filled in, including its file upload. Not yet visible to staff.
+  PRINT_JOB_STATUS_DRAFT = 1;
+  // Complete and handed to staff.
+  PRINT_JOB_STATUS_SUBMITTED = 2;
+  // Staff-only. Staff are reviewing the job. Students are shown SUBMITTED instead.
+  PRINT_JOB_STATUS_UNDER_REVIEW = 3;
+  // Passed review and is waiting for a printer.
+  PRINT_JOB_STATUS_APPROVED = 4;
+  // Staff declined it. status_reason holds the student-visible reason.
+  PRINT_JOB_STATUS_REJECTED = 5;
+  // A printer has been chosen.
+  PRINT_JOB_STATUS_ASSIGNED = 6;
+  // The printer confirmed the print started.
+  PRINT_JOB_STATUS_PRINTING = 7;
+  // The printer reported the print finished.
+  PRINT_JOB_STATUS_COMPLETED = 8;
+  // The print or its dispatch failed. status_reason says why.
+  PRINT_JOB_STATUS_FAILED = 9;
+  // An authorized user cancelled it. status_reason says why.
+  PRINT_JOB_STATUS_CANCELLED = 10;
+}
+
+// A request to print one file. It is created first, as a DRAFT, and its file is attached to it.
+message PrintJob {
+  // This job.
+  id.v1.PrintJobId id = 1;
+  // The user who created it.
+  id.v1.UserId user_id = 2;
+  // The queue staff placed it in after approval. Students never choose it.
+  id.v1.QueueId queue_id = 3;
+  // The file to print. Unset until an upload is created for the job.
+  id.v1.FileId file_id = 4;
+  // Current status.
+  PrintJobStatus status = 5;
+  // Notes the submitting user wrote.
+  string user_notes = 6;
+  // Why the job was rejected, failed or cancelled. Visible to the student.
+  optional string status_reason = 7;
+  // The printer it is assigned to. Unset until assigned.
+  id.v1.PrinterId printer_id = 8;
+  // When the job was created and last changed.
+  common.v1.TimeStatus time_status = 9;
+}

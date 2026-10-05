@@ -14,6 +14,12 @@ def test_spec_covers_rest_and_connect_routes() -> None:
     assert "/api/server.v1.HealthCheckService/HealthCheck" in paths
 
 
+def test_spec_leaves_out_other_servers_services() -> None:
+    paths = TestClient(app).get("/openapi.json").json()["paths"]
+
+    assert not [path for path in paths if path.startswith("/printer_server.")]
+
+
 def test_spec_reports_the_server_version() -> None:
     info = TestClient(app).get("/openapi.json").json()["info"]
 

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+// Strongly typed DDD domain ID for the printer command domain. A distinct type per entity makes
+// passing one entity's ID where another's belongs a type error. See packages/proto/AGENTS.md.
+package id.v1;
+
+// Identifies one command sent to a printer. Resending the same ID never repeats the action.
+message CommandId {
+  // UUID.
+  string value = 1;
+}
