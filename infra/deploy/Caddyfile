@@ -1,0 +1,30 @@
+# Baked into the web image. DOMAIN and ADMIN_EMAIL come from the installation's environment, so
+# nothing here names a site. A real domain gets an HTTPS certificate automatically; ":80" serves
+# plain HTTP, for a test machine without DNS.
+{
+	email {$ADMIN_EMAIL}  # certificate expiry contact
+}
+
+{$DOMAIN} {
+	handle /api/* {  # API requests, path unchanged
+		reverse_proxy server:8000
+	}
+
+	request_body {
+		max_size 500MB  # larger bodies get a 413
+	}
+
+	header {
+		X-Content-Type-Options nosniff                                 # no file type guessing
+		Referrer-Policy strict-origin-when-cross-origin                # share only our origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"  # unused browser features off
+		Content-Security-Policy "frame-ancestors 'none'"               # no embedding in frames
+		-Server                                                        # hide server software
+	}
+
+	handle {  # everything else: the single-page app
+		root * /srv
+		try_files {path} /index.html  # unknown paths load the app
+		file_server
+	}
+}

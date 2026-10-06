@@ -1,0 +1,77 @@
+# The full application stack, used by every deployed machine alike: testing, staging and every
+# user installation. They differ only in their environment file. Images are pulled, never built
+# here. Never run `docker compose down -v`: it deletes the database, the stored files and Caddy's
+# certificates.
+name: armada
+
+services:
+  web:
+    image: ghcr.io/${GHCR_OWNER:?}/armada-web:${VERSION:?}
+    restart: always
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+  server:
+    image: ghcr.io/${GHCR_OWNER:?}/armada-server:${VERSION:?}
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      garage-s3-storage:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: armada
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?}
+      POSTGRES_DB: armada
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U armada"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  garage-s3-storage:
+    image: dxflrs/garage:v2.4.1
+    restart: always
+    # Creates the single-node layout, access key and bucket on first start; later starts find
+    # them already there.
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?}
+      GARAGE_DEFAULT_ACCESS_KEY: ${GARAGE_DEFAULT_ACCESS_KEY:?}
+      GARAGE_DEFAULT_SECRET_KEY: ${GARAGE_DEFAULT_SECRET_KEY:?}
+      GARAGE_DEFAULT_BUCKET: ${GARAGE_DEFAULT_BUCKET:?}
+    volumes:
+      - ./garage.toml:/etc/garage.toml:ro
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+    # Time to close its metadata database cleanly instead of being killed mid-write.
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+  garage_meta:
+  garage_data:
+  caddy_data:
+  caddy_config:

@@ -23,9 +23,9 @@ apps/server/
 │   ├── lifespan.py  # startup and shutdown: configures logging
 │   ├── logging_config.py  # logging setup and processors; see "Logging"
 │   └── main.py      # ASGI entry point
-├── compose.yaml     # runs the server in Docker with live reload; see "Running it"
-├── Dockerfile       # the `dev` image compose.yaml builds, from host-generated api/gen
-├── Dockerfile.dockerignore  # allow-list for that image's build context (the repo root)
+├── dev.Dockerfile   # the development image, from host-generated api/gen; see "Running it"
+├── deploy.Dockerfile  # the image that ships, which generates its own api/gen; see "Images"
+├── *.Dockerfile.dockerignore  # each image's allow-list for its build context (the repo root)
 ├── dev_run.py       # runs the server natively; see "Running natively"
 ├── export_openapi.py  # writes the API spec into docs/api/; see "API reference"
 ├── tests/
@@ -38,31 +38,40 @@ apps/server/
 
 # Running it
 
-The server runs in Docker by default. The image uses the `api/gen` already generated on the host,
+The server runs in Docker by default, as part of the development stack in `infra/dev/` alongside
+the web app, Postgres and Garage. The dev image uses the `api/gen` already generated on the host,
 so generate it first (and again after changing a `.proto` file). From the repo root, with Docker
 running:
 
 ```
 uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml
-docker compose -f apps/server/compose.yaml up --watch
+python scripts/compose_run.py dev
 ```
 
 This serves `http://127.0.0.1:8000`, reachable from this machine only, and follows the logs.
-`Ctrl+C` stops it.
+`Ctrl+C` stops it; `python scripts/compose_run.py dev down` removes the containers.
 
-- `docker compose -f apps/server/compose.yaml up -d --wait` — the same in the background, returning
-  once `/health_check` passes. No live reload.
-- `docker compose -f apps/server/compose.yaml down` — stops and removes it.
-
-With `--watch`, saving a file under `api/` copies it into the container and uvicorn reloads. That
-includes `api/gen`, so rerunning codegen on the host after a `.proto` change is enough. Changing
+Saving a file under `api/` copies it into the container and uvicorn reloads. That includes
+`api/gen`, so rerunning codegen on the host after a `.proto` change is enough. Changing
 `pyproject.toml`, `uv.lock` or one of the two path packages (`packages/proto/utils`,
 `packages/organization-info`) rebuilds the image instead, which reinstalls dependencies. The image
 holds only runtime dependencies; tests, lint and codegen run on the host.
 
-The build context is the repo root, allow-listed in `Dockerfile.dockerignore`, which Docker uses
-in place of the root `.dockerignore` for this Dockerfile. A new path dependency must be added there
-as well as to `pyproject.toml`.
+## Images
+
+| File | Image | Generated code |
+|---|---|---|
+| `dev.Dockerfile` | Development, with live reload | Copied from the host |
+| `deploy.Dockerfile` | What ships: non-root, no dev dependencies, JSON logs | Generated inside the build with pinned, checksum-verified `buf`, `protoc` and `protoc-gen-connect-openapi` |
+
+Both build from the repo root. Each has its own allow-list, `<name>.Dockerfile.dockerignore`,
+which Docker uses in place of the root `.dockerignore`. A new path dependency must be added to
+both as well as to `pyproject.toml`. When upgrading a codegen tool, bump its version and SHA-256 in
+`deploy.Dockerfile` together with the version `/onboarding` installs.
+
+```
+docker build -f apps/server/deploy.Dockerfile -t armada-server .
+```
 
 ## Running natively
 
@@ -143,7 +152,8 @@ ConnectRPC, the path is the procedure, e.g. `/server.v1.HealthCheckService/Healt
 generated per request, used only for logging: it is not read from or returned in any header.
 
 `LOG_FORMAT` chooses the output: `console` for readable lines, `json` for one JSON object per line.
-It defaults to `json`; `compose.yaml` and `dev_run.py` set `console`.
+It defaults to `json`, which the deploy image uses; `infra/dev/compose.yaml` and `dev_run.py` set
+`console`.
 
 `api/logging_config.py` holds the configuration. Processors added to `SHARED_PROCESSORS` run on
 every line, including those from uvicorn and other libraries. `lifespan.py` applies the

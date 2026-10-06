@@ -13,6 +13,29 @@ React, TypeScript and Vite. Talks to `apps/server/` over ConnectRPC through the 
 plumbing (`packages/api-client/`), or anything imported by `apps/desktop/`. The two frontends
 are separate applications and share code only through `packages/`.
 
+## Run in Docker
+
+The web app runs in the development stack in `infra/dev/`, alongside the server, Postgres and
+Garage. The dev image uses the `src/gen` already generated on the host, so generate it first (step
+1 below), then from the repo root:
+
+```
+python scripts/compose_run.py dev
+```
+
+This serves `http://127.0.0.1:5174` and reloads on changes under `src/`. Requests to `/api` are
+forwarded to the server container, as Caddy does in deployment.
+
+| File | Image |
+|---|---|
+| `dev.Dockerfile` | Development: the Vite dev server, with `src/gen` copied from the host |
+| `deploy.Dockerfile` | What ships: Caddy serving the built app and forwarding `/api` to the server, using `infra/deploy/Caddyfile`. Generates its own `src/gen` with a pinned, checksum-verified `buf` |
+
+Both build from the repo root, each with its own allow-list, `<name>.Dockerfile.dockerignore`, and
+install only the web app's part of the root pnpm workspace (`pnpm install --filter apps-web...`).
+When the app gains a dependency on another package from `packages/`, allow that package in both
+allow-lists and copy its `package.json` in both Dockerfiles' `deps` stage.
+
 ## Run locally
 
 Prerequisites:
@@ -31,7 +54,8 @@ Commands:
 
    pnpm --filter apps-web dev
 
-   The dev server serves the app at http://localhost:5174 by default.
+   The dev server serves the app at http://localhost:5174, forwarding `/api` to the server at
+   http://127.0.0.1:8000 (override with `API_PROXY_TARGET`).
 
 3. Build for production
 

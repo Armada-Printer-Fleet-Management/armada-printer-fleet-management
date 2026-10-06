@@ -269,8 +269,11 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Run desktop app (hot reload)   | `python apps/desktop/dev_run.py --dev`                               |
 | Server Python deps             | `uv sync --project apps/server`                                      |
 | Server tests                   | `uv run --directory apps/server pytest`                                |
-| Run server (Docker, live reload) | `docker compose -f apps/server/compose.yaml up --watch`            |
-| Stop server (Docker)           | `docker compose -f apps/server/compose.yaml down`                    |
+| Run dev stack (Docker, live reload) | `python scripts/compose_run.py dev` (server, web, Postgres, Garage) |
+| Stop dev stack                 | `python scripts/compose_run.py dev down`                             |
+| Run deploy stack locally       | `python scripts/compose_run.py deploy --domain :80 --admin-email <email>` (builds the deploy images first) |
+| Stop deploy stack              | `python scripts/compose_run.py deploy down` (never add `-v`)         |
+| Build a deploy image           | `docker build -f apps/<server|web>/deploy.Dockerfile -t armada-<server|web> .` |
 | Run server natively            | `python apps/server/dev_run.py`                                      |
 | Run server natively (hot reload) | `python apps/server/dev_run.py --dev`                              |
 | Regenerate API docs (`docs/api/`) | `uv run --project apps/server python apps/server/export_openapi.py` (pre-commit runs it; never hand-edit `docs/api/`) |

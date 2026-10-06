@@ -1,17 +1,20 @@
 # An allow-list: the build context is the repo root, so everything is excluded unless a
 # Dockerfile needs it. A new config or secret file therefore cannot reach an image by accident.
-# When the server gains a path dependency, add it here as well as to its pyproject.toml.
+# When the server gains a path dependency, add it here and to dev.Dockerfile.dockerignore as well
+# as to its pyproject.toml.
 *
 
 !apps/server/
-!packages/proto/utils/
+!packages/proto/
 !packages/organization-info/
+!buf.yaml
+!buf.gen.server.yaml
+!scripts/generate_proto.py
 
-# Re-excluded inside the allowed paths: host-built or host-specific state.
+# Re-excluded inside the allowed paths: host-built or host-specific state. Unlike the dev image,
+# api/gen stays out: this image generates its own.
 **/.venv
 **/gen
-# Except the server's generated code, which the image uses as built on the host.
-!apps/server/api/gen/
 **/__pycache__
 **/.pytest_cache
 **/.ruff_cache
