@@ -94,44 +94,44 @@ L4  apps/*                 COMPOSITION ROOTS — wire adapters to ports, expose 
 
 ### Domain-driven design
 
-Core business logic is organised into domains, whether it is shared in `core-domain` or lives
-inside one application. Not everything is a domain: glue code, UI and infrastructure are not.
-Where something is a domain:
+**Domains are Python only**: the server and the desktop backend. The frontends have no domain
+layer. Web logic belongs on the server unless it is a performance optimisation, and UI logic
+stays in components; desktop React reaches everything through the Python backend over IPC.
 
-- **Services are the public interface.** Other code calls a domain only through its services.
-- **Entities hold the logic and stay encapsulated.** Their rules and state are not reached into
-  from outside the domain.
-- **Domains couple by ID only.** One domain refers to another's entity by its ID, never by
-  importing or embedding the other domain's types.
-- **Every entity ID is strongly typed.** Each entity has its own ID type, never a bare string or
-  UUID, so passing the wrong entity's ID is a type error rather than a runtime bug.
+- **Services are the public interface.** Other code calls a domain only through its service.
+- **Entities hold the rules and stay encapsulated.** Nothing outside the domain reaches into them.
+- **Domains couple by ID only**, never by importing another domain's types.
+- **Every entity ID is strongly typed.** Never a bare string or UUID between layers.
 
-Every domain has the same shape, in Python and TypeScript alike:
+**Entities and their rules are shared; services and repositories belong to each app.**
 
 ```
-<domain>/
-  ids          typed IDs for this domain's entities
-  entities     state and the rules that change it; no I/O
-  repository   port: get(id) returns an entity, save(entity) persists it
-  service      public interface: one method per use case
+packages/core-domain/core_domain/
+  ddd/          generic bases: TypedId, Entity, Repository ports, Service, change(), errors
+  ids/          the ID kernel, one file per domain, mirroring proto id/v1
+  <domain>/     entities.py: the entity and its rules, defined once
+apps/<app>/.../domains/<domain>/
+  repository.py port for this app: Repository (server, authoritative) or ReadRepository (client)
+  service.py    this app's use cases, extending Service
 ```
 
-A call always flows the same way:
+A use case that changes an entity always goes through `change()`, which loads, applies the
+entity's rule and saves; a refused rule raises `RuleViolation` and saves nothing. The server is
+authoritative: only its `save` makes a change real. On a client the shared rules are advisory
+(UI hints such as `can_start_review()`), and its repository is read-only.
 
-```python
-def approve(self, print_job_id: PrintJobId) -> PrintJob:   # service
-    print_job = self._repository.get(print_job_id)          # load by typed ID
-    print_job.approve()                                      # entity applies its rules
-    self._repository.save(print_job)                         # persist
-    return print_job
-```
+**Proto messages are DTOs.** `proto_utils.mappers` converts each entity to and from its message,
+once, for every app. DTOs need not match entities field for field: internal entity state stays
+off the wire, and a caller-specific view is shaped by its handler.
 
-Repository implementations are adapters: a database on the server, the API client in a
-frontend. The server is authoritative, so frontend entities are read models and never repeat
-server rules such as which status transitions are allowed.
+**Infrastructure is not plugins.** An app's own persistence and clients, behind its domains'
+repository ports, live in its `infrastructure/` and are never shared. `plugins/` holds
+integrations chosen per deployment, behind `plugin-api` ports.
 
-The wire contract follows the same shape. Its rules are in `packages/proto/AGENTS.md`; read it
-before changing anything under `packages/proto/`.
+The initial example is `print_job`: `core_domain/print_job/`, the server's `api/domains/print_job/`
+and the desktop's `armada_domains/print_job/`. import-linter contracts and structure tests in
+each project enforce this shape. The wire contract's rules are in `packages/proto/AGENTS.md`;
+read it before changing anything under `packages/proto/`.
 
 ---
 
@@ -253,7 +253,7 @@ in the pull request when you do.
 - No `any`. Use `unknown` and narrow.
 - No non-null assertions (`!`) without a comment justifying it.
 
-**Generated code** (`**/*_gen/` such as the desktop's `armada_gen/`) is never hand-edited and never committed. Regenerate with
+**Generated code** (`**/gen/` and `**/*_gen/`, such as the shared Python `proto_utils/gen/`) is never hand-edited and never committed. Regenerate with
 `scripts/generate_proto.py` (see _Toolchain_). Each template sets `clean: true`, so every run deletes
 its output folders first: stale files cannot linger, and anything else put there is lost.
 
@@ -305,8 +305,8 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Desktop backend tests          | `uv run --directory apps/desktop/backend pytest`                     |
 | Desktop frontend tests         | `pnpm --dir apps/desktop/frontend exec vitest run`                   |
 | Generate proto code            | `python scripts/generate_proto.py <template> [--node-modules <dir>]` |
-| Generate server proto code     | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` |
-| Generate desktop Python proto  | `python scripts/generate_proto.py buf.gen.desktop_python.yaml`       |
+| Generate Python proto (shared) | `uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml` |
+| Generate server API docs data  | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` |
 | Generate desktop TS proto      | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` |
 | Run desktop app (build mode)   | `python apps/desktop/dev_run.py`                                     |
 | Run desktop app (hot reload)   | `python apps/desktop/dev_run.py --dev`                               |

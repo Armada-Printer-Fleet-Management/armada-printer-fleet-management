@@ -1,14 +1,11 @@
 from collections.abc import Mapping
 
 from connectrpc.request import RequestContext
+from proto_utils.gen.server.v1.health_check_pb2 import HealthCheckRequest, HealthCheckResponse
 
 from api.common.application_info import ApplicationInfo
 from api.common.health import check_health
 from api.common.models import DependencyCheck, HealthStatus
-from api.gen.server.v1.health_check_connect import (
-    HealthCheckRequest,
-    HealthCheckResponse,
-)
 
 _RPC_STATUS = {
     HealthStatus.PASS: HealthCheckResponse.STATUS_PASS,

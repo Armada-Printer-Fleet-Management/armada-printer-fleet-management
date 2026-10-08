@@ -27,8 +27,9 @@ def main() -> None:
     parser.add_argument("--dev", action="store_true")
     args = parser.parse_args()
 
-    if not (ROOT / "api" / "gen").is_dir():
-        sys.exit("api/gen is missing. Run /onboarding to generate the API code.")
+    generated = ROOT.parents[1] / "packages" / "proto" / "utils" / "src" / "proto_utils" / "gen"
+    if not generated.is_dir():
+        sys.exit(f"{generated} is missing. Run /onboarding to generate the API code.")
 
     cmd = [resolve("uv"), "run", "uvicorn", "api.main:app"]
     if args.dev:

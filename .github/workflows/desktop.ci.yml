@@ -17,17 +17,19 @@ jobs:
         with:
           enable-cache: true
       - uses: ./.github/actions/setup-buf
-      - name: Install protoc
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - uses: ./.github/actions/setup-protoc
       - run: uv sync --all-extras --dev
         working-directory: apps/desktop/backend
       - name: Generate API code
-        run: python scripts/generate_proto.py buf.gen.desktop_python.yaml
+        run: uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml
       - run: uv run ruff check .
         working-directory: apps/desktop/backend
       - run: uv run ruff format --check .
         working-directory: apps/desktop/backend
       - run: uv run pyright
+        working-directory: apps/desktop/backend
+      - name: Layer contracts
+        run: uv run lint-imports
         working-directory: apps/desktop/backend
       - run: uv run pytest
         working-directory: apps/desktop/backend
@@ -88,7 +90,7 @@ jobs:
         working-directory: apps/desktop/frontend
       - name: Generate API code
         run: |
-          python scripts/generate_proto.py buf.gen.desktop_python.yaml
+          uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml
           python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules
       - name: Install NSIS
         run: python scripts/install_nsis.py

@@ -184,7 +184,7 @@
               <tr>
                 <td><code>packages/proto/</code></td>
                 <td>both</td>
-                <td>Generated into <code>backend/src/armada_gen/</code> and <code>frontend/src/gen/</code></td>
+                <td>Generated into the shared <code>packages/proto/utils/src/proto_utils/gen/</code> and <code>frontend/src/gen/</code></td>
               </tr>
               <tr>
                 <td><code>packages/proto/utils</code> (<code>proto-utils</code>)</td>
@@ -236,8 +236,12 @@
                 <td><code>Environment</code> (dev versus packaged paths) and packaging names</td>
               </tr>
               <tr>
-                <td><code>armada_gen</code></td>
-                <td>Generated protobuf code. Gitignored, never hand-edited</td>
+                <td><code>armada_domains</code></td>
+                <td>Domains: a read-only repository port and a service each, over entities shared from <code>core-domain</code></td>
+              </tr>
+              <tr>
+                <td><code>armada_infrastructure</code></td>
+                <td>The backend's own clients, such as the application server over Connect</td>
               </tr>
             </tbody>
           </table>
@@ -428,7 +432,7 @@
 
             <rect x="10" y="183" width="280" height="42" rx="8" class="box" />
             <text x="150" y="200" text-anchor="middle" font-size="0.7rem">
-              buf.gen.desktop_python.yaml
+              buf.gen.python.yaml
             </text>
             <text
               x="150"
@@ -472,7 +476,7 @@
             />
 
             <text x="150" y="268" text-anchor="middle" font-size="0.7rem">
-              backend/src/armada_gen/
+              proto_utils/gen/ (shared)
             </text>
             <text x="490" y="268" text-anchor="middle" font-size="0.7rem">
               frontend/src/gen/

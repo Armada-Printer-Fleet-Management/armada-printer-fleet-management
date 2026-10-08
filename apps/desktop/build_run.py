@@ -30,11 +30,12 @@ def main() -> None:
         fail("the desktop build is Windows only")
 
     with step("Checking generated code"):
-        for generated in (BACKEND / "src" / "armada_gen", FRONTEND / "src" / "gen"):
+        python_gen = ROOT.parents[1] / "packages" / "proto" / "utils" / "src" / "proto_utils" / "gen"
+        for generated in (python_gen, FRONTEND / "src" / "gen"):
             if not any(path.is_file() for path in generated.rglob("*")):
                 fail(
                     f"{generated} has no generated files. Run 'python scripts/generate_proto.py' "
-                    "with buf.gen.desktop_python.yaml and buf.gen.desktop_ts.yaml."
+                    "with buf.gen.python.yaml and buf.gen.desktop_ts.yaml."
                 )
 
     with step("Building frontend"):

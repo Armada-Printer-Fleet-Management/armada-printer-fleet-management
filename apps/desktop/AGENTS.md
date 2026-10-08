@@ -11,13 +11,18 @@ A Python process (`backend/`) opens a native window with pywebview and renders a
 between the two is real IPC through `window.pywebview.api`. There is no HTTP and no ConnectRPC
 between them. The app is for printer administrators and operators; students use `apps/web/`.
 
+**The frontend is a thin view; the Python backend holds the logic.** React never calls the
+application server, the printer server or any other service directly: every call goes over IPC
+to the backend, whose domain services and infrastructure do the work. The backend's domains
+follow the root `AGENTS.md` DDD section.
+
 Never import from `apps/web/`. Share UI through `packages/ui-kit/`.
 
 ## Tech stack
 
 | Layer     | Stack                                                                                 |
 | --------- | ------------------------------------------------------------------------------------- |
-| Backend   | Python >=3.13, pywebview >=6.2,<7, protobuf >=7,<8, packaging; uv + hatchling         |
+| Backend   | Python >=3.13, pywebview >=6.2,<7, protobuf >=7,<8, connectrpc >=0.12.1,<0.13, packaging; uv + hatchling |
 | Frontend  | React 19, TypeScript 5 (strict, `noUncheckedIndexedAccess`), Vite 6, @bufbuild/protobuf 2; pnpm 12.3.4 |
 | Contract  | `packages/proto/` via buf; `protoc` for Python, `protoc-gen-es` for TypeScript       |
 | Quality   | ruff, pyright strict; ESLint 9 + typescript-eslint 8                                  |
@@ -31,9 +36,12 @@ project, each with its own manifest. Generated proto code is the only thing tyin
 | Path                              | Owns                                                                 |
 | --------------------------------- | -------------------------------------------------------------------- |
 | `backend/src/armada_app/`         | Entry point `desktop-backend` (`--target`), window lifecycle         |
+| `backend/src/armada_app/composition.py` | Composition root: builds infrastructure and hands it to domain services |
 | `backend/src/armada_ipc/`         | `Ipc` root object, `IpcModule` base, one module per capability       |
+| `backend/src/armada_domains/`     | Domains: a read-only repository port and a service per domain        |
+| `backend/src/armada_infrastructure/` | The backend's own clients, e.g. `application_server/` over Connect |
 | `backend/src/armada_runtime/`     | `Environment` (dev vs packaged paths), packaging names               |
-| `backend/src/armada_gen/`         | Generated protobuf. Gitignored, never edited                         |
+| `packages/proto/utils/` (shared)  | Generated Python protobuf (`proto_utils.gen`) and entity mappers     |
 | `frontend/src/ipc/`               | One TS module per backend capability, plus `pywebview.ts` and `global.d.ts` |
 | `frontend/src/gen/`               | Generated protobuf. Gitignored, never edited                         |
 | `backend/desktop_backend.spec`    | PyInstaller spec                                                     |
@@ -44,14 +52,18 @@ project, each with its own manifest. Generated proto code is the only thing tyin
 
 Mirror one file on each side, named after the capability:
 
-1. If it carries data, define the message in `packages/proto/common/v1/` and regenerate both sides.
-2. `backend/src/armada_ipc/<name>.py`: a class extending `IpcModule`. Methods return
-   `message_to_dict(msg)` (from `proto_utils`), not the message itself.
-3. Add one attribute to `Ipc.__init__` in `armada_ipc/__init__.py`. That attribute name is the JS
-   namespace: `window.pywebview.api.<attr>.<method>()`. Do not restructure `Ipc`.
+1. Shape every call like an RPC: **one request message in, one response message out.** Reuse a
+   service's messages for a pass-through (`print_job` reuses `server.v1.GetPrintJobRequest`);
+   define a message in `packages/proto/` only when the call diverges. Regenerate both sides.
+2. `backend/src/armada_ipc/<name>.py`: a class extending `IpcModule`, taking its domain service in
+   its constructor. Decorate a call that takes input with `@proto_call(RequestType)` and one that
+   takes none with `@proto_response`; both return the message, which they encode.
+3. Add one attribute to `Ipc.__init__` in `armada_ipc/__init__.py` and pass its service in from
+   `armada_app/composition.py`. The attribute name is the JS namespace:
+   `window.pywebview.api.<attr>.<method>()`. Do not restructure `Ipc`.
 4. `frontend/src/ipc/<name>.ts`: augment the global `PywebviewIpc` interface with the namespace
-   (declaration merging, never edit `global.d.ts`), await `waitForPywebviewIpc()`, and decode
-   the reply with `fromJson(<Schema>, raw)`.
+   (declaration merging, never edit `global.d.ts`), await `waitForPywebviewIpc()`, send the
+   request with `toJson`, and decode the reply with `fromJson(<Schema>, raw)`.
 
 Getters are `x()` / `set_x()` on the Python side, because the bridged name is what callers see.
 
@@ -79,9 +91,9 @@ Getters are `x()` / `set_x()` on the Python side, because the bridged name is wh
 | ---------------------------- | ----------------------------------------------------------------------------- |
 | Backend deps                 | `uv sync --project apps/desktop/backend`                                      |
 | Frontend deps                | `pnpm install`; `/onboarding` says where to run it                            |
-| Generate Python proto        | `python scripts/generate_proto.py buf.gen.desktop_python.yaml`                |
+| Generate Python proto        | `uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml` (shared) |
 | Generate TS proto            | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` |
-| Backend checks               | `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright` (in `backend/`) |
+| Backend checks               | `uv run ruff check .`, `uv run ruff format --check .`, `uv run pyright`, `uv run lint-imports` (in `backend/`) |
 | Frontend checks              | `pnpm exec tsc --noEmit`, `pnpm exec eslint .` (in `frontend/`)               |
 | Run (built frontend)         | `python apps/desktop/dev_run.py`                                              |
 | Run (hot reload, `:5173`)    | `python apps/desktop/dev_run.py --dev`                                        |
@@ -89,4 +101,5 @@ Getters are `x()` / `set_x()` on the Python side, because the bridged name is wh
 | Build installer              | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test]`           |
 
 CI is `.github/workflows/desktop.ci.yml`; the pre-push check is
-`.githooks/pre-push.d/desktop/check.sh`. Both run the codegen and checks above.
+`.githooks/pre-push.d/desktop/check.sh`. Both run the checks above; codegen runs first, once, for
+every Python project.

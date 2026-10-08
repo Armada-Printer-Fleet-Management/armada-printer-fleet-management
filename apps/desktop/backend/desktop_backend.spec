@@ -12,7 +12,7 @@
 # Environment.default_frontend_target() looks. Set console=True to see startup errors in a terminal.
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_data_files, copy_metadata
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
 from armada_runtime.packaging import executable_name
 
@@ -23,7 +23,16 @@ APP_NAME = executable_name()  # the executable and its folder are named after th
 datas = [(str(FRONTEND_DIST), "frontend/dist")]
 datas += copy_metadata("backend")  # ApplicationInfo.version() reads it
 datas += collect_data_files("organization_info")  # organization.json, read through importlib.resources
-hiddenimports: list[str] = []
+# OpenTelemetry finds its context and propagators through entry points in this metadata.
+datas += copy_metadata("opentelemetry-api")
+# pyqwest's native module imports these by name at runtime, where PyInstaller cannot see them,
+# and OpenTelemetry imports its entry points' targets dynamically.
+hiddenimports: list[str] = [
+    "pyqwest._glue",
+    "pyqwest._errors",
+    "pyqwest._multipart",
+    *collect_submodules("opentelemetry"),
+]
 
 analysis = Analysis(  # noqa: F821
     [str(BACKEND / "src" / "armada_app" / "__main__.py")],

@@ -10,15 +10,19 @@ dependencies = [
   "uvicorn[standard]>=0.53,<1", # https://github.com/encode/uvicorn, BSD-3-Clause -- ASGI server for api.main:app
   "protobuf>=7,<8",     # runtime for the buf-generated _pb2 classes; must track protoc's own version line
   "packaging>=24",      # https://github.com/pypa/packaging, the reference PEP 440 parser (also a transitive dep of pip/setuptools/hatchling)
-  "proto-utils",        # packages/proto/utils -- shared protobuf helpers
+  "proto-utils",        # packages/proto/utils -- generated proto code and the entity mappers
   "organization-info",  # packages/organization-info -- reads the shared organization identity (organization.json)
+  "core-domain",        # packages/core-domain -- shared entities, typed IDs and the DDD bases
   "connectrpc>=0.12.1,<0.13",
   "structlog>=26.1,<27",  # https://github.com/hynek/structlog, MIT OR Apache-2.0 -- structured logging
 ]
 
 [tool.uv.sources]
-proto-utils = { path = "../../packages/proto/utils" }
+# Editable, because proto-utils holds generated code that is gitignored, and a built copy leaves
+# gitignored files out.
+proto-utils = { path = "../../packages/proto/utils", editable = true }
 organization-info = { path = "../../packages/organization-info" }
+core-domain = { path = "../../packages/core-domain", editable = true }
 
 [dependency-groups]
 dev = [
@@ -26,7 +30,7 @@ dev = [
   "pyright",
   "pytest",
   "httpx2",  # https://github.com/pydantic/httpx2, BSD-3-Clause -- HTTP client Starlette's TestClient requires
-  "protoc-gen-connectrpc>=0.12.1,<0.13",
+  "import-linter>=2.15,<3", # https://github.com/seddonym/import-linter, BSD-2-Clause -- layer contracts below
 ]
 
 [tool.ruff]
@@ -45,3 +49,36 @@ exclude = ["api/gen"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.importlinter]
+root_package = "api"
+include_external_packages = true
+
+# A domain is pure: it sees only core_domain and the standard library
+[[tool.importlinter.contracts]]
+name = "Domains import no transport, infrastructure, generated code or framework"
+type = "forbidden"
+source_modules = ["api.domains"]
+forbidden_modules = [
+  "api.infrastructure",
+  "api.services",
+  "api.routers",
+  "api.main",
+  "proto_utils",
+  "google",
+  "connectrpc",
+  "fastapi",
+  "starlette",
+  "pydantic",
+]
+
+[[tool.importlinter.contracts]]
+name = "Domains are independent of each other"
+type = "independence"
+modules = ["api.domains.*"]
+
+[[tool.importlinter.contracts]]
+name = "Inside a domain, the service sits above its repository port"
+type = "layers"
+containers = ["api.domains.*"]
+layers = ["service", "repository"]

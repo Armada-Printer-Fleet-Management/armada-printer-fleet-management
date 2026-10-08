@@ -1,0 +1,38 @@
+name: CI (server)
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: ./.github/actions/setup-buf
+      - uses: ./.github/actions/setup-protoc
+        with:
+          connect-openapi: "true"
+      - run: uv sync --dev
+        working-directory: apps/server
+      - name: Generate API code
+        run: |
+          uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml
+          uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml
+      - run: uv run ruff check .
+        working-directory: apps/server
+      - run: uv run ruff format --check .
+        working-directory: apps/server
+      - run: uv run pyright
+        working-directory: apps/server
+      - name: Layer contracts
+        run: uv run lint-imports
+        working-directory: apps/server
+      - run: uv run pytest -q
+        working-directory: apps/server

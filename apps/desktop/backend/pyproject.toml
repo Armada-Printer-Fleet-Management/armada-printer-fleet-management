@@ -8,19 +8,25 @@ dependencies = [
   "pywebview>=6.2,<7",  # https://github.com/r0x0r/pywebview, BSD-3-Clause
   "protobuf>=7,<8",     # runtime for the buf-generated _pb2 classes; must track protoc's own version line
   "packaging>=24",      # https://github.com/pypa/packaging, the reference PEP 440 parser (also a transitive dep of pip/setuptools/hatchling)
-  "proto-utils",        # packages/proto/utils -- shared protobuf helpers
+  "proto-utils",        # packages/proto/utils -- generated proto code and the entity mappers
   "organization-info",  # packages/organization-info -- reads the shared organization identity (organization.json)
+  "core-domain",        # packages/core-domain -- shared entities, typed IDs and the DDD bases
+  "connectrpc>=0.12.1,<0.13",  # https://github.com/connectrpc/connect-py, Apache-2.0 -- client to the remote server; pinned as on the server
 ]
 
 [tool.uv.sources]
-proto-utils = { path = "../../../packages/proto/utils" }
+# Editable, because proto-utils holds generated code that is gitignored, and a built copy leaves
+# gitignored files out.
+proto-utils = { path = "../../../packages/proto/utils", editable = true }
 organization-info = { path = "../../../packages/organization-info" }
+core-domain = { path = "../../../packages/core-domain", editable = true }
 
 [dependency-groups]
 dev = [
   "ruff",
   "pyright",
   "pytest>=9,<10",  # https://github.com/pytest-dev/pytest, MIT
+  "import-linter>=2.15,<3", # https://github.com/seddonym/import-linter, BSD-2-Clause -- layer contracts
 ]
 build = [
   "pyinstaller>=6,<7",
@@ -34,11 +40,16 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/armada_app", "src/armada_ipc", "src/armada_runtime", "src/armada_gen"]
+packages = [
+  "src/armada_app",
+  "src/armada_ipc",
+  "src/armada_runtime",
+  "src/armada_domains",
+  "src/armada_infrastructure",
+]
 
 [tool.ruff]
 line-length = 100
-extend-exclude = ["src/armada_gen"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -47,7 +58,44 @@ select = ["E", "F", "I", "UP", "B"]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
 include = ["src", "tests"]
-exclude = ["src/armada_gen"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.importlinter]
+root_packages = [
+  "armada_app",
+  "armada_ipc",
+  "armada_runtime",
+  "armada_domains",
+  "armada_infrastructure",
+]
+include_external_packages = true
+
+# A domain is pure: it sees only core_domain and the standard library
+[[tool.importlinter.contracts]]
+name = "Domains import no transport, infrastructure, generated code or framework"
+type = "forbidden"
+source_modules = ["armada_domains"]
+forbidden_modules = [
+  "armada_app",
+  "armada_ipc",
+  "armada_runtime",
+  "armada_infrastructure",
+  "proto_utils",
+  "google",
+  "connectrpc",
+  "pyqwest",
+  "webview",
+]
+
+[[tool.importlinter.contracts]]
+name = "Domains are independent of each other"
+type = "independence"
+modules = ["armada_domains.*"]
+
+[[tool.importlinter.contracts]]
+name = "Inside a domain, the service sits above its repository port"
+type = "layers"
+containers = ["armada_domains.*"]
+layers = ["service", "repository"]

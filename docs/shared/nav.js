@@ -20,6 +20,7 @@ const SECTIONS = [
     title: "Design",
     links: [
       { href: "data-management-choices.html", text: "Data management choices" },
+      { href: "domain-architecture.html", text: "Domain architecture" },
     ],
   },
   {

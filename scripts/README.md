@@ -18,8 +18,8 @@ template's output folders before generating and removed protos leave no stale co
 
 | Template | Command | Why |
 |---|---|---|
-| `buf.gen.server.yaml` | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` | `protoc-gen-connectrpc` is a dev dependency in the server's virtualenv; `uv run` puts it on `PATH`. |
-| `buf.gen.desktop_python.yaml` | `python scripts/generate_proto.py buf.gen.desktop_python.yaml` | Uses only protoc's built-in plugins. |
+| `buf.gen.python.yaml` | `uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml` | One Python copy for every app. `protoc-gen-connectrpc` is a dev dependency of `packages/proto/utils`; `uv run` puts it on `PATH`. |
+| `buf.gen.server.yaml` | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` | The server's API documentation data only. |
 | `buf.gen.desktop_ts.yaml` | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` | `protoc-gen-es` is an npm package in the frontend. |
 
 ## `install_nsis.py` usage

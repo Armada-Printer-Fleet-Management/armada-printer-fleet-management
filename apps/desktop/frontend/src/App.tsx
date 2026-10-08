@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@armada/ui-kit';
+import { PrintJobDevPanel } from './dev/PrintJobDevPanel';
 import { OrganizationInfoSchema } from './gen/common/v1/organization_info_pb';
 import { version } from './ipc/application-info';
 
@@ -66,6 +67,7 @@ export function App() {
       {state.status === 'error' && (
         <p>Failed to reach the backend: {state.message}</p>
       )}
+      <PrintJobDevPanel />
     </main>
   );
 }

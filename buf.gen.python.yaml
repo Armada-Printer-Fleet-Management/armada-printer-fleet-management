@@ -1,0 +1,15 @@
+version: v2
+clean: true
+inputs:
+  - directory: packages/proto
+# One Python output, shared by every Python app through proto_utils.
+plugins:
+  - protoc_builtin: python
+    protoc_path: protoc
+    out: packages/proto/utils/src/proto_utils/gen
+  - protoc_builtin: pyi
+    protoc_path: protoc
+    out: packages/proto/utils/src/proto_utils/gen
+  - local: protoc-gen-connectrpc
+    out: packages/proto/utils/src/proto_utils/gen
+    opt: protobuf=google

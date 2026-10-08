@@ -1,6 +1,7 @@
 # The development image, run by infra/dev/compose.yaml with live reload; deploy.Dockerfile
 # is the one that ships. Build from the repo root, which the server's path dependencies need.
-# api/gen is copied from the host rather than generated here, so run server codegen first.
+# Generated code (proto_utils/gen and api/gen) is copied from the host rather than generated here,
+# so run codegen first.
 
 ARG PYTHON_VERSION=3.13
 ARG UV_VERSION=0.12.11
@@ -18,11 +19,13 @@ ENV UV_LINK_MODE=copy \
 # apps/ and packages/ still resolve.
 WORKDIR /repo
 
-# Installs the server's runtime dependencies, including the proto-utils and organization-info
-# packages. Only the dependency files are copied, so editing server code leaves this stage cached.
+# Installs the server's runtime dependencies, including the proto-utils, organization-info and
+# core-domain packages. Only the dependency files are copied, so editing server code leaves this
+# stage cached.
 FROM base AS deps
 COPY packages/proto/utils packages/proto/utils
 COPY packages/organization-info packages/organization-info
+COPY packages/core-domain packages/core-domain
 COPY apps/server/pyproject.toml apps/server/uv.lock apps/server/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --project apps/server

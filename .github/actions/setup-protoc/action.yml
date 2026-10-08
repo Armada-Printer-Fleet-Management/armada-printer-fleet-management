@@ -1,0 +1,34 @@
+name: Setup protoc
+description: >-
+  Install the pinned protoc release onto a Linux runner, and optionally the pinned
+  protoc-gen-connect-openapi plugin. The versions and SHA-256s match apps/server/deploy.Dockerfile
+  and what /onboarding installs, so generated code is the same everywhere; bump them together.
+
+inputs:
+  connect-openapi:
+    description: Also install protoc-gen-connect-openapi, which the server's OpenAPI codegen needs.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        cd "${RUNNER_TEMP}"
+        version="36.0"
+        curl -fsSL -o protoc.zip "https://github.com/protocolbuffers/protobuf/releases/download/v${version}/protoc-${version}-linux-x86_64.zip"
+        echo "bc8211ce760bd43ee21ddc145d6d9dbaeeabae205267a79d9054a240e367d4b4  protoc.zip" | sha256sum -c -
+        sudo unzip -q -o protoc.zip -d /usr/local bin/protoc 'include/*'
+        protoc --version
+    - if: inputs.connect-openapi == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd "${RUNNER_TEMP}"
+        version="0.28.0"
+        curl -fsSL -o openapi.tar.gz "https://github.com/sudorandom/protoc-gen-connect-openapi/releases/download/v${version}/protoc-gen-connect-openapi_${version}_linux_amd64.tar.gz"
+        echo "1bc500494b835efa00487d9685ca8e6f74b5a427bdb6f5a456f3287e5f3b336a  openapi.tar.gz" | sha256sum -c -
+        sudo tar -xzf openapi.tar.gz -C /usr/local/bin protoc-gen-connect-openapi
+        protoc-gen-connect-openapi --version

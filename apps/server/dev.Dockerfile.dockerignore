@@ -7,11 +7,14 @@
 !apps/server/
 !packages/proto/utils/
 !packages/organization-info/
+!packages/core-domain/
 
 # Re-excluded inside the allowed paths: host-built or host-specific state.
 **/.venv
 **/gen
-# Except the server's generated code, which the image uses as built on the host.
+# Except the generated code the image uses as built on the host: the shared Python code and the
+# server's API documentation.
+!packages/proto/utils/src/proto_utils/gen/
 !apps/server/api/gen/
 **/__pycache__
 **/.pytest_cache
