@@ -1,0 +1,53 @@
+[project]
+name = "core-domain"
+version = "0.1.0"
+description = "Domain entities, their rules, and the generic DDD bases every Python app builds its domains on. No I/O, no framework."
+requires-python = ">=3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "ruff",
+  "pyright",
+  "pytest>=9,<10",          # https://github.com/pytest-dev/pytest, MIT
+  "import-linter>=2.15,<3", # https://github.com/seddonym/import-linter, BSD-2-Clause -- layer contracts below
+]
+
+[tool.uv]
+# Apps install this as a built copy, so they must rebuild it when its source changes.
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.py" }]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/core_domain"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+include = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.importlinter]
+root_package = "core_domain"
+
+# Domains sit above the ID kernel, which sits above the generic bases. Add each new domain to the
+# first line with " | ", which also keeps domains from importing one another.
+[[tool.importlinter.contracts]]
+name = "Domains -> ids -> ddd"
+type = "layers"
+layers = [
+  "core_domain.print_job",
+  "core_domain.ids",
+  "core_domain.ddd",
+]

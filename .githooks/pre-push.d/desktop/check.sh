@@ -1,8 +1,8 @@
 # ── Desktop: backend (Python) ───────────────────────────────────────────────
 if [ -f apps/desktop/backend/pyproject.toml ]; then
-  require "backend: generate" buf python scripts/generate_proto.py buf.gen.desktop_python.yaml
   require "backend: ruff" uv run_in apps/desktop/backend uv run ruff check .
   require "backend: pyright" uv run_in apps/desktop/backend uv run python -m pyright
+  require "backend: layers" uv run_in apps/desktop/backend uv run lint-imports
   require "backend: pytest" uv run_in apps/desktop/backend uv run pytest -q
 else
   NA+=("desktop-backend")

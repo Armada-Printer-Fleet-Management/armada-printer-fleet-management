@@ -1,0 +1,37 @@
+name: CI (Python packages)
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [packages/core-domain, packages/proto/utils]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: ./.github/actions/setup-buf
+      - uses: ./.github/actions/setup-protoc
+      - run: uv sync --dev
+      - name: Generate API code
+        working-directory: .
+        run: uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pyright
+      - name: Layer contracts
+        if: matrix.project == 'packages/core-domain'
+        run: uv run lint-imports
+      - run: uv run pytest -q

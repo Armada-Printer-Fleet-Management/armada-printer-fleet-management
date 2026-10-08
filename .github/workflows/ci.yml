@@ -17,7 +17,8 @@ jobs:
   detect:
     runs-on: ubuntu-latest
     outputs:
-      python: ${{ steps.check.outputs.python }}
+      python-packages: ${{ steps.check.outputs.python-packages }}
+      server: ${{ steps.check.outputs.server }}
       typescript: ${{ steps.check.outputs.typescript }}
       proto: ${{ steps.check.outputs.proto }}
       desktop: ${{ steps.check.outputs.desktop }}
@@ -25,7 +26,8 @@ jobs:
       - uses: actions/checkout@v4
       - id: check
         run: |
-          { echo "python=$([ -f pyproject.toml ] && echo true || echo false)"
+          { echo "python-packages=$([ -f packages/core-domain/pyproject.toml ] && echo true || echo false)"
+            echo "server=$([ -f apps/server/pyproject.toml ] && echo true || echo false)"
             echo "typescript=$([ -f pnpm-workspace.yaml ] && echo true || echo false)"
             echo "proto=$([ -f buf.yaml ] && echo true || echo false)"
             echo "desktop=$([ -f apps/desktop/backend/pyproject.toml ] && echo true || echo false)"
@@ -74,11 +76,6 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup-buf
       - run: buf lint
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - name: Typed-ID contract rules
-        run: uv run --project packages/proto/utils pytest packages/proto/utils/tests
       - name: Reject breaking API changes
         if: github.event_name == 'pull_request'
         run: |
@@ -89,30 +86,16 @@ jobs:
             echo "No buf.yaml on $BASE yet -- nothing to compare against."
           fi
 
-  python:
+  # The typed-ID contract rules
+  python-packages:
     needs: detect
-    if: needs.detect.outputs.python == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - uses: ./.github/actions/setup-buf
-        if: needs.detect.outputs.proto == 'true'
-      - run: uv sync --all-extras --dev
-      - name: Generate API code
-        if: needs.detect.outputs.proto == 'true'
-        run: buf generate --template buf.gen.server.yaml
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run pyright
-      - name: Layer contracts
-        run: uv run lint-imports
-      - run: uv run pytest -q
+    if: needs.detect.outputs.python-packages == 'true'
+    uses: ./.github/workflows/python-packages.ci.yml
+
+  server:
+    needs: detect
+    if: needs.detect.outputs.server == 'true'
+    uses: ./.github/workflows/server.ci.yml
 
   typescript:
     needs: detect

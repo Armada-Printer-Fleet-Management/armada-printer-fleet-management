@@ -7,11 +7,15 @@ from collections.abc import Callable
 from typing import get_type_hints
 
 import pytest
+from core_domain.ddd import EntityNotFound
+from core_domain.ids import PrintJobId
+from core_domain.print_job import PrintJob
 from google.protobuf.message import Message
 
 import armada_ipc
+from armada_domains.print_job.service import PrintJobService
 from armada_ipc import Ipc
-from armada_ipc._base import PROTO_RESPONSE_MARKER, IpcModule
+from armada_ipc._base import PROTO_CALL_MARKER, PROTO_RESPONSE_MARKER, IpcModule
 
 type Method = Callable[..., object]
 
@@ -66,7 +70,12 @@ def exposed(
     return methods, objects
 
 
-EXPOSED_METHODS, EXPOSED_OBJECTS = exposed(Ipc())
+class _NoPrintJobs:
+    def get(self, entity_id: PrintJobId) -> PrintJob:
+        raise EntityNotFound(entity_id)
+
+
+EXPOSED_METHODS, EXPOSED_OBJECTS = exposed(Ipc(print_jobs=PrintJobService(_NoPrintJobs())))
 SWEPT_METHODS = swept_methods()
 
 
@@ -102,6 +111,14 @@ def test_every_exposed_method_returns_protobuf(name: str) -> None:
         "IPC calls must live on an IpcModule"
     )
     assert_proto_response(method)
+
+
+@pytest.mark.parametrize("name", list(SWEPT_METHODS))
+def test_ipc_calls_with_input_take_one_request_message(name: str) -> None:
+    """JS passes arguments positionally, so loose ones shift silently when one is added."""
+    method = SWEPT_METHODS[name]
+    takes_input = len(inspect.signature(inspect.unwrap(method)).parameters) > 1
+    assert not takes_input or getattr(method, PROTO_CALL_MARKER, False), "use @proto_call"
 
 
 @pytest.mark.parametrize("name", list(SWEPT_METHODS))

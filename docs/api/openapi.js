@@ -1122,7 +1122,7 @@ window.OPENAPI_SPEC = {
         ]
       }
     },
-    "/server.v1.PrintJobService/CreatePrintJob": {
+    "/api/server.v1.PrintJobService/CreatePrintJob": {
       "post": {
         "description": "Step 1. Creates a DRAFT job to attach a file to.",
         "operationId": "server.v1.PrintJobService.CreatePrintJob",
@@ -1184,9 +1184,9 @@ window.OPENAPI_SPEC = {
         ]
       }
     },
-    "/server.v1.PrintJobService/CreatePrintJobUpload": {
+    "/api/server.v1.PrintJobService/CreatePrintJobUpload": {
       "post": {
-        "description": "Step 2, and upload pair call 1 of 2. Creates the job's file record, links it to the job,\r\n and returns where to PUT the bytes (call 2 of 2). Calling it again replaces the file.",
+        "description": "Step 2, and upload pair call 1 of 2. Creates the job's file record, links it to the job,\n and returns where to PUT the bytes (call 2 of 2). Calling it again replaces the file.",
         "operationId": "server.v1.PrintJobService.CreatePrintJobUpload",
         "parameters": [
           {
@@ -1246,7 +1246,7 @@ window.OPENAPI_SPEC = {
         ]
       }
     },
-    "/server.v1.PrintJobService/GetPrintJob": {
+    "/api/server.v1.PrintJobService/GetPrintJob": {
       "post": {
         "description": "Gets one print job with its file.",
         "operationId": "server.v1.PrintJobService.GetPrintJob",
@@ -1308,7 +1308,7 @@ window.OPENAPI_SPEC = {
         ]
       }
     },
-    "/server.v1.PrintJobService/ListPrintJobs": {
+    "/api/server.v1.PrintJobService/ListPrintJobs": {
       "post": {
         "description": "Lists print jobs with their files, one page at a time.",
         "operationId": "server.v1.PrintJobService.ListPrintJobs",
@@ -1370,7 +1370,7 @@ window.OPENAPI_SPEC = {
         ]
       }
     },
-    "/server.v1.PrintJobService/SubmitPrintJob": {
+    "/api/server.v1.PrintJobService/SubmitPrintJob": {
       "post": {
         "description": "Step 3. Submits a DRAFT job whose file has finished uploading, moving it to SUBMITTED.",
         "operationId": "server.v1.PrintJobService.SubmitPrintJob",
@@ -1432,9 +1432,9 @@ window.OPENAPI_SPEC = {
         ]
       }
     },
-    "/server.v1.PrintJobService/TransitionPrintJob": {
+    "/api/server.v1.PrintJobService/TransitionPrintJob": {
       "post": {
-        "description": "Staff move a job to its next status. Each action carries exactly the fields it needs; the\r\n server rejects an action that is not valid from the job's current status.",
+        "description": "Staff move a job to its next status. Each action carries exactly the fields it needs; the\n server rejects an action that is not valid from the job's current status.",
         "operationId": "server.v1.PrintJobService.TransitionPrintJob",
         "parameters": [
           {
@@ -1501,7 +1501,7 @@ window.OPENAPI_SPEC = {
       "name": "server.v1.HealthCheckService"
     },
     {
-      "description": "Print job intake and review, served by the remote server. A job is created first, as a\r\n DRAFT; its file is then uploaded and attached to it, and the job is submitted.",
+      "description": "Print job intake and review, served by the remote server. A job is created first, as a\n DRAFT; its file is then uploaded and attached to it, and the job is submitted.",
       "name": "server.v1.PrintJobService"
     }
   ]

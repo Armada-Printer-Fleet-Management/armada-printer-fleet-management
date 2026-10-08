@@ -5,10 +5,10 @@ from pathlib import Path
 
 from packaging.version import Version
 from proto_utils import message_to_dict
+from proto_utils.gen.common.v1 import application_info_pb2
 from pydantic import BaseModel
 
 from api.common.consts import PYPROJECT_PATH
-from api.gen.common.v1 import application_info_pb2
 
 
 class _Project(BaseModel):

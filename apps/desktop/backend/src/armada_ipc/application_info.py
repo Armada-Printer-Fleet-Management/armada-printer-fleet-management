@@ -3,8 +3,8 @@
 from importlib.metadata import version as pkg_version
 
 from packaging.version import Version
+from proto_utils.gen.common.v1 import application_info_pb2
 
-from armada_gen.common.v1 import application_info_pb2
 from armada_ipc._base import IpcModule, proto_response
 
 

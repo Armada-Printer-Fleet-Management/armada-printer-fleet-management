@@ -27,7 +27,10 @@ echo "pre-push checks:"
 # ── Protobuf contract (shared across every service, not per-service) ────────
 if [ -f buf.yaml ]; then
   require "buf lint" buf buf lint
-  require "proto ids" uv uv run --project packages/proto/utils pytest -q packages/proto/utils/tests
+  # Shared generated Python code; every Python check below imports it.
+  require "python gen" uv uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml
+  require "proto utils" uv run_in packages/proto/utils uv run pytest -q
+  require "proto pyright" uv run_in packages/proto/utils uv run pyright
 else
   NA+=("protobuf")
 fi

@@ -4,11 +4,11 @@ from collections.abc import Iterator, Mapping
 import pytest
 from fastapi.testclient import TestClient
 from packaging.version import Version
+from proto_utils.gen.server.v1.health_check_connect import HealthCheckServiceASGIApplication
 
 from api.common.consts import PYPROJECT_PATH
 from api.common.dependencies import application_info, dependency_checks
 from api.common.models import DependencyCheck
-from api.gen.server.v1.health_check_connect import HealthCheckServiceASGIApplication
 from api.main import app
 from api.services.health_check_service import HealthCheckServiceImplementation
 

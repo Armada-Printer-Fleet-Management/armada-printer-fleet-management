@@ -7,12 +7,14 @@
 !apps/server/
 !packages/proto/
 !packages/organization-info/
+!packages/core-domain/
 !buf.yaml
+!buf.gen.python.yaml
 !buf.gen.server.yaml
 !scripts/generate_proto.py
 
 # Re-excluded inside the allowed paths: host-built or host-specific state. Unlike the dev image,
-# api/gen stays out: this image generates its own.
+# generated code stays out: this image generates its own.
 **/.venv
 **/gen
 **/__pycache__

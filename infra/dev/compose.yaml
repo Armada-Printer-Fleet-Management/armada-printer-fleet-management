@@ -22,7 +22,7 @@ services:
       - 127.0.0.1:8000:8000
     develop:
       watch:
-        # Includes api/gen, so rerunning server codegen on the host reaches the container too.
+        # Includes api/gen, so rerunning OpenAPI codegen on the host reaches the container too.
         - action: sync
           path: ../../apps/server/api
           target: /repo/apps/server/api
@@ -30,10 +30,13 @@ services:
           path: ../../apps/server/pyproject.toml
         - action: rebuild
           path: ../../apps/server/uv.lock
+        # Includes the shared generated Python code, so rerunning codegen rebuilds the container.
         - action: rebuild
           path: ../../packages/proto/utils
         - action: rebuild
           path: ../../packages/organization-info
+        - action: rebuild
+          path: ../../packages/core-domain
 
   web:
     build:

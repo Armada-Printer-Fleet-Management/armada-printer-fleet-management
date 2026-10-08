@@ -3,15 +3,6 @@ clean: true
 inputs:
   - directory: packages/proto
 plugins:
-  - protoc_builtin: python
-    protoc_path: protoc
-    out: apps/server/api/gen
-  - protoc_builtin: pyi
-    protoc_path: protoc
-    out: apps/server/api/gen
-  - local: protoc-gen-connectrpc
-    out: apps/server/api/gen
-    opt: protobuf=google
   - local: protoc-gen-connect-openapi
     out: apps/server/api/gen/openapi
     opt:

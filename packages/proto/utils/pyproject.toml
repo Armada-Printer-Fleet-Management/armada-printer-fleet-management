@@ -1,14 +1,24 @@
 [project]
 name = "proto-utils"
 version = "0.1.0"
-description = "Shared helpers for working with buf-generated protobuf code, used by every app that consumes packages/proto."
+description = "The Python boundary edge: code generated from packages/proto, plus the mappers between it and core-domain's entities. Used by every Python app."
 requires-python = ">=3.13"
 dependencies = [
   "protobuf>=7,<8",
+  "connectrpc>=0.12.1,<0.13",  # https://github.com/connectrpc/connect-py, Apache-2.0 -- runtime for the generated Connect code
+  "core-domain",               # packages/core-domain -- the entities the mappers convert to and from
 ]
 
+[tool.uv.sources]
+core-domain = { path = "../../core-domain", editable = true }
+
 [dependency-groups]
-dev = ["ruff", "pyright", "pytest>=9,<10"]
+dev = [
+  "ruff",
+  "pyright",
+  "pytest>=9,<10",
+  "protoc-gen-connectrpc>=0.12.1,<0.13",  # generates the Connect code into src/proto_utils/gen
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -19,6 +29,7 @@ packages = ["src/proto_utils"]
 
 [tool.ruff]
 line-length = 100
+extend-exclude = ["src/proto_utils/gen"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -27,6 +38,7 @@ select = ["E", "F", "I", "UP", "B"]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
 include = ["src", "tests"]
+exclude = ["src/proto_utils/gen"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

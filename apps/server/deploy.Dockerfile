@@ -1,7 +1,7 @@
 # The image that ships to deployed machines; dev.Dockerfile is the local development one. Build
 # from the repo root, which the server's path dependencies and the .proto contract need.
-# api/gen is generated inside the build, never copied from the host, so a stale local copy
-# cannot ship.
+# Generated code (proto_utils/gen and api/gen) is generated inside the build, never copied from
+# the host, so a stale local copy cannot ship.
 
 ARG PYTHON_VERSION=3.13
 ARG UV_VERSION=0.12.11
@@ -22,11 +22,13 @@ ENV UV_LINK_MODE=copy \
 # apps/ and packages/ still resolve.
 WORKDIR /repo
 
-# Installs the server's dependencies, including the proto-utils and organization-info packages.
-# Only the dependency files are copied, so editing server code leaves this stage cached.
+# Installs the server's dependencies, including the proto-utils, organization-info and
+# core-domain packages. Only the dependency files are copied, so editing server code leaves this
+# stage cached.
 FROM base AS deps
 COPY packages/proto/utils packages/proto/utils
 COPY packages/organization-info packages/organization-info
+COPY packages/core-domain packages/core-domain
 COPY apps/server/pyproject.toml apps/server/uv.lock apps/server/
 # Runtime packages only (--no-dev). The image that ships inherits this virtualenv.
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -58,25 +60,27 @@ RUN set -eu; cd /tmp \
  && tar -xzf openapi.tar.gz -C /usr/local/bin protoc-gen-connect-openapi \
  && rm -f /tmp/buf /tmp/protoc.zip /tmp/openapi.tar.gz
 
-# Adds the dev dependencies, which include the protoc-gen-connectrpc generator, to this stage's
-# virtualenv only. The runtime stage copies just apps/server/api from here, so neither they nor
-# the codegen tools ship.
+# Adds proto-utils' dev dependencies, which include the protoc-gen-connectrpc generator, in its
+# own virtualenv in this stage only. The runtime stage copies just the generated code from here,
+# so neither they nor the codegen tools ship.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --project apps/server
-COPY buf.yaml buf.gen.server.yaml ./
+    uv sync --locked --project packages/proto/utils
+COPY buf.yaml buf.gen.python.yaml buf.gen.server.yaml ./
 COPY packages/proto packages/proto
 COPY scripts/generate_proto.py scripts/
 COPY apps/server apps/server
 
-# Writes apps/server/api/gen from packages/proto using the server's buf template. uv run puts
-# the virtualenv's generator on PATH, where buf looks for it.
-RUN uv run --locked --project apps/server python scripts/generate_proto.py buf.gen.server.yaml
+# Writes the shared Python code into proto_utils/gen, then the server's OpenAPI data into
+# apps/server/api/gen. uv run puts the virtualenv's generator on PATH, where buf looks for it.
+RUN uv run --locked --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml \
+ && uv run --locked --project apps/server python scripts/generate_proto.py buf.gen.server.yaml
 
 # The image that ships. Built on deps rather than codegen, so the dev dependencies and codegen
 # tools stay behind.
 FROM deps AS runtime
 RUN useradd --system --uid 10001 --no-create-home armada
 USER armada
+COPY --from=codegen /repo/packages/proto/utils/src/proto_utils/gen packages/proto/utils/src/proto_utils/gen
 COPY --from=codegen /repo/apps/server/api apps/server/api
 WORKDIR /repo/apps/server
 ENV PATH="/repo/apps/server/.venv/bin:${PATH}" \

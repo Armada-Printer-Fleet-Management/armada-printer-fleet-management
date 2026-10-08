@@ -119,18 +119,19 @@ Each template covers one language and is invoked through the shared script rathe
 
 | Condition | Command |
 |---|---|
-| `buf.gen.desktop_python.yaml` exists | `python scripts/generate_proto.py buf.gen.desktop_python.yaml` |
+| `buf.gen.python.yaml` exists | `uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml` |
 | `buf.gen.desktop_ts.yaml` exists and `apps/desktop/frontend/node_modules` exists | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` |
 | `buf.gen.server.yaml` exists | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` |
 | `buf.gen.web_ts.yaml` exists and `apps/web/node_modules` exists | `python scripts/generate_proto.py buf.gen.web_ts.yaml --node-modules apps/web/node_modules` |
 
 (Step 4 installs dependencies before this step generates code, so the local plugins are already
-present: the frontends' `protoc-gen-es` for the TypeScript rows, and the server's
-`protoc-gen-connectrpc` for the server row. The server's plugin is a dev dependency in its
-virtualenv, which is why that row runs through `uv run`: it puts the virtualenv's executables on
-`PATH` for `buf` to find.)
+present: the frontends' `protoc-gen-es` for the TypeScript rows. The Python row runs through
+`uv run` because `protoc-gen-connectrpc` is a dev dependency of `packages/proto/utils`, and
+`uv run` puts that virtualenv's executables on `PATH` for `buf` to find.)
 
-This produces the Python server interfaces and TypeScript clients from `packages/proto`. The output
+The Python row writes one shared copy, `packages/proto/utils/src/proto_utils/gen/`, which the server
+and the desktop backend both import; the server row writes only its API documentation data.
+This produces the Python code and TypeScript clients from `packages/proto`. The output
 is gitignored and must exist before anything type-checks. Every template sets `clean: true`, so each
 run deletes that template's output folders before regenerating them; re-running a row is always safe.
 
