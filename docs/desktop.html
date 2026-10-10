@@ -237,11 +237,11 @@
               </tr>
               <tr>
                 <td><code>armada_domains</code></td>
-                <td>Domains: a read-only repository port and a service each, over entities shared from <code>core-domain</code></td>
+                <td>Domains: a repository port and a service each, over entities shared from <code>core-domain</code>. The port reads and requests changes; it never saves a shared entity, because the server validates and applies every change. An entity specific to the desktop may be saved locally</td>
               </tr>
               <tr>
                 <td><code>armada_infrastructure</code></td>
-                <td>The backend's own clients, such as the application server over Connect</td>
+                <td>The backend's own I/O clients that implement those ports, such as the application server over Connect. No repository or domain logic lives here</td>
               </tr>
             </tbody>
           </table>

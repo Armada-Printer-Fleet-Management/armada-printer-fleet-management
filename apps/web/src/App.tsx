@@ -10,6 +10,7 @@ import {
 } from '@armada/ui-kit';
 import { OrganizationInfoSchema } from './gen/common/v1/organization_info_pb';
 import { version } from './lib/version';
+import { TempVerticalSlice } from './temp/TempVerticalSlice';
 
 const App: React.FC = () => {
   return (
@@ -37,6 +38,7 @@ const App: React.FC = () => {
               </p>
             </CardContent>
           </Card>
+          <TempVerticalSlice />
         </div>
       </main>
     </div>
