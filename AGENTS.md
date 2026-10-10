@@ -111,14 +111,21 @@ packages/core-domain/core_domain/
   ids/          the ID kernel, one file per domain, mirroring proto id/v1
   <domain>/     entities.py: the entity and its rules, defined once
 apps/<app>/.../domains/<domain>/
-  repository.py port for this app: Repository (server, authoritative) or ReadRepository (client)
+  repository.py port for this app: Repository (server, saves) or ReadRepository (client, requests)
   service.py    this app's use cases, extending Service
 ```
 
 A use case that changes an entity always goes through `change()`, which loads, applies the
 entity's rule and saves; a refused rule raises `RuleViolation` and saves nothing. The server is
-authoritative: only its `save` makes a change real. On a client the shared rules are advisory
-(UI hints such as `can_start_review()`), and its repository is read-only.
+authoritative: only its `save` makes a change real, because it alone can validate every request
+against current state.
+
+**Clients differ: the desktop never saves a shared entity and never applies its rule.** Its service passes the
+typed ID to a `request_<action>()` method on its repository port, the server validates and
+applies the change, and the returned entity is the result. The server's refusal comes back as
+`RuleViolation`. On a client the shared rules are only UI hints, such as `can_start_review()`.
+This is for shared entity state and rules. If the entity is client specific then it should be
+defined in the client domain.
 
 **Proto messages are DTOs.** `proto_utils.mappers` converts each entity to and from its message,
 once, for every app. DTOs need not match entities field for field: internal entity state stays
@@ -127,6 +134,12 @@ off the wire, and a caller-specific view is shaped by its handler.
 **Infrastructure is not plugins.** An app's own persistence and clients, behind its domains'
 repository ports, live in its `infrastructure/` and are never shared. `plugins/` holds
 integrations chosen per deployment, behind `plugin-api` ports.
+
+**Infrastructure is I/O, not domain.** Repositories are ports and stay isolated in the domain;
+the domain calls the infrastructure that implements them. Infrastructure holds no domain
+logic: name its classes after what they talk to and what domain it is, such as the
+desktop's `ApplicationServerPrintJobs` on an `ApplicationServerClient` base. Transport helpers
+(ID conversion, Connect error mapping) live in that base, since domains cannot import them.
 
 The initial example is `print_job`: `core_domain/print_job/`, the server's `api/domains/print_job/`
 and the desktop's `armada_domains/print_job/`. import-linter contracts and structure tests in
