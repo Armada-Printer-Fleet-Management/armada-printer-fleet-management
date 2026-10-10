@@ -90,7 +90,7 @@
             <text x="95" y="148" text-anchor="middle" class="label-muted">browser</text>
             <rect x="20" y="200" width="150" height="58" rx="8" class="box" />
             <text x="95" y="220" text-anchor="middle" font-size="11">ApplicationServer</text>
-            <text x="95" y="234" text-anchor="middle" font-size="11">PrintJobRepository</text>
+            <text x="95" y="234" text-anchor="middle" font-size="11">PrintJobs</text>
             <text x="95" y="250" text-anchor="middle" class="label-muted">desktop backend</text>
             <text x="95" y="278" text-anchor="middle" class="label-muted">desktop React reaches</text>
             <text x="95" y="292" text-anchor="middle" class="label-muted">it through IPC</text>
@@ -181,7 +181,7 @@
             <text x="400" y="92" text-anchor="middle" class="label-muted">status rules</text>
             <rect x="560" y="50" width="200" height="56" rx="8" class="box" />
             <text x="660" y="74" text-anchor="middle" font-size="12">PrintJobService</text>
-            <text x="660" y="92" text-anchor="middle" class="label-muted">read-only · asks the server</text>
+            <text x="660" y="92" text-anchor="middle" class="label-muted">never saves · asks the server</text>
 
             <rect x="40" y="136" width="200" height="56" rx="8" class="box-future" />
             <text x="140" y="160" text-anchor="middle" font-size="12">PrinterService</text>
@@ -223,6 +223,24 @@
           </figcaption>
         </figure>
 
+        <h2>Server and desktop domains differ</h2>
+        <p>
+          They share entities, but not the way changes happen. The server is authoritative:
+          its service loads the entity, applies the rule and saves, because only it can validate
+          every request against current state, whichever client or concurrent caller sent it.
+          The desktop never saves a shared entity and never applies its rule: its service passes
+          the typed ID to a <code>request_&lt;action&gt;()</code> method on its repository port,
+          and the server's answer, a changed entity or a <code>RuleViolation</code>, is the
+          result. An entity specific to the desktop is defined in the desktop's own domain, and
+          the desktop may save it.
+        </p>
+        <p>
+          In both apps the repository is a port that stays in the domain, and the domain calls the
+          infrastructure that implements it. Infrastructure is I/O only. It holds no domain
+          logic, and its classes are named after what they talk to, such as the desktop's
+          <code>ApplicationServerPrintJobs</code> on an <code>ApplicationServerClient</code> base.
+        </p>
+
         <h2>One request, step by step</h2>
         <figure class="diagram">
           <svg
@@ -251,8 +269,8 @@
             <text x="330" y="86" text-anchor="middle" class="label-muted">use cases</text>
             <rect x="402" y="44" width="116" height="56" rx="8" class="box" />
             <text x="460" y="62" text-anchor="middle" font-size="10.5">ApplicationServer</text>
-            <text x="460" y="75" text-anchor="middle" font-size="10.5">PrintJobRepository</text>
-            <text x="460" y="92" text-anchor="middle" class="label-muted">read-only repository</text>
+            <text x="460" y="75" text-anchor="middle" font-size="10.5">PrintJobs</text>
+            <text x="460" y="92" text-anchor="middle" class="label-muted">server client</text>
             <rect x="532" y="44" width="116" height="56" rx="8" class="box" />
             <text x="590" y="62" text-anchor="middle" font-size="10.5">PrintJobService</text>
             <text x="590" y="75" text-anchor="middle" font-size="10.5">Implementation</text>

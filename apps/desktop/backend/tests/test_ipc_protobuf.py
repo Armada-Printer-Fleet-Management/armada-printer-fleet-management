@@ -74,6 +74,9 @@ class _NoPrintJobs:
     def get(self, entity_id: PrintJobId) -> PrintJob:
         raise EntityNotFound(entity_id)
 
+    def request_start_review(self, print_job_id: PrintJobId) -> PrintJob:
+        raise EntityNotFound(print_job_id)
+
 
 EXPOSED_METHODS, EXPOSED_OBJECTS = exposed(Ipc(print_jobs=PrintJobService(_NoPrintJobs())))
 SWEPT_METHODS = swept_methods()

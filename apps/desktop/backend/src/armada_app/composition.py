@@ -3,12 +3,10 @@ domain services that IPC exposes."""
 
 from armada_domains.print_job.service import PrintJobService
 from armada_infrastructure.application_server.connection import ApplicationServerConnection
-from armada_infrastructure.application_server.print_job_repository import (
-    ApplicationServerPrintJobRepository,
-)
+from armada_infrastructure.application_server.print_job import ApplicationServerPrintJobs
 from armada_ipc import Ipc
 
 
 def build_ipc() -> Ipc:
     server = ApplicationServerConnection()
-    return Ipc(print_jobs=PrintJobService(ApplicationServerPrintJobRepository(server)))
+    return Ipc(print_jobs=PrintJobService(ApplicationServerPrintJobs(server)))
