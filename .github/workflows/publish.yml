@@ -1,0 +1,203 @@
+# Builds the deploy images, starts them as the deploy stack, and publishes them to GHCR under a new
+# version and the :testing pointer. Opening a pull request never publishes.
+name: Publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      override_version:
+        description: "Publish as this version (X.Y.Z) instead of the computed one"
+        required: false
+      dry_run:
+        description: "Build and smoke test only; push nothing"
+        type: boolean
+        default: false
+
+# A publish cut short can leave one image pushed and the other not, so runs queue, never cancel.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute the next version
+        id: version
+        env:
+          OVERRIDE: ${{ inputs.override_version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          last=$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+          if [ -n "$last" ]; then range="$last..HEAD"; else range=HEAD; fi
+          IFS=. read -r major minor patch <<< "${last#v}"
+          major=${major:-0}; minor=${minor:-0}; patch=${patch:-0}
+
+          # Every commit since the last version counts, so a pull request merged with a merge
+          # commit or rebased as several commits bumps by its largest change.
+          breaking='^[a-z]+(\([^)]*\))?!:'
+          feature='^feat(\([^)]*\))?:'
+          bump=patch
+          while IFS= read -r -d '' message; do
+            message=${message#$'\n'}
+            subject=${message%%$'\n'*}
+            if [[ $subject =~ $breaking ]] || grep -q '^BREAKING CHANGE:' <<< "$message"; then
+              bump=major
+              break
+            elif [[ $subject =~ $feature ]]; then
+              bump=minor
+            fi
+          done < <(git log --no-merges --format='%B%x00' "$range")
+
+          case "$bump" in
+            major) version="$((major + 1)).0.0" ;;
+            minor) version="$major.$((minor + 1)).0" ;;
+            patch) version="$major.$minor.$((patch + 1))" ;;
+          esac
+
+          publish=true
+          if [ -n "$OVERRIDE" ]; then
+            if ! [[ $OVERRIDE =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::override_version must look like 1.4.2"; exit 1
+            fi
+            if git rev-parse -q --verify "refs/tags/v$OVERRIDE" > /dev/null; then
+              echo "::error::v$OVERRIDE already exists"; exit 1
+            fi
+            version=$OVERRIDE
+            bump=override
+          elif [ -n "$last" ] && [ "$(git rev-parse "$last^{commit}")" = "$(git rev-parse HEAD)" ]; then
+            echo "::notice::This commit is already published as $last; building and testing only."
+            version=${last#v}
+            bump=none
+            publish=false
+          fi
+          if [ "$GITHUB_REF" != refs/heads/main ] || [ "$DRY_RUN" = true ]; then
+            publish=false
+          fi
+
+          { echo "version=$version"
+            echo "bump=$bump"
+            echo "range=$range"
+            echo "publish=$publish"
+            echo "owner=${GITHUB_REPOSITORY_OWNER,,}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Version $version ($bump since ${last:-the first commit}), publish=$publish"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      # compose_run.py keeps these two values and generates throwaway secrets for the rest.
+      - name: Write the deploy settings
+        env:
+          OWNER: ${{ steps.version.outputs.owner }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: printf 'GHCR_OWNER=%s\nVERSION=%s\n' "$OWNER" "$VERSION" > config/compose.deploy.env
+
+      - name: Build the images and start the deploy stack
+        run: python scripts/compose_run.py deploy --domain :80 --admin-email ci@example.invalid
+
+      - name: Smoke test through Caddy
+        run: |
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 3 -o /dev/null http://localhost/
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 3 http://localhost/api/health_check
+
+      - name: Show the stack's logs
+        if: failure() && steps.version.outcome == 'success'
+        run: docker compose -f infra/deploy/compose.yaml --env-file config/compose.deploy.env logs
+
+      - name: Stop the deploy stack
+        if: always() && steps.version.outcome == 'success'
+        run: python scripts/compose_run.py deploy down
+
+      - name: Log in to GHCR
+        if: steps.version.outputs.publish == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push the images and move :testing
+        id: push
+        if: steps.version.outputs.publish == 'true'
+        env:
+          OWNER: ${{ steps.version.outputs.owner }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          for name in armada-server armada-web; do
+            repo="ghcr.io/$OWNER/$name"
+            docker tag "$repo:$VERSION" "$repo:testing"
+            docker push "$repo:$VERSION"
+            docker push "$repo:testing"
+            digest=$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$repo:$VERSION" | grep "^$repo@")
+            echo "${name#armada-}=$digest" >> "$GITHUB_OUTPUT"
+          done
+
+      # Images are pushed before the tag, so a failed push leaves no tag and the next run
+      # computes the same version again.
+      - name: Tag the commit
+        if: steps.version.outputs.publish == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+
+      # A pre-release, because the version has only reached :testing so far.
+      - name: Create the release
+        if: steps.version.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          BUMP: ${{ steps.version.outputs.bump }}
+          RANGE: ${{ steps.version.outputs.range }}
+          SERVER: ${{ steps.push.outputs.server }}
+          WEB: ${{ steps.push.outputs.web }}
+        run: |
+          set -euo pipefail
+          notes="$RUNNER_TEMP/notes.md"
+          { echo "Bump: $BUMP"
+            echo
+            echo "## Images"
+            echo
+            echo "- \`$SERVER\`"
+            echo "- \`$WEB\`"
+            echo
+            echo "## Changes"
+            echo
+            git log --no-merges --format='- %s' "$RANGE"
+          } > "$notes"
+          gh release create "v$VERSION" --verify-tag --prerelease --title "v$VERSION" \
+            --notes-file "$notes" infra/deploy/compose.yaml infra/deploy/garage.toml
+
+      - name: Summary
+        if: always()
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUMP: ${{ steps.version.outputs.bump }}
+          PUBLISH: ${{ steps.version.outputs.publish }}
+          SERVER: ${{ steps.push.outputs.server }}
+          WEB: ${{ steps.push.outputs.web }}
+        run: |
+          { echo "### Version $VERSION ($BUMP)"
+            echo
+            echo "Published: $PUBLISH"
+            if [ -n "$SERVER" ]; then
+              echo
+              echo "- \`$SERVER\`"
+              echo "- \`$WEB\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
