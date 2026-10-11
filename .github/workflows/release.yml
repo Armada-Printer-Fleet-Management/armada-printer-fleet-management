@@ -1,0 +1,273 @@
+# Promotes images that deploy.yml already built; nothing is rebuilt. Testing to staging names the
+# images on :testing as the next release candidate of the version a developer enters. Staging to
+# production gives the candidate on :staging its plain version, creates its release branch and
+# publishes the release. How to run it: infra/deploy/README.md.
+name: Release
+run-name: >-
+  Release ${{ inputs.step }}${{ inputs.step == 'testing-to-staging' && format(' {0}', inputs.version) || '' }}${{ inputs.dry_run && ' (dry run)' || '' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      step:
+        description: >-
+          testing-to-staging makes the build on :testing a release candidate.
+          staging-to-production ships the candidate on :staging as its plain version.
+        type: choice
+        options: [testing-to-staging, staging-to-production]
+      version:
+        description: >-
+          Testing to staging only; ignored otherwise. The version this build will become, X.Y.Z,
+          newer than production. The same version again makes its next candidate (rc.2, rc.3);
+          a new version starts at rc.1.
+        required: false
+      dry_run:
+        description: >-
+          Change nothing; the summary shows the version in production, the changes since it and
+          what this build would become. Do this first to choose the version.
+        type: boolean
+        default: false
+
+# Shared with deploy.yml: both move pointers and number release candidates.
+concurrency:
+  group: armada-images
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  RELEASE_BRANCHES_KEPT: 5
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The pointer is resolved to digests once, so a build landing mid-run cannot change what is
+      # promoted. The commit comes from the label compose_run.py sets when deploy.yml builds.
+      - name: Find the images to promote
+        id: source
+        env:
+          STEP: ${{ inputs.step }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner=${GITHUB_REPOSITORY_OWNER,,}
+          case "$STEP" in
+            testing-to-staging) from=testing ;;
+            staging-to-production) from=staging ;;
+          esac
+          for name in armada-server armada-web; do
+            repo="ghcr.io/$owner/$name"
+            if ! inspect=$(docker buildx imagetools inspect "$repo:$from"); then
+              echo "::error::Nothing is on :$from yet"; exit 1
+            fi
+            # The top-level Digest line; a multi-platform image lists its platforms' digests indented below.
+            digest=$(awk '/^Digest:/ { print $2; exit }' <<< "$inspect")
+            echo "${name#armada-}=$repo@$digest" >> "$GITHUB_OUTPUT"
+            # Outputs are only readable by later steps, and this one still needs the server image.
+            if [ "$name" = armada-server ]; then server="$repo@$digest"; fi
+          done
+
+          # Both images come from one build, so the server's label gives the commit for both.
+          docker pull -q "$server" > /dev/null
+          commit=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$server")
+          if [ -z "$commit" ] || ! git cat-file -e "$commit^{commit}" 2> /dev/null; then
+            echo "::error::The images on :$from do not record a commit in this repository"; exit 1
+          fi
+
+          # Only production versions are plain vX.Y.Z, so the newest of those is what production runs.
+          production=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
+          { echo "owner=$owner"
+            echo "from=$from"
+            echo "commit=$commit"
+            echo "production=${production#v}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Promoting :$from, built from $commit"
+
+      - name: Name the promotion
+        id: plan
+        env:
+          STEP: ${{ inputs.step }}
+          VERSION: ${{ inputs.version }}
+          COMMIT: ${{ steps.source.outputs.commit }}
+          PRODUCTION: ${{ steps.source.outputs.production }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$STEP" = testing-to-staging ]; then
+            if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::Enter the version this build is meant to become, like 1.4.0"; exit 1
+            fi
+            if [ -n "$PRODUCTION" ] && [ "$(printf '%s\n' "$PRODUCTION" "$VERSION" | sort -V | tail -1)" != "$VERSION" ] \
+                || [ "$VERSION" = "$PRODUCTION" ]; then
+              echo "::error::$VERSION must be newer than $PRODUCTION, the version in production"; exit 1
+            fi
+            # Promoting the same build again would only give it a second candidate number.
+            existing=$(git tag --points-at "$COMMIT" --list "v$VERSION-rc.*" | sort -V | tail -1)
+            if [ -n "$existing" ]; then
+              echo "::error::The images on :testing are already ${existing#v}. Merge a change to main for a new candidate."
+              exit 1
+            fi
+            # Next number after every rc tag of this version, including any a hot fix branch made.
+            last=$(git tag --list "v$VERSION-rc.*" | sed "s/^v$VERSION-rc\.//" | sort -n | tail -1)
+            tag="$VERSION-rc.$(( ${last:-0} + 1 ))"
+            pointer=staging
+          else
+            # The version comes from the candidate's own tag; the version input is ignored here.
+            candidate=$(git tag --points-at "$COMMIT" --list 'v*-rc.*' | sort -V | tail -1)
+            if [ -z "$candidate" ]; then
+              echo "::error::The images on :staging are not a release candidate"; exit 1
+            fi
+            tag=${candidate%-rc.*}
+            tag=${tag#v}
+            if git rev-parse -q --verify "refs/tags/v$tag" > /dev/null; then
+              echo "::error::$tag is already released"; exit 1
+            fi
+            pointer=production
+          fi
+          { echo "tag=$tag"; echo "pointer=$pointer"; } >> "$GITHUB_OUTPUT"
+          echo "Promoting as $tag to :$pointer"
+
+      # Each image is tagged before either pointer moves, as deploy.yml does.
+      - name: Tag the images and move the pointer
+        if: ${{ !inputs.dry_run }}
+        env:
+          OWNER: ${{ steps.source.outputs.owner }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          POINTER: ${{ steps.plan.outputs.pointer }}
+          SERVER: ${{ steps.source.outputs.server }}
+          WEB: ${{ steps.source.outputs.web }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Adds a name to an image already in the registry; nothing is pulled, rebuilt or uploaded.
+          docker buildx imagetools create -t "ghcr.io/$OWNER/armada-server:$TAG" "$SERVER"
+          docker buildx imagetools create -t "ghcr.io/$OWNER/armada-web:$TAG" "$WEB"
+          docker buildx imagetools create -t "ghcr.io/$OWNER/armada-server:$POINTER" "$SERVER"
+          docker buildx imagetools create -t "ghcr.io/$OWNER/armada-web:$POINTER" "$WEB"
+
+      - name: Tag the commit
+        if: ${{ !inputs.dry_run }}
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+          COMMIT: ${{ steps.source.outputs.commit }}
+        shell: bash
+        run: |
+          git tag "v$TAG" "$COMMIT"
+          git push origin "v$TAG"
+
+      # A hot fix's branch already exists, made by hand before its version shipped. Only branches of
+      # versions that reached production are pruned, so a hot fix in progress is never deleted.
+      - name: Create the release branch
+        if: ${{ !inputs.dry_run && inputs.step == 'staging-to-production' }}
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+          COMMIT: ${{ steps.source.outputs.commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/remotes/origin/release/$TAG" > /dev/null; then
+            echo "release/$TAG already exists"
+          else
+            git push origin "$COMMIT:refs/heads/release/$TAG"
+          fi
+          # Shipped release branches, oldest first, minus the newest few; the rest are deleted.
+          git for-each-ref --format='%(refname:lstrip=4)' 'refs/remotes/origin/release/' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+            | while read -r version; do
+                if git rev-parse -q --verify "refs/tags/v$version" > /dev/null || [ "$version" = "$TAG" ]; then
+                  echo "$version"
+                fi
+              done \
+            | sort -V | head -n "-$RELEASE_BRANCHES_KEPT" \
+            | while read -r old; do
+                echo "Deleting release/$old"
+                git push origin --delete "release/$old"
+              done
+
+      # Candidates are pre-releases; only a production version is a full release, and the newest.
+      - name: Create the GitHub release
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STEP: ${{ inputs.step }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          COMMIT: ${{ steps.source.outputs.commit }}
+          PRODUCTION: ${{ steps.source.outputs.production }}
+          SERVER: ${{ steps.source.outputs.server }}
+          WEB: ${{ steps.source.outputs.web }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$RUNNER_TEMP/files"
+          mkdir -p "$files"
+          # The deploy files as they were in the promoted commit, not as they are on main now.
+          git show "$COMMIT:infra/deploy/compose.yaml" > "$files/compose.yaml"
+          git show "$COMMIT:infra/deploy/garage.toml" > "$files/garage.toml"
+
+          notes="$RUNNER_TEMP/notes.md"
+          { echo "## Images"
+            echo
+            echo "- \`$SERVER\`"
+            echo "- \`$WEB\`"
+            echo
+            echo "## Changes since ${PRODUCTION:-the first commit}"
+            echo
+            if [ -n "$PRODUCTION" ]; then range="v$PRODUCTION..$COMMIT"; else range=$COMMIT; fi
+            git log --no-merges --format='- %s' "$range"
+          } > "$notes"
+
+          if [ "$STEP" = testing-to-staging ]; then
+            kind=(--prerelease)
+          else
+            kind=(--latest)
+          fi
+          gh release create "v$TAG" --verify-tag "${kind[@]}" --title "v$TAG" \
+            --notes-file "$notes" "$files/compose.yaml" "$files/garage.toml"
+
+      - name: Summary
+        if: always()
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          FROM: ${{ steps.source.outputs.from }}
+          COMMIT: ${{ steps.source.outputs.commit }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          POINTER: ${{ steps.plan.outputs.pointer }}
+          PRODUCTION: ${{ steps.source.outputs.production }}
+          SERVER: ${{ steps.source.outputs.server }}
+          WEB: ${{ steps.source.outputs.web }}
+        shell: bash
+        run: |
+          { if [ -n "$TAG" ]; then
+              echo "### \`:$FROM\` → \`:$POINTER\` as $TAG"
+            else
+              echo "### \`:$FROM\` was not promoted"
+            fi
+            echo
+            if [ "$DRY_RUN" = true ]; then echo "Dry run: nothing was changed."; echo; fi
+            echo "In production: ${PRODUCTION:-nothing yet}"
+            if [ -n "$COMMIT" ]; then
+              echo
+              echo "Built from \`$COMMIT\`"
+              echo
+              echo "- \`$SERVER\`"
+              echo "- \`$WEB\`"
+              echo
+              echo "#### Changes since ${PRODUCTION:-the first commit}"
+              echo
+              if [ -n "$PRODUCTION" ]; then range="v$PRODUCTION..$COMMIT"; else range=$COMMIT; fi
+              git log --no-merges --format='- %s' "$range"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

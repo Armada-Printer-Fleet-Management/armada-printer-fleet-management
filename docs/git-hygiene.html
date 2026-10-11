@@ -100,6 +100,10 @@
       <td>Large feature</td>
       <td><code>feature/&lt;feature-name&gt;</code></td>
     </tr>
+    <tr>
+      <td>Release</td>
+      <td><code>release/x.y.z</code>, created automatically; see below</td>
+    </tr>
   </tbody>
 </table>
 </div>
@@ -126,9 +130,45 @@
 </p>
 
 <p>
-  For hot fixes to an already released version, define a <strong>clone ticket</strong>. The clone
-  cherry-picks the original pull request's commit hash, and documents anything that went wrong
-  during the pick, such as merge conflicts.
+  A release branch is created by the release workflow when a version is promoted to production,
+  and is named for that version: <code>release/1.0.0</code>. Only versions that reached production
+  get one, and the last five are kept. Versions on staging are release candidates such as
+  <code>1.0.0-rc.1</code>, and never get a branch. Nobody creates a release branch by hand, except
+  for a hot fix.
+</p>
+
+<h3>Hot fixes</h3>
+
+<p>
+  Only the version in production is hot fixed. A hot fix is a new patch version on a new branch,
+  never a commit added to an existing release branch.
+</p>
+
+<ol>
+  <li>Fix the bug on <code>main</code> with an ordinary pull request. Merging it also moves the
+    testing environment to a new build, like any other change, so the fix is tested there alongside
+    everything else merged since the last release. Because it is on <code>main</code>, every future
+    version cut from <code>main</code> includes it, and the bug cannot come back with the next
+    release.</li>
+  <li>Define a <strong>clone ticket</strong> for the hot fix.</li>
+  <li>Cut the next patch version from production's release branch, and cherry-pick the fix:
+<pre><code>git fetch
+git switch -c release/1.0.1 origin/release/1.0.0
+git cherry-pick -x &lt;commit-hash&gt;
+git commit --amend          # rewrite as the clone commit message below
+git push -u origin release/1.0.1</code></pre>
+  </li>
+  <li>The push builds release candidate <code>1.0.1-rc.1</code> and moves the staging environment
+    to it. Test it there, then promote it to production with the release workflow, which names it
+    <code>1.0.1</code>. If it needs another change, fix <code>main</code> and cherry-pick again onto
+    the same branch; the next push builds <code>1.0.1-rc.2</code>. If the hot fix is abandoned,
+    delete the branch.</li>
+  <li>Whatever was on staging before the hot fix was built without the fix. Promote a new version
+    from testing, which has the fix, and test it on staging again.</li>
+</ol>
+
+<p>
+  The clone ticket documents anything that went wrong during the pick, such as merge conflicts.
 </p>
 
 <h3>Clone commit message</h3>

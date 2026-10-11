@@ -1,0 +1,230 @@
+# Builds the deploy images, starts them as the deploy stack, and pushes them to GHCR. A push to main
+# moves :testing; a push to a release/X.Y.Z hot fix branch builds the next release candidate and
+# moves :staging. Promotion past that is release.yml. Opening a pull request never publishes.
+name: Deploy
+
+on:
+  push:
+    branches: [main, "release/**"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and smoke test only; push nothing"
+        type: boolean
+        default: false
+
+# Shared with release.yml: both move pointers and number release candidates. A run cut short can
+# leave one image pushed and the other not, so runs queue, never cancel.
+concurrency:
+  group: armada-images
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Name the images
+        id: plan
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          commit=$(git rev-parse HEAD)
+          publish=true
+          case "$GITHUB_REF" in
+            refs/heads/main)
+              tag="sha-${commit:0:12}"
+              pointer=testing
+              ;;
+            refs/heads/release/*)
+              version=${GITHUB_REF#refs/heads/release/}
+              if ! [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "::error::Release branches are named release/X.Y.Z"; exit 1
+              fi
+              pointer=staging
+              # The newest candidate tag already on this commit, if it was built before.
+              built=$(git tag --points-at HEAD --list "v$version-rc.*" | sort -V | tail -1)
+              if git rev-parse -q --verify "refs/tags/v$version" > /dev/null; then
+                # Shipped already. Only the branch release.yml created at production may sit on it.
+                if [ "$(git rev-parse "v$version^{commit}")" != "$commit" ]; then
+                  echo "::error::$version is already released. A hot fix goes on a new branch for the next patch version."
+                  exit 1
+                fi
+                echo "::notice::This commit is already released as $version; building and testing only."
+                tag=$version
+                publish=false
+              elif [ -n "$built" ]; then
+                # A rerun: reuse the name, so the same code never becomes a second candidate.
+                echo "::notice::This commit is already built as ${built#v}; building and testing only."
+                tag=${built#v}
+                publish=false
+              else
+                # Next number after every rc tag of this version, including any release.yml made.
+                last=$(git tag --list "v$version-rc.*" | sed "s/^v$version-rc\.//" | sort -n | tail -1)
+                tag="$version-rc.$(( ${last:-0} + 1 ))"
+              fi
+              ;;
+            # Any other branch, run by hand: build and smoke test only.
+            *)
+              tag="sha-${commit:0:12}"
+              pointer=none
+              publish=false
+              ;;
+          esac
+          if [ "$DRY_RUN" = true ]; then
+            publish=false
+          fi
+
+          # Later steps read these as steps.plan.outputs.<name>. GHCR names must be lowercase.
+          { echo "tag=$tag"
+            echo "pointer=$pointer"
+            echo "commit=$commit"
+            echo "publish=$publish"
+            echo "owner=${GITHUB_REPOSITORY_OWNER,,}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Images $tag, pointer :$pointer, publish=$publish"
+
+      - name: Log in to GHCR
+        if: steps.plan.outputs.publish == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # A rerun of a commit already on main would otherwise push a second build under the same tag.
+      - name: Check whether this commit is already built
+        id: existing
+        if: steps.plan.outputs.publish == 'true' && steps.plan.outputs.pointer == 'testing'
+        env:
+          OWNER: ${{ steps.plan.outputs.owner }}
+          TAG: ${{ steps.plan.outputs.tag }}
+        shell: bash
+        run: |
+          if docker buildx imagetools inspect "ghcr.io/$OWNER/armada-server:$TAG" > /dev/null 2>&1; then
+            echo "::notice::$TAG is already published; nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.existing.outputs.skip != 'true'
+        with:
+          python-version: "3.13"
+
+      # compose_run.py keeps these values and generates throwaway secrets for the rest.
+      - name: Write the deploy settings
+        if: steps.existing.outputs.skip != 'true'
+        env:
+          OWNER: ${{ steps.plan.outputs.owner }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          COMMIT: ${{ steps.plan.outputs.commit }}
+        shell: bash
+        run: | 
+          printf 'GHCR_OWNER=%s\nVERSION=%s\nREVISION=%s\n' "$OWNER" "$TAG" "$COMMIT" > config/compose.deploy.env
+
+      - name: Build the images and start the deploy stack
+        if: steps.existing.outputs.skip != 'true'
+        shell: bash
+        run: | 
+          python scripts/compose_run.py deploy --domain :80 --admin-email ci@example.invalid
+
+      - name: Smoke test through Caddy
+        if: steps.existing.outputs.skip != 'true'
+        shell: bash
+        run: |
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 3 -o /dev/null http://localhost/
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 3 http://localhost/api/health_check
+
+      - name: Show the stack's logs
+        if: failure() && steps.plan.outcome == 'success'
+        shell: bash
+        run: | 
+          docker compose -f infra/deploy/compose.yaml --env-file config/compose.deploy.env logs
+
+      - name: Stop the deploy stack
+        if: always() && steps.plan.outcome == 'success' && steps.existing.outputs.skip != 'true'
+        shell: bash
+        run: | 
+          python scripts/compose_run.py deploy down
+
+      # Both images are pushed before either pointer moves, so a pointer never names a server from
+      # one build and a web app from another.
+      - name: Push the images and move the pointer
+        id: push
+        if: steps.plan.outputs.publish == 'true' && steps.existing.outputs.skip != 'true'
+        env:
+          OWNER: ${{ steps.plan.outputs.owner }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          POINTER: ${{ steps.plan.outputs.pointer }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in armada-server armada-web; do
+            repo="ghcr.io/$OWNER/$name"
+            docker push "$repo:$TAG"
+            digest=$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$repo:$TAG" | grep "^$repo@")
+            echo "${name#armada-}=$digest" >> "$GITHUB_OUTPUT"
+          done
+          for name in armada-server armada-web; do
+            repo="ghcr.io/$OWNER/$name"
+            docker tag "$repo:$TAG" "$repo:$POINTER"
+            docker push "$repo:$POINTER"
+          done
+
+      # A hot fix candidate gets the same git tag and pre-release as one promoted by release.yml.
+      - name: Tag the release candidate
+        if: steps.push.outcome == 'success' && steps.plan.outputs.pointer == 'staging'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.plan.outputs.tag }}
+          SERVER: ${{ steps.push.outputs.server }}
+          WEB: ${{ steps.push.outputs.web }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git tag "v$TAG"
+          git push origin "v$TAG"
+          notes="$RUNNER_TEMP/notes.md"
+          { echo "Hot fix release candidate, built from ${GITHUB_REF#refs/heads/}."
+            echo
+            echo "## Images"
+            echo
+            echo "- \`$SERVER\`"
+            echo "- \`$WEB\`"
+          } > "$notes"
+          gh release create "v$TAG" --verify-tag --prerelease --title "v$TAG" \
+            --notes-file "$notes" infra/deploy/compose.yaml infra/deploy/garage.toml
+
+      - name: Summary
+        if: always()
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+          POINTER: ${{ steps.plan.outputs.pointer }}
+          PUBLISH: ${{ steps.plan.outputs.publish }}
+          SKIP: ${{ steps.existing.outputs.skip }}
+          SERVER: ${{ steps.push.outputs.server }}
+          WEB: ${{ steps.push.outputs.web }}
+        shell: bash
+        run: |
+          { echo "### Images $TAG"
+            echo
+            if [ "$SKIP" = true ]; then
+              echo "Already published; nothing was built."
+            elif [ -n "$SERVER" ]; then
+              echo "Pushed and moved \`:$POINTER\`:"
+              echo
+              echo "- \`$SERVER\`"
+              echo "- \`$WEB\`"
+            else
+              echo "Published: $PUBLISH"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
