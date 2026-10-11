@@ -3,7 +3,7 @@
 
     dev     server and web with live reload, plus Postgres and Garage (infra/dev/compose.yaml)
     deploy  the deployment stack (infra/deploy/compose.yaml), from deploy images built and tagged
-            here, since no image registry is published yet
+            here rather than pulled; the deploy workflow runs it the same way before pushing
 
 Settings live in config/compose.<stack>.env, which is gitignored. A missing or placeholder secret
 is generated on first run and never replaced afterwards, since regenerating one would lock the
@@ -124,11 +124,16 @@ def prepare_env(
 
 def build_deploy_images(env: dict[str, str]) -> None:
     docker = resolve("docker")
+    # The release workflow reads this label to find the commit an image on a pointer came from.
+    labels: list[str] = []
+    if revision := env.get("REVISION"):
+        labels = ["--label", f"org.opencontainers.image.revision={revision}"]
     for name, dockerfile in DEPLOY_IMAGES.items():
         tag = f"ghcr.io/{env['GHCR_OWNER']}/{name}:{env['VERSION']}"
         print(f"Building {tag}", flush=True)
         subprocess.run(
-            [docker, "build", "-f", str(dockerfile), "-t", tag, str(REPO)], check=True
+            [docker, "build", "-f", str(dockerfile), "-t", tag, *labels, str(REPO)],
+            check=True,
         )
 
 

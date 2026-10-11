@@ -221,7 +221,7 @@ Full rules in `docs/git-hygiene.html`. You can be asked to carry out this plumbi
 | Trunk          | `main`                                                           |
 | Regular ticket | `developer/firstname.lastname/<ticket-id>-<ticket-title>`        |
 | Large feature  | `feature/<feature-name>`, with developer branches merged into it |
-| Release        | `release/x.y`                                                    |
+| Release        | `release/x.y.z`, created when that version reaches production    |
 
 **Rebase only**, both for syncing a branch and for merging a pull request. Rebase is the default
 merge strategy on the remote; merge stays available for special cases, chiefly a large feature
@@ -234,8 +234,17 @@ the change will need cherry-picking separately; keep those as their own commits.
 them. Moving a site to a new version is a maintenance event, not a cherry-pick. Fixes land on
 `main` first and are cherry-picked from there — never the reverse.
 
-A hot fix to a released version gets a **clone ticket**, which cherry-picks the original commit and
-records anything that went wrong during the pick, such as conflicts:
+Only production versions are plain `x.y.z`; a version on staging is a release candidate,
+`x.y.z-rc.N`, and replacing one uses up a candidate number, never a version. Release branches are
+created by `release.yml` when a version is promoted to production, and only the version in
+production is hot fixed. A hot fix is a new branch, `release/x.y.(z+1)`, cut from production's
+release branch; pushing it builds the next candidate, `x.y.(z+1)-rc.N`, moves `:staging` to it, and
+it reaches production through `release.yml` like any other version. Merging the fix to `main`
+first also moves `:testing` to a new build, and means every later version already carries it. The
+steps are in `docs/git-hygiene.html`.
+
+A hot fix gets a **clone ticket**, which cherry-picks the original commit and records anything
+that went wrong during the pick, such as conflicts:
 
 ```
 <Original Commit Message>
