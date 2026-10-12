@@ -12,7 +12,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [packages/core-domain, packages/proto/utils]
+        project:
+          - packages/core-domain
+          - packages/proto/utils
+          - packages/plugin-api
+          - plugins/s3-file-store
     runs-on: ubuntu-latest
     defaults:
       run:

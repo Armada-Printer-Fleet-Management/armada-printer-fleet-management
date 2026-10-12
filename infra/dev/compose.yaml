@@ -18,6 +18,12 @@ services:
         condition: service_healthy
     environment:
       LOG_FORMAT: console
+      FILE_STORE_BACKEND: ${FILE_STORE_BACKEND:-s3}
+      FILE_STORE_ENDPOINT_URL: http://garage-s3-storage:3900
+      FILE_STORE_REGION: garage
+      FILE_STORE_BUCKET: ${GARAGE_DEFAULT_BUCKET:?}
+      FILE_STORE_ACCESS_KEY: ${GARAGE_DEFAULT_ACCESS_KEY:?}
+      FILE_STORE_SECRET_KEY: ${GARAGE_DEFAULT_SECRET_KEY:?}
     ports:
       - 127.0.0.1:8000:8000
     develop:
@@ -37,6 +43,10 @@ services:
           path: ../../packages/organization-info
         - action: rebuild
           path: ../../packages/core-domain
+        - action: rebuild
+          path: ../../packages/plugin-api
+        - action: rebuild
+          path: ../../plugins/s3-file-store
 
   web:
     build:

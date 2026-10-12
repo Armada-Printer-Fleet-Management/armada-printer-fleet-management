@@ -30,6 +30,13 @@ services:
         condition: service_healthy
       garage-s3-storage:
         condition: service_healthy
+    environment:
+      FILE_STORE_BACKEND: ${FILE_STORE_BACKEND:-s3}
+      FILE_STORE_ENDPOINT_URL: http://garage-s3-storage:3900
+      FILE_STORE_REGION: garage
+      FILE_STORE_BUCKET: ${GARAGE_DEFAULT_BUCKET:?}
+      FILE_STORE_ACCESS_KEY: ${GARAGE_DEFAULT_ACCESS_KEY:?}
+      FILE_STORE_SECRET_KEY: ${GARAGE_DEFAULT_SECRET_KEY:?}
 
   db:
     image: postgres:17-alpine

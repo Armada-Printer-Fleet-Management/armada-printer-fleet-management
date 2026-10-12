@@ -1,7 +1,7 @@
 [project]
 name = "backend-server"
 # major.minor.maintenance, optionally -postfix (e.g. "0.1.0-rc1") for special releases
-version = "0.1.3"
+version = "0.1.4"
 description = "Hosted server for handling requests from the frontend webapp"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -13,8 +13,11 @@ dependencies = [
   "proto-utils",        # packages/proto/utils -- generated proto code and the entity mappers
   "organization-info",  # packages/organization-info -- reads the shared organization identity (organization.json)
   "core-domain",        # packages/core-domain -- shared entities, typed IDs and the DDD bases
-  "connectrpc>=0.12.1,<0.13",
+  "connectrpc>=0.12.1,<0.13", # https://github.com/connectrpc/connect-py, Apache-2.0 -- library for creating RPC contracts that this server implements
   "structlog>=26.1,<27",  # https://github.com/hynek/structlog, MIT OR Apache-2.0 -- structured logging
+  "plugin-api",         # packages/plugin-api -- the ports plugins implement, such as FileStore
+  "s3-file-store",      # plugins/s3-file-store -- the FileStore plugin for S3-compatible storage
+  "pydantic-settings>=2.15.0,<2.16", # https://github.com/pydantic/pydantic-settings, MIT -- reads plugin settings from environment variables
 ]
 
 [tool.uv.sources]
@@ -23,6 +26,8 @@ dependencies = [
 proto-utils = { path = "../../packages/proto/utils", editable = true }
 organization-info = { path = "../../packages/organization-info" }
 core-domain = { path = "../../packages/core-domain", editable = true }
+plugin-api = { path = "../../packages/plugin-api", editable = true }
+s3-file-store = { path = "../../plugins/s3-file-store", editable = true }
 
 [dependency-groups]
 dev = [
@@ -51,12 +56,14 @@ pythonpath = ["."]
 testpaths = ["tests"]
 
 [tool.importlinter]
-root_package = "api"
+# The plugin packages are listed so the contracts below can check their imports too.
+root_packages = ["api", "plugin_api", "s3_file_store"]
 include_external_packages = true
 
-# A domain is pure: it sees only core_domain and the standard library
+# A domain is pure: it sees only core_domain and the standard library. Plugins reach it through
+# an infrastructure adapter that implements the domain's own port.
 [[tool.importlinter.contracts]]
-name = "Domains import no transport, infrastructure, generated code or framework"
+name = "Domains import no transport, infrastructure, plugin, generated code or framework"
 type = "forbidden"
 source_modules = ["api.domains"]
 forbidden_modules = [
@@ -64,13 +71,47 @@ forbidden_modules = [
   "api.services",
   "api.routers",
   "api.main",
+  "api.plugins",
   "proto_utils",
   "google",
   "connectrpc",
   "fastapi",
   "starlette",
   "pydantic",
+  "pydantic_settings",
+  "plugin_api",
+  "s3_file_store",
+  "aioboto3",
+  "aiobotocore",
+  "botocore",
 ]
+
+# Only api/infrastructure and the composition root (api.main, api.plugins) touch a plugin
+[[tool.importlinter.contracts]]
+name = "Only infrastructure and the composition root touch plugins"
+type = "forbidden"
+source_modules = [
+  "api.common",
+  "api.domains",
+  "api.lifespan",
+  "api.logging_config",
+  "api.middleware",
+  "api.routers",
+  "api.services",
+]
+forbidden_modules = ["plugin_api", "s3_file_store"]
+
+[[tool.importlinter.contracts]]
+name = "Ports depend on no plugin or app"
+type = "forbidden"
+source_modules = ["plugin_api"]
+forbidden_modules = ["api", "s3_file_store"]
+
+[[tool.importlinter.contracts]]
+name = "Plugins import no app"
+type = "forbidden"
+source_modules = ["s3_file_store"]
+forbidden_modules = ["api"]
 
 [[tool.importlinter.contracts]]
 name = "Domains are independent of each other"
@@ -78,7 +119,7 @@ type = "independence"
 modules = ["api.domains.*"]
 
 [[tool.importlinter.contracts]]
-name = "Inside a domain, the service sits above its repository port"
+name = "Inside a domain, the service sits above its ports"
 type = "layers"
 containers = ["api.domains.*"]
-layers = ["service", "repository"]
+layers = ["service", "(storage) | repository"]

@@ -1,15 +1,19 @@
+import asyncio
 import tomllib
-from collections.abc import Iterator, Mapping
+from collections.abc import Mapping
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from packaging.version import Version
 from proto_utils.gen.server.v1.health_check_connect import HealthCheckServiceASGIApplication
 
-from api.common.consts import PYPROJECT_PATH
-from api.common.dependencies import application_info, dependency_checks
+from api.common import health
+from api.common.consts import API_PREFIX, PYPROJECT_PATH
+from api.common.dependencies import application_info
 from api.common.models import DependencyCheck
 from api.main import app
+from api.routers.health import health_router
 from api.services.health_check_service import HealthCheckServiceImplementation
 
 _RPC_PATH = "/server.v1.HealthCheckService/HealthCheck"
@@ -33,7 +37,13 @@ async def _raise() -> bool:
     raise RuntimeError("internal detail")
 
 
+async def _hang() -> bool:
+    await asyncio.sleep(60)
+    return True
+
+
 _passing = DependencyCheck(_pass)
+_hanging = DependencyCheck(_hang)
 _failing = DependencyCheck(_fail)
 _raising = DependencyCheck(_raise)
 _optional_failing = DependencyCheck(_fail, critical=False)
@@ -41,13 +51,15 @@ _optional_raising = DependencyCheck(_raise, critical=False)
 
 
 @pytest.fixture
-def client() -> Iterator[TestClient]:
-    yield TestClient(app)
-    app.dependency_overrides.clear()
+def client() -> TestClient:
+    return TestClient(app)
 
 
-def _use_checks(checks: Mapping[str, DependencyCheck]) -> None:
-    app.dependency_overrides[dependency_checks] = lambda: checks
+# The app's own checks probe real infrastructure, so these tests mount the router over fakes.
+def _rest_client(checks: Mapping[str, DependencyCheck]) -> TestClient:
+    rest = FastAPI()
+    rest.include_router(health_router(checks), prefix=API_PREFIX)
+    return TestClient(rest)
 
 
 def test_health_defaults_to_plain_pass(client: TestClient) -> None:
@@ -64,28 +76,28 @@ def test_health_full_reports_version_without_dependencies(client: TestClient) ->
     assert response.json() == {"status": "pass", "version": _expected_version()}
 
 
-def test_health_full_with_dependencies_reports_each(client: TestClient) -> None:
-    _use_checks({"database": _passing, "cache": _passing})
-
-    response = client.get("/api/health_check", params={"full": True, "check_dependencies": True})
+def test_health_full_with_dependencies_reports_each() -> None:
+    response = _rest_client({"database": _passing, "cache": _passing}).get(
+        "/api/health_check", params={"full": True, "check_dependencies": True}
+    )
 
     assert response.status_code == 200
     assert response.json()["dependencies"] == {"database": "pass", "cache": "pass"}
 
 
-def test_health_failing_dependency_returns_503_plain(client: TestClient) -> None:
-    _use_checks({"database": _passing, "cache": _failing})
-
-    response = client.get("/api/health_check", params={"check_dependencies": True})
+def test_health_failing_dependency_returns_503_plain() -> None:
+    response = _rest_client({"database": _passing, "cache": _failing}).get(
+        "/api/health_check", params={"check_dependencies": True}
+    )
 
     assert response.status_code == 503
     assert response.text == "fail"
 
 
-def test_health_raising_dependency_is_reported_as_fail(client: TestClient) -> None:
-    _use_checks({"database": _raising})
-
-    response = client.get("/api/health_check", params={"full": True, "check_dependencies": True})
+def test_health_raising_dependency_is_reported_as_fail() -> None:
+    response = _rest_client({"database": _raising}).get(
+        "/api/health_check", params={"full": True, "check_dependencies": True}
+    )
 
     assert response.status_code == 503
     assert response.json()["status"] == "fail"
@@ -93,53 +105,62 @@ def test_health_raising_dependency_is_reported_as_fail(client: TestClient) -> No
     assert "internal detail" not in response.text
 
 
-def test_health_failing_optional_dependency_is_degraded(client: TestClient) -> None:
-    _use_checks({"database": _passing, "metrics": _optional_failing})
+def test_health_hanging_dependency_times_out_as_fail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(health, "DEPENDENCY_CHECK_TIMEOUT_SECONDS", 0.01)
+    response = _rest_client({"database": _passing, "storage": _hanging}).get(
+        "/api/health_check", params={"full": True, "check_dependencies": True}
+    )
 
-    response = client.get("/api/health_check", params={"full": True, "check_dependencies": True})
+    assert response.status_code == 503
+    assert response.json()["dependencies"] == {"database": "pass", "storage": "fail"}
+
+
+def test_health_failing_optional_dependency_is_degraded() -> None:
+    response = _rest_client({"database": _passing, "metrics": _optional_failing}).get(
+        "/api/health_check", params={"full": True, "check_dependencies": True}
+    )
 
     assert response.status_code == 200
     assert response.json()["status"] == "degraded"
     assert response.json()["dependencies"] == {"database": "pass", "metrics": "fail"}
 
 
-def test_health_degraded_plain(client: TestClient) -> None:
-    _use_checks({"metrics": _optional_failing})
-
-    response = client.get("/api/health_check", params={"check_dependencies": True})
-
-    assert response.status_code == 200
-    assert response.text == "degraded"
-
-
-def test_health_raising_optional_dependency_is_degraded(client: TestClient) -> None:
-    _use_checks({"metrics": _optional_raising})
-
-    response = client.get("/api/health_check", params={"check_dependencies": True})
+def test_health_degraded_plain() -> None:
+    response = _rest_client({"metrics": _optional_failing}).get(
+        "/api/health_check", params={"check_dependencies": True}
+    )
 
     assert response.status_code == 200
     assert response.text == "degraded"
 
 
-def test_health_critical_failure_outranks_degraded(client: TestClient) -> None:
-    _use_checks({"database": _failing, "metrics": _optional_failing})
+def test_health_raising_optional_dependency_is_degraded() -> None:
+    response = _rest_client({"metrics": _optional_raising}).get(
+        "/api/health_check", params={"check_dependencies": True}
+    )
 
-    response = client.get("/api/health_check", params={"check_dependencies": True})
+    assert response.status_code == 200
+    assert response.text == "degraded"
+
+
+def test_health_critical_failure_outranks_degraded() -> None:
+    response = _rest_client({"database": _failing, "metrics": _optional_failing}).get(
+        "/api/health_check", params={"check_dependencies": True}
+    )
 
     assert response.status_code == 503
     assert response.text == "fail"
 
 
-def test_health_skips_dependencies_unless_asked(client: TestClient) -> None:
-    _use_checks({"database": _failing})
-
-    response = client.get("/api/health_check")
+def test_health_skips_dependencies_unless_asked() -> None:
+    response = _rest_client({"database": _failing}).get("/api/health_check")
 
     assert response.status_code == 200
 
 
-# The RPC service is not a FastAPI route, so dependency_overrides cannot reach it; these tests
-# build it directly with the fake checks instead.
+# Likewise, the RPC service is built directly over the fake checks.
 def _rpc_client(checks: Mapping[str, DependencyCheck]) -> TestClient:
     service = HealthCheckServiceImplementation(application_info(), checks)
     return TestClient(HealthCheckServiceASGIApplication(service))
