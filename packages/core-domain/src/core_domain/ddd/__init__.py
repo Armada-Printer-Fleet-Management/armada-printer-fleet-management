@@ -7,6 +7,7 @@ from core_domain.ddd.errors import (
     InvalidPageToken,
     InvalidValue,
     RuleViolation,
+    Unavailable,
 )
 from core_domain.ddd.page import Page
 from core_domain.ddd.repository import (
@@ -32,6 +33,7 @@ __all__ = [
     "RuleViolation",
     "Service",
     "TypedId",
+    "Unavailable",
     "change",
     "change_async",
 ]

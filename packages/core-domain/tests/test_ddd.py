@@ -3,7 +3,7 @@ from uuid import uuid4
 
 import pytest
 
-from core_domain.ddd import Entity, EntityNotFound, RuleViolation, TypedId, change
+from core_domain.ddd import Entity, EntityNotFound, RuleViolation, TypedId, Unavailable, change
 
 
 class AlphaId(TypedId):
@@ -84,3 +84,7 @@ def test_change_saves_nothing_when_the_rule_refuses() -> None:
 def test_change_reports_a_missing_entity() -> None:
     with pytest.raises(EntityNotFound):
         change(InMemory(), AlphaId.new(), Alpha.increment)
+
+
+def test_unavailable_names_only_the_dependency() -> None:
+    assert str(Unavailable("file storage")) == "file storage is unavailable"

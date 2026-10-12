@@ -1000,7 +1000,7 @@ window.OPENAPI_SPEC = {
   },
   "info": {
     "title": "Armada - Printer Fleet Management",
-    "version": "0.1.3"
+    "version": "0.1.4"
   },
   "openapi": "3.1.0",
   "paths": {

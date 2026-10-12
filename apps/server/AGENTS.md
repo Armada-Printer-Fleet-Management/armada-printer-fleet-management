@@ -12,8 +12,9 @@ The server is authoritative: it owns every entity's state, and its domains follo
 | ---------------------- | ------------------------------------------------------------------------- |
 | `api/main.py`          | Composition root: builds infrastructure, hands it to domain services, mounts RPC handlers |
 | `api/domains/`         | Domains: a repository port and a service per domain                      |
-| `api/infrastructure/`  | The server's own persistence behind those ports. In memory until the database exists |
+| `api/infrastructure/`  | The server's own persistence behind those ports, in memory until the database exists, and the adapters over plugins |
 | `tests/contract/`      | What every repository adapter must do. A new adapter joins by adding its factory to `ADAPTERS` |
+| `api/plugins.py`       | Builds the plugins each deployment chose in config, such as `FILE_STORE_BACKEND` |
 | `api/services/`        | Connect handlers: translate between the wire and domain services, composing several where an RPC spans domains. No rules |
 | `api/routers/`         | REST routes that do not fit Connect, such as the health check             |
 | `api/gen/openapi/`     | Generated API documentation data. Gitignored                              |
@@ -31,3 +32,13 @@ Follow `print_job`, the worked example:
    domains, the handler calls each domain's service and joins the results, but holds no rules:
    `PrintJobServiceImplementation` passes `FileService.is_uploaded` into `submit` and returns a
    job beside its file.
+
+## Using a plugin
+
+A plugin reaches a domain only through infrastructure: domain service → the domain's port →
+an adapter in `api/infrastructure/` → the plugin. `api/main.py` builds the plugin with
+`api/plugins.py` and hands it to the adapter, which implements the domain's port in typed IDs
+and domain terms, owns the plugin's lifetime and health check, and turns its errors into domain
+errors: a missing item becomes `EntityNotFound` for the typed ID, an outage `Unavailable`.
+`FileStoreFiles` is the example. Services, handlers, routes and `api/common/` never import a
+plugin or its port, and import-linter enforces it. Never share an adapter through `app.state`.
