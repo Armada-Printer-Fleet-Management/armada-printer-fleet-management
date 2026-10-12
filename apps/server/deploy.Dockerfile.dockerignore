@@ -8,6 +8,8 @@
 !packages/proto/
 !packages/organization-info/
 !packages/core-domain/
+!packages/plugin-api/
+!plugins/s3-file-store/
 !buf.yaml
 !buf.gen.python.yaml
 !buf.gen.server.yaml

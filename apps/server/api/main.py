@@ -9,7 +9,7 @@ from proto_utils.gen.server.v1.print_job_service_connect import PrintJobServiceA
 from starlette.types import Receive, Scope, Send
 
 from api.common.consts import API_PREFIX
-from api.common.dependencies import application_info, dependency_checks
+from api.common.dependencies import application_info, dependency_checks, file_store
 from api.common.openapi import openapi_schema
 from api.domains.print_job.service import PrintJobService
 from api.infrastructure.print_job_sql import SqlPrintJobRepository, stub_print_jobs
@@ -19,10 +19,12 @@ from api.routers.health import router as health_router
 from api.services.health_check_service import HealthCheckServiceImplementation
 from api.services.print_job_service import PrintJobServiceImplementation
 
+# The lifespan opens the store before the first request. file_store() is cached, so services and
+# routes that receive it get this same instance.
 app = FastAPI(
     title=read(organization_info_pb2.OrganizationInfo()).title,
     version=application_info().version_string(),
-    lifespan=lifespan,
+    lifespan=lifespan(file_store()),
 )
 app.openapi = lambda: openapi_schema(app)
 app.add_middleware(RequestContextMiddleware)

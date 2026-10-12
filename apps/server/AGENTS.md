@@ -13,6 +13,7 @@ The server is authoritative: it owns every entity's state, and its domains follo
 | `api/main.py`          | Composition root: builds infrastructure, hands it to domain services, mounts RPC handlers |
 | `api/domains/`         | Domains: a repository port and a service per domain                      |
 | `api/infrastructure/`  | The server's own persistence behind those ports                           |
+| `api/plugins.py`       | Builds the plugins each deployment chose in config, such as `FILE_STORE_BACKEND` |
 | `api/services/`        | Connect handlers: translate between the wire and a domain service, nothing else |
 | `api/routers/`         | REST routes that do not fit Connect, such as the health check             |
 | `api/gen/openapi/`     | Generated API documentation data. Gitignored                              |
@@ -26,3 +27,9 @@ Follow `print_job`, the worked example:
    when it changes an entity.
 3. The handler in `api/services/` reads typed IDs with `request_id()`, calls the service inside
    `domain_errors_as_connect()`, and maps the result with the entity's mapper.
+
+A service that needs a plugin, such as the `FileStore`, takes its port in its constructor;
+`api/main.py` passes in the cached instance from `api/common/dependencies.py` (`file_store()`),
+the same one REST routes receive through `Depends`. Never share it through `app.state`. The service turns the port's not-found error into
+`EntityNotFound` for its own typed ID, because only it knows which entity is missing. Leave a
+plugin's outages alone: `domain_errors_as_connect()` reports them as `UNAVAILABLE`.
