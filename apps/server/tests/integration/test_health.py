@@ -1,3 +1,4 @@
+import asyncio
 import tomllib
 from collections.abc import Iterator, Mapping
 
@@ -6,6 +7,7 @@ from fastapi.testclient import TestClient
 from packaging.version import Version
 from proto_utils.gen.server.v1.health_check_connect import HealthCheckServiceASGIApplication
 
+from api.common import health
 from api.common.consts import PYPROJECT_PATH
 from api.common.dependencies import application_info, dependency_checks
 from api.common.models import DependencyCheck
@@ -33,7 +35,13 @@ async def _raise() -> bool:
     raise RuntimeError("internal detail")
 
 
+async def _hang() -> bool:
+    await asyncio.sleep(60)
+    return True
+
+
 _passing = DependencyCheck(_pass)
+_hanging = DependencyCheck(_hang)
 _failing = DependencyCheck(_fail)
 _raising = DependencyCheck(_raise)
 _optional_failing = DependencyCheck(_fail, critical=False)
@@ -91,6 +99,18 @@ def test_health_raising_dependency_is_reported_as_fail(client: TestClient) -> No
     assert response.json()["status"] == "fail"
     assert response.json()["dependencies"] == {"database": "fail"}
     assert "internal detail" not in response.text
+
+
+def test_health_hanging_dependency_times_out_as_fail(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(health, "DEPENDENCY_CHECK_TIMEOUT_SECONDS", 0.01)
+    _use_checks({"database": _passing, "storage": _hanging})
+
+    response = client.get("/api/health_check", params={"full": True, "check_dependencies": True})
+
+    assert response.status_code == 503
+    assert response.json()["dependencies"] == {"database": "pass", "storage": "fail"}
 
 
 def test_health_failing_optional_dependency_is_degraded(client: TestClient) -> None:

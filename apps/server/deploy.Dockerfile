@@ -22,13 +22,14 @@ ENV UV_LINK_MODE=copy \
 # apps/ and packages/ still resolve.
 WORKDIR /repo
 
-# Installs the server's dependencies, including the proto-utils, organization-info and
-# core-domain packages. Only the dependency files are copied, so editing server code leaves this
-# stage cached.
+# Installs the server's dependencies, including its path packages from packages/ and plugins/.
+# Only the dependency files are copied, so editing server code leaves this stage cached.
 FROM base AS deps
 COPY packages/proto/utils packages/proto/utils
 COPY packages/organization-info packages/organization-info
 COPY packages/core-domain packages/core-domain
+COPY packages/plugin-api packages/plugin-api
+COPY plugins/s3-file-store plugins/s3-file-store
 COPY apps/server/pyproject.toml apps/server/uv.lock apps/server/
 # Runtime packages only (--no-dev). The image that ships inherits this virtualenv.
 RUN --mount=type=cache,target=/root/.cache/uv \

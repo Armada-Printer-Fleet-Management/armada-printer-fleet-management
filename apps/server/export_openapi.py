@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import sys
 
@@ -17,6 +18,17 @@ ROOT = pathlib.Path(__file__).resolve().parent
 DOCS_API = ROOT.parent.parent / "docs" / "api"
 
 sys.path.insert(0, str(ROOT))
+
+# api.main builds the file store from these when it is imported. The spec never touches the store,
+# so placeholders let this run without a deployment's configuration.
+for name, value in {
+    "FILE_STORE_ENDPOINT_URL": "http://file-store.invalid",
+    "FILE_STORE_REGION": "unused",
+    "FILE_STORE_BUCKET": "unused",
+    "FILE_STORE_ACCESS_KEY": "unused",
+    "FILE_STORE_SECRET_KEY": "unused",
+}.items():
+    os.environ.setdefault(name, value)
 
 from api.main import app  # noqa: E402 -- needs the server directory on sys.path first
 

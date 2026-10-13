@@ -1,0 +1,42 @@
+[project]
+name = "s3-file-store"
+version = "0.1.0"
+description = "Access layer implementation of FileStore plugin for communicating with garage-s3-storage"
+requires-python = ">=3.13"
+
+dependencies = [
+  "plugin-api",
+  "aioboto3>=15.5.0,<16", # https://github.com/terricain/aioboto3, Apache-2.0 -- S3 client
+]
+
+[tool.uv.sources]
+plugin-api = { path = "../../packages/plugin-api", editable = true }
+
+[dependency-groups]
+dev = [
+  "ruff",
+  "pyright",
+  "pytest>=9,<10",  # https://github.com/pytest-dev/pytest, MIT
+  "types-aioboto3[s3]==15.5.0",  # https://github.com/youtype/types-aioboto3, MIT -- type stubs for the aioboto3 version pinned above
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/s3_file_store"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+include = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

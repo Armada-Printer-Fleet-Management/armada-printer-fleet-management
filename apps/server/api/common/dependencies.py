@@ -3,9 +3,12 @@ from functools import cache
 from typing import Annotated
 
 from fastapi import Depends
+from plugin_api.file_store import FileStore
 
 from api.common.application_info import ApplicationInfo
 from api.common.models import DependencyCheck
+from api.common.settings import FileStoreSettings
+from api.plugins import build_file_store
 
 
 # Cached so pyproject.toml is read once, not on every request.
@@ -14,18 +17,24 @@ def application_info() -> ApplicationInfo:
     return ApplicationInfo()
 
 
-# Stub: stands in for real dependency checks until the server has dependencies. Filling it in
-# means replacing each entry in dependency_checks() with a DependencyCheck wrapping an async
-# function that probes it, marked critical=False if the service can run without it.
-async def _placeholder_dependency_check() -> bool:
-    return True
+# Cached so api/main.py, which opens it in the lifespan and hands it to services, and every
+# Depends receive the same store.
+@cache
+def file_store() -> FileStore:
+    return build_file_store(FileStoreSettings())
 
 
+def file_store_check(store: FileStore) -> DependencyCheck:
+    async def probe() -> bool:
+        await store.health_check()
+        return True
+
+    return DependencyCheck(probe)
+
+
+@cache
 def dependency_checks() -> Mapping[str, DependencyCheck]:
-    return {
-        "example_1": DependencyCheck(_placeholder_dependency_check),
-        "example_2": DependencyCheck(_placeholder_dependency_check, critical=False),
-    }
+    return {"file_storage": file_store_check(file_store())}
 
 
 ApplicationInfoDep = Annotated[ApplicationInfo, Depends(application_info)]

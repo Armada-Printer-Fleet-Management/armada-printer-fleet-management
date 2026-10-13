@@ -1,16 +1,30 @@
 import asyncio
 from collections.abc import Mapping
 
+import structlog
+
 from api.common.application_info import ApplicationInfo
 from api.common.models import DependencyCheck, HealthReport, HealthStatus
 
+logger = structlog.stdlib.get_logger(__name__)
+
+# A dependency that hangs must not hang the health endpoint with it.
+DEPENDENCY_CHECK_TIMEOUT_SECONDS = 3.0
+
 
 async def run_dependency_checks(checks: Mapping[str, DependencyCheck]) -> dict[str, str]:
-    # A check that raises counts as a failure; its message is deliberately not reported,
-    # because it can carry internal details such as hostnames.
+    # A check that raises or times out counts as a failure; its message is logged but
+    # deliberately not reported, because it can carry internal details such as hostnames.
     results = await asyncio.gather(
-        *(check.probe() for check in checks.values()), return_exceptions=True
+        *(
+            asyncio.wait_for(check.probe(), DEPENDENCY_CHECK_TIMEOUT_SECONDS)
+            for check in checks.values()
+        ),
+        return_exceptions=True,
     )
+    for name, result in zip(checks.keys(), results, strict=True):
+        if isinstance(result, BaseException):
+            logger.warning("dependency check failed", dependency=name, exc_info=result)
     return {
         name: HealthStatus.PASS if result is True else HealthStatus.FAIL
         for name, result in zip(checks.keys(), results, strict=True)

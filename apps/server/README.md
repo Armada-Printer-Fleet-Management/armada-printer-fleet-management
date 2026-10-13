@@ -97,6 +97,19 @@ Python code every app imports.
 The script stops with a pointer to `/onboarding` if `uv` is missing or the Python code has not
 been generated. Both ways use port 8000, so run one at a time.
 
+The server will not start without its file store settings. The Docker stacks set them; natively,
+set them in your shell first. Against the dev stack's Garage, which is published on this machine,
+they are:
+
+| Variable | Value |
+|---|---|
+| `FILE_STORE_BACKEND` | Optional; `s3` is the default and the only plugin today |
+| `FILE_STORE_ENDPOINT_URL` | `http://localhost:3900` |
+| `FILE_STORE_REGION` | `garage` |
+| `FILE_STORE_BUCKET` | `GARAGE_DEFAULT_BUCKET` from `config/compose.dev.env` |
+| `FILE_STORE_ACCESS_KEY` | `GARAGE_DEFAULT_ACCESS_KEY` from `config/compose.dev.env` |
+| `FILE_STORE_SECRET_KEY` | `GARAGE_DEFAULT_SECRET_KEY` from `config/compose.dev.env` |
+
 Every route, REST and ConnectRPC, is served under `/api`, so Connect clients use
 `http://<host>:8000/api` as their base URL. Mount new RPC services with `mount_rpc` in
 `api/main.py`; a plain `app.mount` under the prefix returns 404.
@@ -110,6 +123,13 @@ Health is exposed twice, from the same logic in `api/common/health.py`:
 
 A failing dependency fails the service unless its `DependencyCheck` is marked `critical=False`,
 in which case the service is reported as degraded instead.
+
+**Don't put shared objects on `app.state`.** FastAPI's reference says of it: "You normally wouldn't
+use this in FastAPI, for most of the cases you would instead use FastAPI dependencies"
+([`FastAPI.state`](https://fastapi.tiangolo.com/reference/fastapi/)). Its attributes are untyped,
+so pyright can't check what a route reads from it, and tests can't replace what's on it through
+`app.dependency_overrides`. Give a REST route what it needs through `Depends`, and give a Connect
+handler or domain service what it needs through its constructor in `api/main.py`.
 
 ConnectRPC services are mounted at their generated `path`, so every service shares one base URL.
 Tests: `uv run --directory apps/server pytest`.
