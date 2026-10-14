@@ -11,8 +11,12 @@ from starlette.types import Receive, Scope, Send
 from api.common.consts import API_PREFIX
 from api.common.dependencies import application_info, dependency_checks
 from api.common.openapi import openapi_schema
+from api.domains.file.service import FileService
 from api.domains.print_job.service import PrintJobService
-from api.infrastructure.print_job_sql import SqlPrintJobRepository, stub_print_jobs
+from api.infrastructure.file_memory import InMemoryFileRepository
+from api.infrastructure.file_storage_mock import MockFileStorage
+from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
+from api.infrastructure.stub_data import STUB_STUDENT_ID, stub_files, stub_print_jobs
 from api.lifespan import lifespan
 from api.middleware.request_context import RequestContextMiddleware
 from api.routers.health import router as health_router
@@ -44,7 +48,17 @@ def mount_rpc[S](service: ConnectASGIApplication[S]) -> None:
 health_check_service = HealthCheckServiceImplementation(application_info(), dependency_checks())
 mount_rpc(HealthCheckServiceASGIApplication(health_check_service))
 
-print_job_service = PrintJobService(
-    SqlPrintJobRepository(stub_print_jobs()), clock=lambda: datetime.now(UTC)
+
+def clock() -> datetime:
+    return datetime.now(UTC)
+
+
+# The in-memory repositories and mock storage stand in until the server has a database and an
+# object store. Switching means constructing the real adapters here; nothing else changes.
+print_job_service = PrintJobService(InMemoryPrintJobRepository(stub_print_jobs()), clock)
+file_service = FileService(InMemoryFileRepository(stub_files()), MockFileStorage(), clock)
+# Stub: every caller is the seeded student until the server authenticates requests.
+print_job_handler = PrintJobServiceImplementation(
+    print_job_service, file_service, caller=lambda: STUB_STUDENT_ID
 )
-mount_rpc(PrintJobServiceASGIApplication(PrintJobServiceImplementation(print_job_service)))
+mount_rpc(PrintJobServiceASGIApplication(print_job_handler))

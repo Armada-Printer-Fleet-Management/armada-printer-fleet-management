@@ -1,7 +1,15 @@
+from collections.abc import Callable
+
+import structlog
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from core_domain.ids import PrintJobId
+from core_domain.file import File
+from core_domain.ids import FileId, PrinterId, PrintJobId, UserId
+from core_domain.print_job import PrintJob
+from proto_utils.gen.common.v1.page_pb2 import PageResponse
+from proto_utils.gen.file.v1.file_upload_pb2 import FileUploadSlot
+from proto_utils.gen.id.v1.file_id_pb2 import FileId as FileIdMessage
 from proto_utils.gen.server.v1.print_job_service_pb2 import (
     CreatePrintJobRequest,
     CreatePrintJobResponse,
@@ -16,20 +24,43 @@ from proto_utils.gen.server.v1.print_job_service_pb2 import (
     TransitionPrintJobRequest,
     TransitionPrintJobResponse,
 )
-from proto_utils.mappers import PrintJobMapper
+from proto_utils.mappers import FileMapper, PrintJobMapper
 
+from api.domains.file.service import FileService
 from api.domains.print_job.service import PrintJobService
 from api.services.domain_errors import domain_errors_as_connect, request_id
 
+logger = structlog.stdlib.get_logger(__name__)
+
 
 class PrintJobServiceImplementation:
-    """The Connect handler for server.v1.PrintJobService. It only translates between the wire and
-    the print_job domain: rules live on the entity, use cases on the domain service."""
+    """The Connect handler for server.v1.PrintJobService. It translates between the wire and the
+    print_job and file domains, and composes the two where an RPC involves a job's file: rules
+    live on the entities, use cases on the domain services."""
 
     _mapper = PrintJobMapper()
+    _file_mapper = FileMapper()
 
-    def __init__(self, print_jobs: PrintJobService) -> None:
+    def __init__(
+        self, print_jobs: PrintJobService, files: FileService, caller: Callable[[], UserId]
+    ) -> None:
         self._print_jobs = print_jobs
+        self._files = files
+        self._caller = caller
+
+    async def _file_of(self, print_job: PrintJob) -> File | None:
+        if print_job.file_id is None:
+            return None
+        files = await self._files.files([print_job.file_id])
+        if not files:
+            # The job still exists, so it is returned without its file rather than reported missing.
+            logger.warning(
+                "print job file record is missing",
+                print_job_id=str(print_job.id),
+                file_id=str(print_job.file_id),
+            )
+            return None
+        return files[0]
 
     async def get_print_job(
         self,
@@ -40,7 +71,11 @@ class PrintJobServiceImplementation:
         print_job_id = request_id(PrintJobId, request.print_job_id)
         with domain_errors_as_connect():
             print_job = await self._print_jobs.print_job(print_job_id)
-        return GetPrintJobResponse(print_job=self._mapper.to_proto(print_job))
+            file = await self._file_of(print_job)
+        return GetPrintJobResponse(
+            print_job=self._mapper.to_proto(print_job),
+            file=None if file is None else self._file_mapper.to_proto(file),
+        )
 
     async def transition_print_job(
         self,
@@ -49,13 +84,19 @@ class PrintJobServiceImplementation:
         /,
     ) -> TransitionPrintJobResponse:
         print_job_id = request_id(PrintJobId, request.print_job_id)
-        action = request.WhichOneof("action")
-        if action is None:
-            raise ConnectError(Code.INVALID_ARGUMENT, "action must be set")
-        if action != "start_review":
-            raise ConnectError(Code.UNIMPLEMENTED, f"{action} is not implemented yet")
         with domain_errors_as_connect():
-            print_job = await self._print_jobs.start_review(print_job_id)
+            match request.WhichOneof("action"):
+                case "start_review":
+                    print_job = await self._print_jobs.start_review(print_job_id)
+                case "approve":
+                    print_job = await self._print_jobs.approve(print_job_id)
+                case "reject":
+                    print_job = await self._print_jobs.reject(print_job_id, request.reject.reason)
+                case "assign":
+                    printer_id = request_id(PrinterId, request.assign.printer_id)
+                    print_job = await self._print_jobs.assign(print_job_id, printer_id)
+                case _:
+                    raise ConnectError(Code.INVALID_ARGUMENT, "action must be set")
         return TransitionPrintJobResponse(print_job=self._mapper.to_proto(print_job))
 
     async def create_print_job(
@@ -64,7 +105,8 @@ class PrintJobServiceImplementation:
         ctx: RequestContext[CreatePrintJobRequest, CreatePrintJobResponse],
         /,
     ) -> CreatePrintJobResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "CreatePrintJob is not implemented yet")
+        print_job = await self._print_jobs.create(self._caller(), request.user_notes)
+        return CreatePrintJobResponse(print_job=self._mapper.to_proto(print_job))
 
     async def create_print_job_upload(
         self,
@@ -72,7 +114,30 @@ class PrintJobServiceImplementation:
         ctx: RequestContext[CreatePrintJobUploadRequest, CreatePrintJobUploadResponse],
         /,
     ) -> CreatePrintJobUploadResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "CreatePrintJobUpload is not implemented yet")
+        print_job_id = request_id(PrintJobId, request.print_job_id)
+        metadata = request.metadata
+        try:
+            file_type = FileMapper.file_type_from_proto(metadata.file_type)
+        except ValueError as error:
+            raise ConnectError(Code.INVALID_ARGUMENT, "metadata.file_type must be set") from error
+
+        created: list[tuple[File, str]] = []
+
+        async def new_file() -> FileId:
+            created.append(
+                await self._files.create_upload(
+                    metadata.filename, file_type, metadata.size_bytes, metadata.sha256
+                )
+            )
+            return created[0][0].id
+
+        with domain_errors_as_connect():
+            await self._print_jobs.attach_new_file(print_job_id, new_file)
+        file, upload_url = created[0]
+        slot = FileUploadSlot(
+            file_id=FileMapper.id_to_proto(FileIdMessage, file.id), upload_url=upload_url
+        )
+        return CreatePrintJobUploadResponse(slot=slot)
 
     async def submit_print_job(
         self,
@@ -80,7 +145,14 @@ class PrintJobServiceImplementation:
         ctx: RequestContext[SubmitPrintJobRequest, SubmitPrintJobResponse],
         /,
     ) -> SubmitPrintJobResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "SubmitPrintJob is not implemented yet")
+        print_job_id = request_id(PrintJobId, request.print_job_id)
+        with domain_errors_as_connect():
+            print_job = await self._print_jobs.submit(print_job_id, self._files.is_uploaded)
+            file = await self._file_of(print_job)
+        return SubmitPrintJobResponse(
+            print_job=self._mapper.to_proto(print_job),
+            file=None if file is None else self._file_mapper.to_proto(file),
+        )
 
     async def list_print_jobs(
         self,
@@ -88,4 +160,13 @@ class PrintJobServiceImplementation:
         ctx: RequestContext[ListPrintJobsRequest, ListPrintJobsResponse],
         /,
     ) -> ListPrintJobsResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "ListPrintJobs is not implemented yet")
+        with domain_errors_as_connect():
+            page = await self._print_jobs.page(request.page.page_size, request.page.page_token)
+            files = await self._files.files(
+                print_job.file_id for print_job in page.items if print_job.file_id is not None
+            )
+        return ListPrintJobsResponse(
+            print_jobs=[self._mapper.to_proto(print_job) for print_job in page.items],
+            files=[self._file_mapper.to_proto(file) for file in files],
+            page=PageResponse(next_page_token=page.next_page_token),
+        )
