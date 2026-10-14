@@ -14,3 +14,14 @@ class EntityNotFound(DomainError):
 
 class RuleViolation(DomainError):
     """An entity refused a change its rules do not allow."""
+
+
+class InvalidValue(DomainError):
+    """A value that can never be valid, whatever state the entity is in."""
+
+
+class InvalidPageToken(DomainError):
+    """A page token that the repository did not issue."""
+
+    def __init__(self) -> None:
+        super().__init__("page_token is not valid")
