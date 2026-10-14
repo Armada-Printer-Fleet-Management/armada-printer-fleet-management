@@ -12,8 +12,9 @@ The server is authoritative: it owns every entity's state, and its domains follo
 | ---------------------- | ------------------------------------------------------------------------- |
 | `api/main.py`          | Composition root: builds infrastructure, hands it to domain services, mounts RPC handlers |
 | `api/domains/`         | Domains: a repository port and a service per domain                      |
-| `api/infrastructure/`  | The server's own persistence behind those ports                           |
-| `api/services/`        | Connect handlers: translate between the wire and a domain service, nothing else |
+| `api/infrastructure/`  | The server's own persistence behind those ports. In memory until the database exists |
+| `tests/contract/`      | What every repository adapter must do. A new adapter joins by adding its factory to `ADAPTERS` |
+| `api/services/`        | Connect handlers: translate between the wire and domain services, composing several where an RPC spans domains. No rules |
 | `api/routers/`         | REST routes that do not fit Connect, such as the health check             |
 | `api/gen/openapi/`     | Generated API documentation data. Gitignored                              |
 
@@ -23,6 +24,10 @@ Follow `print_job`, the worked example:
 
 1. The rule goes on the entity in `packages/core-domain/core_domain/<domain>/entities.py`.
 2. The use case goes on the domain service in `api/domains/<domain>/service.py`, using `change()`
-   when it changes an entity.
+   when it changes an entity. A rule that needs another domain's fact takes it as a plain value
+   or a callback typed by ID, as `PrintJobService.submit` does, never that domain's types.
 3. The handler in `api/services/` reads typed IDs with `request_id()`, calls the service inside
-   `domain_errors_as_connect()`, and maps the result with the entity's mapper.
+   `domain_errors_as_connect()`, and maps the result with the entity's mapper. Where an RPC spans
+   domains, the handler calls each domain's service and joins the results, but holds no rules:
+   `PrintJobServiceImplementation` passes `FileService.is_uploaded` into `submit` and returns a
+   job beside its file.

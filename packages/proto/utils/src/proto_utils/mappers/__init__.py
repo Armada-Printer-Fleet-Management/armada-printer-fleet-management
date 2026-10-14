@@ -2,6 +2,7 @@
 DTOs need not match entities field for field: internal entity state stays off the wire, and a
 caller-specific view is shaped by the caller."""
 
+from proto_utils.mappers.file import FileMapper
 from proto_utils.mappers.print_job import PrintJobMapper
 
-__all__ = ["PrintJobMapper"]
+__all__ = ["FileMapper", "PrintJobMapper"]

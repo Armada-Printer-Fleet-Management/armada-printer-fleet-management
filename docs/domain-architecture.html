@@ -56,7 +56,7 @@
               <tr>
                 <td>Infrastructure</td>
                 <td>Code that does I/O by implementing a port: databases, network clients.</td>
-                <td><code>SqlPrintJobRepository</code></td>
+                <td><code>InMemoryPrintJobRepository</code>, until the database exists</td>
               </tr>
               <tr>
                 <td>DTO and mapper</td>
@@ -443,6 +443,14 @@
           All of them run in CI and in the pre-push hook. To add a use case, follow
           print jobs: the rule on the entity, the use case on the service, and the
           handler or IPC call translating at the edge.
+        </p>
+        <p>
+          Domains never import each other, so an RPC that needs two of them, such as
+          uploading a print job's file, is composed by its handler. The handler calls
+          each domain's service in turn and holds no rules of its own. Where a domain's
+          own use case needs an answer from another domain, such as whether a job's
+          file has finished uploading, the handler passes it in as a callback that deals
+          only in typed IDs.
         </p>
 
         <section class="ai-statement">
