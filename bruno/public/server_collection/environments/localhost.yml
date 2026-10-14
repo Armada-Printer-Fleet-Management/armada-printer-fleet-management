@@ -2,3 +2,7 @@ name: localhost
 variables:
   - name: baseUrl
     value: localhost:8000
+  # The seeded draft job, so the print_job requests run in order without editing. To follow a
+  # job you created instead, set this to the ID that Create Print Job returns.
+  - name: printJobId
+    value: 00000000-0000-4000-8000-000000000001

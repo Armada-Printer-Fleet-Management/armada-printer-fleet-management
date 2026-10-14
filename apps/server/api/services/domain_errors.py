@@ -5,7 +5,7 @@ from uuid import UUID
 
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from core_domain.ddd import EntityNotFound, RuleViolation
+from core_domain.ddd import EntityNotFound, InvalidPageToken, InvalidValue, RuleViolation
 from proto_utils import ProtoId, ProtoMapper
 
 
@@ -19,6 +19,8 @@ def domain_errors_as_connect() -> Generator[None]:
         raise ConnectError(Code.NOT_FOUND, str(error)) from error
     except RuleViolation as error:
         raise ConnectError(Code.FAILED_PRECONDITION, str(error)) from error
+    except (InvalidPageToken, InvalidValue) as error:
+        raise ConnectError(Code.INVALID_ARGUMENT, str(error)) from error
 
 
 def request_id[IdT](id_type: Callable[[UUID], IdT], message: ProtoId) -> IdT:
