@@ -1,0 +1,10 @@
+# Run by armada-update.timer. Checks the installation's track for a new version and, depending on
+# the update policy, records it (notify), installs it (auto) or does nothing (off).
+[Unit]
+Description=Check for Armada updates
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/armada check-for-updates --scheduled

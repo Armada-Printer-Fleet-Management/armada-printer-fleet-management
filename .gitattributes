@@ -1,3 +1,8 @@
 # Code generated from the .proto files copies their comments, line endings included, so a
 # Windows checkout with CRLF would generate different code and API docs from Linux CI.
 *.proto text eol=lf
+
+# Shell scripts and systemd units run on Linux, where a CRLF line ending breaks them.
+*.sh text eol=lf
+infra/deploy/armada text eol=lf
+infra/deploy/systemd/* text eol=lf

@@ -346,6 +346,8 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Build desktop installer        | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test]` |
 | Install NSIS (Windows)         | `python scripts/install_nsis.py`                                     |
 | Run CI job locally             | `act -W .github/workflows/<file>.yml -j <job>` (Windows job: add `-P windows-latest=-self-hosted`) |
+| Lint deployment scripts        | `shellcheck infra/deploy/armada infra/deploy/*.sh`                   |
+| Assemble a release's files     | `bash infra/deploy/release.sh <preview\|release> <version> <owner/repo> <image owner> <dir>` |
 
 New frontend dependencies added for this branch:
 

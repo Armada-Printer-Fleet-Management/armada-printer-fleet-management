@@ -1,7 +1,8 @@
-# Promotes images that deploy.yml already built; nothing is rebuilt. Testing to staging names the
-# images on :testing as the next release candidate of the version a developer enters. Staging to
-# production gives the candidate on :staging its plain version, creates its release branch and
-# publishes the release. How to run it: infra/deploy/README.md.
+# Promotes images that deploy.yml already built; no image is rebuilt. Testing to staging names the
+# images on :testing as the next release candidate of the version a developer enters, inside the
+# private -preview packages. Staging to production copies the candidate's server and web images
+# into the public packages under its plain version, creates its release branch and publishes the
+# release with the installer. How to run it: infra/deploy/README.md.
 name: Release
 run-name: >-
   Release ${{ inputs.step }}${{ inputs.step == 'testing-to-staging' && format(' {0}', inputs.version) || '' }}${{ inputs.dry_run && ' (dry run)' || '' }}
@@ -68,8 +69,8 @@ jobs:
             testing-to-staging) from=testing ;;
             staging-to-production) from=staging ;;
           esac
-          for name in armada-server armada-web; do
-            repo="ghcr.io/$owner/$name"
+          for name in armada-server armada-web armada-release; do
+            repo="ghcr.io/$owner/$name-preview"
             if ! inspect=$(docker buildx imagetools inspect "$repo:$from"); then
               echo "::error::Nothing is on :$from yet"; exit 1
             fi
@@ -80,7 +81,7 @@ jobs:
             if [ "$name" = armada-server ]; then server="$repo@$digest"; fi
           done
 
-          # Both images come from one build, so the server's label gives the commit for both.
+          # All three images come from one build, so the server's label gives the commit for each.
           docker pull -q "$server" > /dev/null
           commit=$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$server")
           if [ -z "$commit" ] || ! git cat-file -e "$commit^{commit}" 2> /dev/null; then
@@ -140,7 +141,9 @@ jobs:
           { echo "tag=$tag"; echo "pointer=$pointer"; } >> "$GITHUB_OUTPUT"
           echo "Promoting as $tag to :$pointer"
 
-      # Each image is tagged before either pointer moves, as deploy.yml does.
+      # Each image is tagged before any pointer moves, as deploy.yml does. A candidate stays in the
+      # private packages. Production copies only server and web into the public packages, which
+      # nothing else writes to; its release files go to the GitHub release instead.
       - name: Tag the images and move the pointer
         if: ${{ !inputs.dry_run }}
         env:
@@ -149,14 +152,24 @@ jobs:
           POINTER: ${{ steps.plan.outputs.pointer }}
           SERVER: ${{ steps.source.outputs.server }}
           WEB: ${{ steps.source.outputs.web }}
+          RELEASE: ${{ steps.source.outputs.release }}
         shell: bash
         run: |
           set -euo pipefail
-          # Adds a name to an image already in the registry; nothing is pulled, rebuilt or uploaded.
-          docker buildx imagetools create -t "ghcr.io/$OWNER/armada-server:$TAG" "$SERVER"
-          docker buildx imagetools create -t "ghcr.io/$OWNER/armada-web:$TAG" "$WEB"
-          docker buildx imagetools create -t "ghcr.io/$OWNER/armada-server:$POINTER" "$SERVER"
-          docker buildx imagetools create -t "ghcr.io/$OWNER/armada-web:$POINTER" "$WEB"
+          # Adds a name to an image already in the registry; nothing is rebuilt, and a copy between
+          # packages keeps the digest.
+          if [ "$POINTER" = production ]; then
+            images=("armada-server=$SERVER" "armada-web=$WEB")
+            suffix=""
+          else
+            images=("armada-server=$SERVER" "armada-web=$WEB" "armada-release=$RELEASE")
+            suffix=-preview
+          fi
+          for name in "$TAG" "$POINTER"; do
+            for image in "${images[@]}"; do
+              docker buildx imagetools create -t "ghcr.io/$OWNER/${image%%=*}$suffix:$name" "${image#*=}"
+            done
+          done
 
       - name: Tag the commit
         if: ${{ !inputs.dry_run }}
@@ -197,12 +210,13 @@ jobs:
                 git push origin --delete "release/$old"
               done
 
-      # Candidates are pre-releases; only a production version is a full release, and the newest.
+      # Only production versions get a GitHub release, because releases are public. A candidate is
+      # recorded by its git tag and its tags in the private packages.
       - name: Create the GitHub release
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && inputs.step == 'staging-to-production' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          STEP: ${{ inputs.step }}
+          OWNER: ${{ steps.source.outputs.owner }}
           TAG: ${{ steps.plan.outputs.tag }}
           COMMIT: ${{ steps.source.outputs.commit }}
           PRODUCTION: ${{ steps.source.outputs.production }}
@@ -211,11 +225,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # The promoted commit's own release.sh, not main's, so the installer matches the images it
+          # installs.
           files="$RUNNER_TEMP/files"
-          mkdir -p "$files"
-          # The deploy files as they were in the promoted commit, not as they are on main now.
-          git show "$COMMIT:infra/deploy/compose.yaml" > "$files/compose.yaml"
-          git show "$COMMIT:infra/deploy/garage.toml" > "$files/garage.toml"
+          deploy="$RUNNER_TEMP/deploy"
+          mkdir -p "$deploy"
+          git archive "$COMMIT" infra/deploy | tar -x -C "$deploy"
+          bash "$deploy/infra/deploy/release.sh" release "$TAG" "$GITHUB_REPOSITORY" "$OWNER" "$files"
 
           notes="$RUNNER_TEMP/notes.md"
           { echo "## Images"
@@ -229,13 +245,9 @@ jobs:
             git log --no-merges --format='- %s' "$range"
           } > "$notes"
 
-          if [ "$STEP" = testing-to-staging ]; then
-            kind=(--prerelease)
-          else
-            kind=(--latest)
-          fi
-          gh release create "v$TAG" --verify-tag "${kind[@]}" --title "v$TAG" \
-            --notes-file "$notes" "$files/compose.yaml" "$files/garage.toml"
+          # Production machines follow the latest release, so --latest is what offers them this version.
+          gh release create "v$TAG" --verify-tag --latest --title "v$TAG" \
+            --notes-file "$notes" "$files"/*
 
       - name: Summary
         if: always()

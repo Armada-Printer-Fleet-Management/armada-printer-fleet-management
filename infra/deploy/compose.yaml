@@ -6,7 +6,7 @@ name: armada
 
 services:
   web:
-    image: ghcr.io/${GHCR_OWNER:?}/armada-web:${VERSION:?}
+    image: ${REGISTRY:-ghcr.io}/${GHCR_OWNER:?}/armada-web${IMAGE_SUFFIX:-}:${VERSION:?}
     restart: always
     depends_on:
       server:
@@ -23,7 +23,7 @@ services:
       - caddy_config:/config
 
   server:
-    image: ghcr.io/${GHCR_OWNER:?}/armada-server:${VERSION:?}
+    image: ${REGISTRY:-ghcr.io}/${GHCR_OWNER:?}/armada-server${IMAGE_SUFFIX:-}:${VERSION:?}
     restart: always
     depends_on:
       db:

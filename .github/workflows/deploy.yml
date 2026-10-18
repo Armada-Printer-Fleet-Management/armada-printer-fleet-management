@@ -1,6 +1,8 @@
-# Builds the deploy images, starts them as the deploy stack, and pushes them to GHCR. A push to main
-# moves :testing; a push to a release/X.Y.Z hot fix branch builds the next release candidate and
-# moves :staging. Promotion past that is release.yml. Opening a pull request never publishes.
+# Builds the deploy images, starts them as the deploy stack, and pushes them with their release
+# image to the private -preview packages on GHCR. A push to main moves :testing; a push to a
+# release/X.Y.Z hot fix branch builds the next release candidate and moves :staging. Promotion past
+# that, including the copy into the public packages, is release.yml. Opening a pull request never
+# publishes.
 name: Deploy
 
 on:
@@ -110,7 +112,7 @@ jobs:
           TAG: ${{ steps.plan.outputs.tag }}
         shell: bash
         run: |
-          if docker buildx imagetools inspect "ghcr.io/$OWNER/armada-server:$TAG" > /dev/null 2>&1; then
+          if docker buildx imagetools inspect "ghcr.io/$OWNER/armada-server-preview:$TAG" > /dev/null 2>&1; then
             echo "::notice::$TAG is already published; nothing to do."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
@@ -129,7 +131,7 @@ jobs:
           COMMIT: ${{ steps.plan.outputs.commit }}
         shell: bash
         run: | 
-          printf 'GHCR_OWNER=%s\nVERSION=%s\nREVISION=%s\n' "$OWNER" "$TAG" "$COMMIT" > config/compose.deploy.env
+          printf 'GHCR_OWNER=%s\nVERSION=%s\nREVISION=%s\nIMAGE_SUFFIX=-preview\n' "$OWNER" "$TAG" "$COMMIT" > config/compose.deploy.env
 
       - name: Build the images and start the deploy stack
         if: steps.existing.outputs.skip != 'true'
@@ -156,8 +158,21 @@ jobs:
         run: | 
           python scripts/compose_run.py deploy down
 
-      # Both images are pushed before either pointer moves, so a pointer never names a server from
-      # one build and a web app from another.
+      # Testing and staging machines install from this image, so it holds exactly this build's files.
+      - name: Build the release image
+        if: steps.existing.outputs.skip != 'true'
+        env:
+          OWNER: ${{ steps.plan.outputs.owner }}
+          TAG: ${{ steps.plan.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="$RUNNER_TEMP/release"
+          bash infra/deploy/release.sh preview "$TAG" "$GITHUB_REPOSITORY" "$OWNER" "$files"
+          docker build -f infra/deploy/release.Dockerfile -t "ghcr.io/$OWNER/armada-release-preview:$TAG" "$files"
+
+      # Every image is pushed before any pointer moves, so a pointer never names a server from one
+      # build and a web app or release files from another.
       - name: Push the images and move the pointer
         id: push
         if: steps.plan.outputs.publish == 'true' && steps.existing.outputs.skip != 'true'
@@ -168,41 +183,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in armada-server armada-web; do
-            repo="ghcr.io/$OWNER/$name"
+          for name in armada-server armada-web armada-release; do
+            repo="ghcr.io/$OWNER/$name-preview"
             docker push "$repo:$TAG"
             digest=$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$repo:$TAG" | grep "^$repo@")
             echo "${name#armada-}=$digest" >> "$GITHUB_OUTPUT"
           done
-          for name in armada-server armada-web; do
-            repo="ghcr.io/$OWNER/$name"
+          for name in armada-server armada-web armada-release; do
+            repo="ghcr.io/$OWNER/$name-preview"
             docker tag "$repo:$TAG" "$repo:$POINTER"
             docker push "$repo:$POINTER"
           done
 
-      # A hot fix candidate gets the same git tag and pre-release as one promoted by release.yml.
+      # A hot fix candidate gets the same git tag as one promoted by release.yml, which numbers the
+      # next candidates from it.
       - name: Tag the release candidate
         if: steps.push.outcome == 'success' && steps.plan.outputs.pointer == 'staging'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.plan.outputs.tag }}
-          SERVER: ${{ steps.push.outputs.server }}
-          WEB: ${{ steps.push.outputs.web }}
         shell: bash
         run: |
           set -euo pipefail
           git tag "v$TAG"
           git push origin "v$TAG"
-          notes="$RUNNER_TEMP/notes.md"
-          { echo "Hot fix release candidate, built from ${GITHUB_REF#refs/heads/}."
-            echo
-            echo "## Images"
-            echo
-            echo "- \`$SERVER\`"
-            echo "- \`$WEB\`"
-          } > "$notes"
-          gh release create "v$TAG" --verify-tag --prerelease --title "v$TAG" \
-            --notes-file "$notes" infra/deploy/compose.yaml infra/deploy/garage.toml
 
       - name: Summary
         if: always()
