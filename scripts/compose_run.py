@@ -129,7 +129,9 @@ def build_deploy_images(env: dict[str, str]) -> None:
     if revision := env.get("REVISION"):
         labels = ["--label", f"org.opencontainers.image.revision={revision}"]
     for name, dockerfile in DEPLOY_IMAGES.items():
-        tag = f"ghcr.io/{env['GHCR_OWNER']}/{name}:{env['VERSION']}"
+        registry = env.get("REGISTRY") or "ghcr.io"
+        suffix = env.get("IMAGE_SUFFIX", "")
+        tag = f"{registry}/{env['GHCR_OWNER']}/{name}{suffix}:{env['VERSION']}"
         print(f"Building {tag}", flush=True)
         subprocess.run(
             [docker, "build", "-f", str(dockerfile), "-t", tag, *labels, str(REPO)],

@@ -1,0 +1,309 @@
+# Lints the deployment scripts, then installs, updates and rolls back a real installation on a
+# fresh runner, through both channels: preview (testing, from the release image) and release
+# (production, from release files). Images go to a registry inside the job, so no test image ever
+# reaches GHCR.
+name: CI (deploy)
+
+on:
+  pull_request:
+    paths:
+      - infra/deploy/**
+      - apps/server/deploy.Dockerfile
+      - apps/web/deploy.Dockerfile
+      - scripts/compose_run.py
+      - .github/workflows/deploy.ci.yml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck infra/deploy/armada infra/deploy/*.sh
+
+  install-and-update:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # armada and install.sh run as root, as they do on a real machine. -E keeps the overrides below.
+        shell: sudo -E bash --noprofile --norc -euo pipefail {0}
+    env:
+      ARMADA_REGISTRY: localhost:5000
+      ARMADA_IMAGE_OWNER: armada-test
+      ARMADA_HEALTH_TIMEOUT: "120"
+      IMAGES: localhost:5000/armada-test
+      # Build names as deploy.yml makes them on main.
+      GOOD_1: sha-000000000001
+      GOOD_2: sha-000000000002
+      BROKEN: sha-000000000003
+    steps:
+      - uses: actions/checkout@v4
+
+      # The runner's temporary directory is only known once a step runs, so later steps get the
+      # release URL through GITHUB_ENV. Laid out like GitHub's: <base>/download/v<version>/<file>
+      # and <base>/latest/download/<file>.
+      - name: Start a local registry
+        run: |
+          echo "ARMADA_RELEASE_URL=file://$RUNNER_TEMP/github/download" >> "$GITHUB_ENV"
+          docker run --detach --publish 5000:5000 --name registry registry:2
+
+      - name: Publish preview builds, and production versions 0.0.1 to 0.0.3
+        run: |
+          github="$RUNNER_TEMP/github"
+          # One build of each app, pushed under every name; the names are what armada tells apart.
+          for app in server web; do
+            docker build --quiet -f "apps/$app/deploy.Dockerfile" -t "armada-$app:built" .
+          done
+          publish_preview() {
+            local name=$1 files
+            for app in server web; do
+              docker tag "armada-$app:built" "$IMAGES/armada-$app-preview:$name"
+              docker push --quiet "$IMAGES/armada-$app-preview:$name"
+            done
+            files=$(mktemp -d)
+            bash infra/deploy/release.sh preview "$name" test/armada armada-test "$files"
+            docker build --quiet -f infra/deploy/release.Dockerfile \
+              -t "$IMAGES/armada-release-preview:$name" "$files"
+            docker push --quiet "$IMAGES/armada-release-preview:$name"
+          }
+          publish_preview "$GOOD_1"
+          publish_preview "$GOOD_2"
+          # The broken build's server never reports healthy, so updating to it must return to the
+          # previous version.
+          docker build --quiet -t armada-server:broken - <<< $'FROM armada-server:built\nHEALTHCHECK --interval=5s CMD ["false"]'
+          docker tag armada-server:broken armada-server:built
+          publish_preview "$BROKEN"
+
+          for version in 0.0.1 0.0.2 0.0.3; do
+            for app in server web; do
+              docker tag "$IMAGES/armada-$app-preview:$GOOD_1" "$IMAGES/armada-$app:$version"
+              docker push --quiet "$IMAGES/armada-$app:$version"
+            done
+            bash infra/deploy/release.sh release "$version" test/armada armada-test "$github/download/v$version"
+          done
+          mkdir -p "$github/latest"
+          ln -sfn ../download/v0.0.1 "$github/latest/download"
+
+      - name: Preview channel - install, update, roll back, uninstall and reinstall
+        run: |
+          expect() {
+            local running
+            running=$(armada version)
+            if [ "$running" != "$1" ]; then
+              echo "::error::Expected $1 to be running, found $running"
+              armada status || true
+              exit 1
+            fi
+            echo "ok: running $1"
+          }
+          # The timer would otherwise move the installation while the test is checking it.
+          quiet_timer() {
+            systemctl stop armada-update.timer
+            while systemctl is-active --quiet armada-update.service; do sleep 1; done
+          }
+          # Pulls first: armada removes the release images it reads, local tags included.
+          move() {
+            local pointer=$1 name=$2 image
+            for image in armada-server armada-web armada-release; do
+              docker pull --quiet "$IMAGES/$image-preview:$name" > /dev/null
+              docker tag "$IMAGES/$image-preview:$name" "$IMAGES/$image-preview:$pointer"
+              docker push --quiet "$IMAGES/$image-preview:$pointer"
+            done
+          }
+          # What a person does on a testing machine: read the installer out of the release image.
+          extract() {
+            local out container
+            out=$(mktemp -d)
+            docker pull --quiet "$IMAGES/armada-release-preview:testing" > /dev/null
+            container=$(docker create "$IMAGES/armada-release-preview:testing" none)
+            docker cp "$container:/release/." "$out"
+            docker rm "$container" > /dev/null
+            echo "$out"
+          }
+
+          echo "::group::Install the build on :testing"
+          move testing "$GOOD_1"
+          dir=$(extract)
+          # Output is captured before grep reads it: grep -q on a pipe can stop the writer mid-output.
+          help=$(bash "$dir/install.sh" --help)
+          grep -qF -- '--track testing|staging' <<< "$help"
+          bash "$dir/install.sh" --non-interactive --domain :80 \
+            --admin-email ci@example.invalid --update-policy auto --update-interval 5min
+          quiet_timer
+          expect "$GOOD_1"
+          [ "$(armada config track)" = testing ]
+          status=$(armada status)
+          echo "$status"
+          grep -q '^  Track  *testing$' <<< "$status"
+          curl -fsS http://localhost/api/health_check
+          echo "::endgroup::"
+
+          echo "::group::Automatic updates wait for the update window"
+          timer=/etc/systemd/system/armada-update.timer.d
+          [ ! -e "$timer/window.conf" ]
+          # A window starting two hours from now, so the check below is always outside it.
+          hour=$(( (10#$(date +%H) + 2) % 24 ))
+          window=$(printf '%02d:00-%02d:30' "$hour" "$hour")
+          armada config update-window "$window"
+          grep -qxF "OnCalendar=*-*-* ${window%-*}:00" "$timer/window.conf"
+          move testing "$GOOD_2"
+          out=$(armada check-for-updates --scheduled)
+          echo "$out"
+          grep -qF "Not installing it yet" <<< "$out"
+          expect "$GOOD_1"
+          status=$(armada status)
+          grep -qF "$GOOD_2 is available" <<< "$status"
+          armada config update-window ""
+          [ ! -e "$timer/window.conf" ]
+          echo "::endgroup::"
+
+          echo "::group::The update service follows the testing pointer"
+          # What the timer starts; for a oneshot service, start waits until the check has finished.
+          systemctl start armada-update.service
+          journalctl -u armada-update.service --no-pager -n 20
+          expect "$GOOD_2"
+          echo "::endgroup::"
+
+          echo "::group::Roll back"
+          armada rollback --yes
+          expect "$GOOD_1"
+          echo "::endgroup::"
+
+          echo "::group::A build that never becomes healthy is undone"
+          if armada update "$BROKEN"; then
+            echo "::error::Updating to the broken build reported success"
+            exit 1
+          fi
+          expect "$GOOD_1"
+          curl -fsS http://localhost/api/health_check
+          echo "::endgroup::"
+
+          echo "::group::Notify only records the new build"
+          armada config update-policy notify
+          [ "$(armada config update-policy)" = notify ]
+          armada check-for-updates --scheduled
+          expect "$GOOD_1"
+          status=$(armada status)
+          grep -qF "$GOOD_2 is available" <<< "$status"
+          echo "::endgroup::"
+
+          echo "::group::Tracks move within the channel, never across it"
+          armada config track staging
+          armada config track testing
+          if armada config track production; then
+            echo "::error::A preview installation moved to production"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Uninstall keeps the data; reinstalling finds it"
+          armada uninstall --yes
+          [ ! -e /usr/local/bin/armada ]
+          [ -f /opt/armada/.env ]
+          docker volume inspect armada_pgdata > /dev/null
+          bash "$(extract)/install.sh" --non-interactive
+          quiet_timer
+          expect "$GOOD_2"
+          curl -fsS http://localhost/api/health_check
+          echo "::endgroup::"
+
+      - name: Release channel - refuse preview tracks, install and follow the latest release
+        run: |
+          github="$RUNNER_TEMP/github"
+          expect() {
+            local running
+            running=$(armada version)
+            if [ "$running" != "$1" ]; then
+              echo "::error::Expected $1 to be running, found $running"
+              armada status || true
+              exit 1
+            fi
+            echo "ok: running $1"
+          }
+          quiet_timer() {
+            systemctl stop armada-update.timer
+            while systemctl is-active --quiet armada-update.service; do sleep 1; done
+          }
+
+          echo "::group::The release installer hides and refuses testing"
+          help=$(bash "$github/download/v0.0.1/install.sh" --help)
+          if grep -qF -- '--track' <<< "$help"; then
+            echo "::error::The release installer's help mentions tracks"
+            exit 1
+          fi
+          if bash "$github/download/v0.0.1/install.sh" --non-interactive --track testing; then
+            echo "::error::The release installer installed a testing machine"
+            exit 1
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Reinstall as production, from the latest release"
+          armada uninstall --yes
+          bash "$github/download/v0.0.1/install.sh" --non-interactive --update-policy auto
+          quiet_timer
+          expect 0.0.1
+          [ "$(armada config track)" = production ]
+          curl -fsS http://localhost/api/health_check
+          # Production has only one track, so nothing shown to its operators names one.
+          status=$(armada status)
+          echo "$status"
+          if grep -q '^  Track' <<< "$status"; then
+            echo "::error::A production installation's status shows a track"
+            exit 1
+          fi
+          out=$(armada check-for-updates)
+          grep -qxF "Up to date: 0.0.1 is the newest version." <<< "$out"
+          echo "::endgroup::"
+
+          echo "::group::The scheduled check follows the latest release"
+          ln -sfn ../download/v0.0.2 "$github/latest/download"
+          armada check-for-updates --scheduled
+          expect 0.0.2
+          echo "::endgroup::"
+
+          echo "::group::Only the running and previous versions' files and images are kept"
+          ln -sfn ../download/v0.0.3 "$github/latest/download"
+          armada check-for-updates --scheduled
+          expect 0.0.3
+          [ "$(ls /opt/armada/releases)" = "$(printf '0.0.2\n0.0.3')" ]
+          for app in server web; do
+            if docker image inspect "$IMAGES/armada-$app:0.0.1" > /dev/null 2>&1; then
+              echo "::error::armada-$app:0.0.1 was not removed"
+              exit 1
+            fi
+            docker image inspect "$IMAGES/armada-$app:0.0.2" > /dev/null
+          done
+          # The database and file storage images are named by every version, so they stay.
+          docker image inspect postgres:17-alpine > /dev/null
+          echo "::endgroup::"
+
+      # Uninstalling clears the version, so the next install is a first one with nothing to go back to.
+      - name: A first install that never becomes healthy says what to do
+        run: |
+          armada uninstall --yes
+          dir=$(mktemp -d)
+          docker pull --quiet "$IMAGES/armada-release-preview:testing" > /dev/null
+          container=$(docker create "$IMAGES/armada-release-preview:testing" none)
+          docker cp "$container:/release/." "$dir"
+          docker rm "$container" > /dev/null
+          if out=$(bash "$dir/install.sh" --non-interactive --version "$BROKEN" 2>&1); then
+            echo "$out"
+            echo "::error::Installing the broken build reported success"
+            exit 1
+          fi
+          echo "$out"
+          grep -qF "is the first version on this machine" <<< "$out"
+          grep -qF "Armada did not start" <<< "$out"
+
+      - name: Show the stack's logs
+        if: failure()
+        run: |
+          armada status || true
+          docker compose --project-name armada logs --no-color || true

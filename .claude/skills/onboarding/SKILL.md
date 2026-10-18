@@ -51,6 +51,7 @@ Check each before installing — never reinstall something already present.
 | `gitleaks` | Secret scanning in the pre-commit hook | `winget install gitleaks.gitleaks` | `brew install gitleaks` |
 | `protoc-gen-connect-openapi` | OpenAPI for the ConnectRPC services, generated with the server code; the pre-commit hook needs it to regenerate `docs/api/` | No winget package. Download `protoc-gen-connect-openapi_<version>_windows_amd64.tar.gz` from [its releases](https://github.com/sudorandom/protoc-gen-connect-openapi/releases), check it against `checksums.txt`, extract `protoc-gen-connect-openapi.exe` into `%LOCALAPPDATA%\Programs\protoc-gen-connect-openapi\`, and add that folder to the user `PATH` | The matching `linux_amd64` / `linux_arm64` / `darwin_all` archive from the same releases page, extracted onto `PATH` (e.g. `/usr/local/bin`) |
 | `act` | Run GitHub Actions workflows locally, without pushing | `winget install nektos.act` (or `choco install act-cli`) | `brew install act` |
+| `shellcheck` | Lints the deployment scripts in `infra/deploy/`; the pre-push hook requires it | `winget install koalaman.shellcheck` | apt: `sudo apt-get install shellcheck`, brew: `brew install shellcheck` |
 | NSIS | Builds the desktop app's Windows installer | `python scripts/install_nsis.py` | not needed |
 
 **Before running `scripts/install_nsis.py`, tell the developer that Windows is about to show an

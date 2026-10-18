@@ -1,0 +1,746 @@
+#!/usr/bin/env bash
+# The armada command: everything an operator does to an Armada installation after install.sh has
+# set it up. Installed to /usr/local/bin/armada, and replaced by each successful update with that
+# version's copy. Run `armada help` for the commands.
+#
+# Never add `docker compose down -v` here: it deletes the database, the stored files and Caddy's
+# certificates. Only `uninstall --delete-data` removes volumes, by name, after a typed confirmation.
+set -euo pipefail
+
+ARMADA_HOME="${ARMADA_HOME:-/opt/armada}"
+ENV_FILE="$ARMADA_HOME/.env"
+STATE_FILE="$ARMADA_HOME/state.env"
+RELEASES="$ARMADA_HOME/releases"
+BIN=/usr/local/bin/armada
+UNIT_DIR=/etc/systemd/system
+TIMER=armada-update.timer
+SERVICE=armada-update.service
+LOCK_FILE=/run/armada.lock
+HEALTH_TIMEOUT="${ARMADA_HEALTH_TIMEOUT:-180}"
+
+# Compose settings must come from the installation's .env only. A variable of the same name in the
+# caller's shell would otherwise override it.
+unset VERSION REGISTRY GHCR_OWNER IMAGE_SUFFIX DOMAIN ADMIN_EMAIL
+
+# ── output ───────────────────────────────────────────────────────────────────────────────────────
+
+say() { printf '%s\n' "$*"; }
+warn() { printf 'armada: %s\n' "$*" >&2; }
+die() {
+  warn "$*"
+  exit 1
+}
+
+usage() {
+  cat <<'EOF'
+Usage: armada <command> [arguments]
+
+Versions
+  update <version|latest>     Move to a version; latest is the newest available to this machine.
+                              Returns to the previous version if the new one does not start.
+  rollback [version] [--yes]  Return to the version before the last update, or to the version
+                              given, after asking. Run it again to undo the rollback.
+  check-for-updates           Say whether a newer version is available
+  version                     Print the running version
+
+Running
+  status                      What is running and whether it is healthy
+  logs [service] [lines]      Follow the logs, of every service or just one
+  restart                     Restart every service
+  stop                        Stop every service; data is kept
+  start                       Start every service again
+
+Settings
+  reconfigure                 Answer the installation questions again
+  config <key> [value]        Show one setting, or change it when a value is given:
+                                domain, admin-email, update-policy,
+                                update-window, update-interval
+  uninstall [--delete-data] [--yes]
+                              Remove Armada. Data is kept unless --delete-data is given.
+EOF
+}
+
+# ── settings files: KEY=VALUE lines, never sourced ───────────────────────────────────────────────
+
+get_kv() {
+  local file=$1 key=$2 default=${3:-} value=""
+  [ -f "$file" ] && value=$(sed -n "s/^$key=//p" "$file" | tail -n 1)
+  printf '%s' "${value:-$default}"
+}
+
+# Rewrites one key in place, keeping every other line. mktemp creates the file readable by root
+# only, which matters because .env holds the generated passwords.
+set_kv() {
+  local file=$1 key=$2 value=$3 tmp
+  tmp=$(mktemp "$file.XXXXXX")
+  touch "$file"
+  KEY=$key VALUE=$value awk '
+    index($0, ENVIRON["KEY"] "=") == 1 { if (!done) print ENVIRON["KEY"] "=" ENVIRON["VALUE"]; done = 1; next }
+    { print }
+    END { if (!done) print ENVIRON["KEY"] "=" ENVIRON["VALUE"] }
+  ' "$file" >"$tmp"
+  mv -f "$tmp" "$file"
+}
+
+setting() { get_kv "$ENV_FILE" "$@"; }
+set_setting() { set_kv "$ENV_FILE" "$@"; }
+state() { get_kv "$STATE_FILE" "$@"; }
+set_state() { set_kv "$STATE_FILE" "$@"; }
+
+# ── validation ───────────────────────────────────────────────────────────────────────────────────
+
+# A production version, a release candidate, or a build from main.
+valid_version() { [[ $1 =~ ^([0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?|sha-[0-9a-f]{12})$ ]]; }
+valid_track() { [[ $1 =~ ^(production|staging|testing)$ ]]; }
+# Testing and staging come from the private preview packages; production from the public ones.
+preview_track() { [ "${1:-$(setting TRACK production)}" != production ]; }
+valid_policy() { [[ $1 =~ ^(notify|auto|off)$ ]]; }
+valid_window() { [ -z "$1" ] || [[ $1 =~ ^([01][0-9]|2[0-3]):[0-5][0-9]-([01][0-9]|2[0-3]):[0-5][0-9]$ ]]; }
+valid_interval() { [[ $1 =~ ^[0-9a-z\ ]+$ ]] && systemd-analyze timespan "$1" >/dev/null 2>&1; }
+# ":80" serves plain HTTP; otherwise a host name.
+valid_domain() { [[ $1 =~ ^(:[0-9]+|[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?)$ ]]; }
+valid_email() { [[ $1 =~ ^[^[:space:]@]+@[^[:space:]@]+$ ]]; }
+
+# Quotes the value, so an empty or space-filled answer is visible in the message.
+not_valid() { die "'$1' is not a valid $2. $3"; }
+
+check_value() {
+  local key=$1 value=$2
+  case "$key" in
+    domain) valid_domain "$value" || not_valid "$value" "domain name" "Use a host name such as armada.example.com, or :80 for plain HTTP." ;;
+    admin-email) valid_email "$value" || not_valid "$value" "email address" "Use one like name@example.com." ;;
+    track) valid_track "$value" || not_valid "$value" track "Use production, staging or testing." ;;
+    update-policy) valid_policy "$value" || not_valid "$value" "update policy" "Use notify, auto or off." ;;
+    update-window) valid_window "$value" || not_valid "$value" "update window" "Use 24-hour times like 02:00-05:00, or leave it empty for any time." ;;
+    update-interval) valid_interval "$value" || not_valid "$value" "update interval" "Use a time span such as 6h or 15min." ;;
+    *) not_valid "$key" setting "Run armada help." ;;
+  esac
+}
+
+setting_key() {
+  case "$1" in
+    domain) echo DOMAIN ;;
+    admin-email) echo ADMIN_EMAIL ;;
+    track) echo TRACK ;;
+    update-policy) echo UPDATE_POLICY ;;
+    update-window) echo UPDATE_WINDOW ;;
+    update-interval) echo UPDATE_INTERVAL ;;
+    *) not_valid "$1" setting "Run armada help." ;;
+  esac
+}
+
+# Whether now is inside an HH:MM-HH:MM window, which may cross midnight. No window means always.
+in_window() {
+  local window=$1 now start end
+  [ -z "$window" ] && return 0
+  now=$((10#$(date +%H%M)))
+  start=$((10#${window:0:2}${window:3:2}))
+  end=$((10#${window:6:2}${window:9:2}))
+  if [ "$start" -le "$end" ]; then
+    [ "$now" -ge "$start" ] && [ "$now" -lt "$end" ]
+  else
+    [ "$now" -ge "$start" ] || [ "$now" -lt "$end" ]
+  fi
+}
+
+# ── docker compose ───────────────────────────────────────────────────────────────────────────────
+
+# Each version runs from its own release directory. The project name is fixed in compose.yaml, so
+# the volumes are the same whichever version runs.
+compose_at() {
+  local version=$1
+  shift
+  docker compose --project-directory "$RELEASES/$version" -f "$RELEASES/$version/compose.yaml" \
+    --env-file "$ENV_FILE" "$@"
+}
+
+compose() {
+  local version
+  version=$(setting VERSION)
+  [ -n "$version" ] || die "No version is installed yet. Run: armada update latest"
+  compose_at "$version" "$@"
+}
+
+# Every service declares a health check, so the stack is up when all of them report healthy.
+all_healthy() {
+  local expected lines
+  expected=$(compose config --services | wc -l)
+  lines=$(compose ps --all --format '{{.Service}} {{.State}} {{.Health}}' 2>/dev/null) || return 1
+  [ "$(grep -c ' running healthy$' <<<"$lines")" -eq "$expected" ]
+}
+
+wait_healthy() {
+  local deadline=$((SECONDS + HEALTH_TIMEOUT))
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    all_healthy && return 0
+    sleep 3
+  done
+  return 1
+}
+
+image_ref() {
+  printf '%s/%s/%s%s:%s' "$(setting REGISTRY ghcr.io)" "$(setting GHCR_OWNER)" "$1" \
+    "$(setting IMAGE_SUFFIX)" "$2"
+}
+
+# Copies /release out of a preview release image into a directory. The image has no shell, so it
+# is created with a placeholder command and never started. Once copied it is removed, since every
+# check would otherwise leave one behind; it is a few kilobytes to pull again.
+extract_release_image() {
+  local tag=$1 out=$2 ref container status=0
+  ref=$(image_ref armada-release "$tag")
+  docker pull --quiet "$ref" >/dev/null || return 1
+  container=$(docker create "$ref" none) || return 1
+  docker cp "$container:/release/." "$out" || status=$?
+  docker rm "$container" >/dev/null
+  docker image rm "$ref" >/dev/null 2>&1 || true
+  return "$status"
+}
+
+# GitHub serves the newest full release's files under releases/latest/download.
+latest_url() {
+  local url
+  url=$(setting RELEASE_URL)
+  printf '%s/latest/download' "${url%/download}"
+}
+
+# The version a track's pointer names. Preview tracks read it from the release image the pointer
+# is on; production reads it from the latest GitHub release.
+track_version() {
+  local track version tmp
+  track=$(setting TRACK production)
+  if preview_track "$track"; then
+    tmp=$(mktemp -d)
+    extract_release_image "$track" "$tmp" || {
+      rm -rf "$tmp"
+      die "Could not read $(image_ref armada-release "$track"). Is this machine logged in? docker login $(setting REGISTRY ghcr.io)"
+    }
+    version=$(head -n 1 "$tmp/VERSION" 2>/dev/null || true)
+    rm -rf "$tmp"
+  else
+    version=$(curl -fsSL --retry 3 "$(latest_url)/VERSION" | head -n 1) ||
+      die "Could not find the latest release at $(setting RELEASE_URL)."
+  fi
+  if ! valid_version "$version"; then
+    preview_track "$track" && die "The $track track does not name a version."
+    die "The latest release does not name a version."
+  fi
+  printf '%s' "$version"
+}
+
+# ── releases ─────────────────────────────────────────────────────────────────────────────────────
+
+# Downloads every file a GitHub release lists in its SHA256SUMS.
+download_release() {
+  local version=$1 tmp=$2 url name
+  url="$(setting RELEASE_URL)/v$version"
+  curl -fsSL --retry 3 -o "$tmp/SHA256SUMS" "$url/SHA256SUMS" ||
+    die "Could not download version $version from $url."
+  while read -r _ name; do
+    name=${name#\*} # some sha256sum builds mark binary mode with a leading *
+    if ! [[ $name =~ ^[A-Za-z0-9._-]+$ ]] || ! curl -fsSL --retry 3 -o "$tmp/$name" "$url/$name"; then
+      die "Could not download $name for version $version."
+    fi
+  done <"$tmp/SHA256SUMS"
+}
+
+# Gets a version's files from its channel and checks them all before keeping any.
+fetch_release() {
+  local version=$1 dir="$RELEASES/$1" tmp
+  [ -f "$dir/SHA256SUMS" ] && return 0
+  mkdir -p "$RELEASES"
+  tmp=$(mktemp -d "$RELEASES/.download.XXXXXX")
+  if preview_track; then
+    extract_release_image "$version" "$tmp" || {
+      rm -rf "$tmp"
+      die "Could not read $(image_ref armada-release "$version")."
+    }
+  # A subshell, so a failed download still removes the half-made directory; its die has already
+  # said why.
+  elif ! (download_release "$version" "$tmp"); then
+    rm -rf "$tmp"
+    exit 1
+  fi
+  if ! (cd "$tmp" && sha256sum --quiet --strict -c SHA256SUMS); then
+    rm -rf "$tmp"
+    die "Version $version failed its checksum check. Nothing was changed."
+  fi
+  chmod 755 "$tmp"
+  mv "$tmp" "$dir"
+}
+
+# Installs a release's own command and timer units, so tooling always matches the running version.
+install_tooling() {
+  local dir="$RELEASES/$1"
+  install -m 0755 "$dir/armada" "$BIN.new"
+  mv -f "$BIN.new" "$BIN"
+  install -m 0644 "$dir/$SERVICE" "$dir/$TIMER" "$UNIT_DIR/"
+  systemctl daemon-reload
+  systemctl enable --now "$TIMER" >/dev/null 2>&1 || warn "Could not start the update timer."
+}
+
+# The images a version's compose.yaml names, one per line.
+release_images() {
+  VERSION=$1 compose_at "$1" config --images 2>/dev/null
+}
+
+# Keeps the running and previous versions' files and images; older ones are downloaded again if
+# needed. Only images an older version names, and no kept one, are removed.
+prune_releases() {
+  local keep_current keep_previous kept="" version dir image
+  keep_current=$(setting VERSION)
+  keep_previous=$(state PREVIOUS_VERSION)
+  for version in "$keep_current" "$keep_previous"; do
+    if [ -n "$version" ] && [ -d "$RELEASES/$version" ]; then
+      kept+=$(release_images "$version")$'\n' || true
+    fi
+  done
+  for dir in "$RELEASES"/*/; do
+    dir=${dir%/}
+    version=${dir##*/}
+    case "$version" in
+      "$keep_current" | "$keep_previous") continue ;;
+    esac
+    while read -r image; do
+      if [ -n "$image" ] && ! grep -qxF "$image" <<<"$kept"; then
+        docker image rm "$image" >/dev/null 2>&1 || true
+      fi
+    done <<<"$(release_images "$version" || true)"
+    rm -rf "$dir"
+  done
+}
+
+# ── commands ─────────────────────────────────────────────────────────────────────────────────────
+
+cmd_update() {
+  local target=${1:-} previous
+  [ -n "$target" ] || die "Usage: armada update <version|latest>"
+  [ "$target" = latest ] && target=$(track_version)
+  valid_version "$target" || not_valid "$target" version "Use one like 1.2.0, or latest."
+  previous=$(setting VERSION)
+  if [ "$target" = "$previous" ] && all_healthy; then
+    say "Already running $target."
+    return 0
+  fi
+
+  say "Updating ${previous:-a new installation} to $target"
+  fetch_release "$target"
+  VERSION=$target compose_at "$target" pull --quiet
+  set_setting VERSION "$target"
+
+  # up itself fails when a service another one depends on never becomes healthy, so its failure is
+  # handled like a timeout rather than ending armada before the previous version is restored.
+  if compose_at "$target" up --detach --remove-orphans && wait_healthy; then
+    [ -n "$previous" ] && [ "$previous" != "$target" ] && set_state PREVIOUS_VERSION "$previous"
+    set_state INSTALLED_AT "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    set_state AVAILABLE_VERSION ""
+    install_tooling "$target"
+    prune_releases
+    say "Now running $target."
+    return 0
+  fi
+
+  warn "$target did not become healthy."
+  compose ps --all --format '  {{.Service}}: {{.State}} {{.Health}}' >&2 || true
+  if [ -z "$previous" ]; then
+    warn "$target is the first version on this machine, so there is no earlier one to return to. It is left as it is, so you can see what failed: armada logs <service>, for a service listed above."
+    die "If the machine is only slow to start, allow it longer: sudo ARMADA_HEALTH_TIMEOUT=600 armada update $target"
+  fi
+  warn "Returning to $previous."
+  set_setting VERSION "$previous"
+  if ! compose_at "$previous" up --detach --remove-orphans || ! wait_healthy; then
+    warn "$previous did not come back healthy either. See: armada logs"
+  fi
+  return 1
+}
+
+cmd_rollback() {
+  local target="" confirmed=false
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --yes) confirmed=true ;;
+      -*) not_valid "$1" option "Run armada help." ;;
+      *) target=$1 ;;
+    esac
+    shift
+  done
+  [ -n "$target" ] || target=$(state PREVIOUS_VERSION)
+  [ -n "$target" ] || die "No previous version is recorded. Name one: armada rollback <version>"
+  if ! $confirmed; then
+    [[ $(ask "Roll back from $(setting VERSION) to $target? (y/n)" n) =~ ^[Yy] ]] ||
+      die "Nothing was changed."
+  fi
+  say "Rolling back to $target"
+  cmd_update "$target"
+}
+
+# The timer runs this with --scheduled, which obeys the update policy and window.
+cmd_check_for_updates() {
+  local scheduled=false policy latest current window
+  [ "${1:-}" = --scheduled ] && scheduled=true
+  policy=$(setting UPDATE_POLICY notify)
+  if $scheduled && [ "$policy" = off ]; then
+    return 0
+  fi
+  latest=$(track_version)
+  current=$(setting VERSION)
+  set_state LAST_CHECK "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  if [ "$latest" = "$current" ]; then
+    set_state AVAILABLE_VERSION ""
+    if preview_track; then
+      say "Up to date: $current is the newest on the $(setting TRACK) track."
+    else
+      say "Up to date: $current is the newest version."
+    fi
+    return 0
+  fi
+  # Follows the pointer down as well as up, so moving a pointer back rolls installations back.
+  set_state AVAILABLE_VERSION "$latest"
+  say "$latest is available; running ${current:-nothing}."
+  window=$(setting UPDATE_WINDOW)
+  # An update restarts Armada, so automatic ones wait for the window the operator chose.
+  if $scheduled && [ "$policy" = auto ]; then
+    if in_window "$window"; then
+      cmd_update "$latest"
+    else
+      say "Not installing it yet: automatic updates restart Armada, so they wait for the update window, $window."
+    fi
+  elif ! $scheduled; then
+    if [ "$policy" = auto ]; then
+      say "It installs itself at the next scheduled check${window:+ inside the update window, $window}. To install it now: armada update $latest"
+    else
+      say "Install it with: armada update $latest"
+    fi
+  fi
+}
+
+certificate_expiry() {
+  local domain=$1
+  [[ $domain == :* ]] && return 0
+  command -v openssl >/dev/null || return 0
+  echo | timeout 5 openssl s_client -connect 127.0.0.1:443 -servername "$domain" 2>/dev/null |
+    openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2 || true
+}
+
+cmd_status() {
+  local version available last_check health expiry disk root
+  version=$(setting VERSION)
+  available=$(state AVAILABLE_VERSION)
+  last_check=$(state LAST_CHECK never)
+  printf 'Armada  %s\n' "$(setting DOMAIN)"
+  printf '  %-12s %s   (installed %s)\n' Version "${version:-none}" "$(state INSTALLED_AT unknown)"
+  preview_track && printf '  %-12s %s\n' Track "$(setting TRACK)"
+  printf '  %-12s %s, checked every %s%s   last checked %s\n' Updates \
+    "$(setting UPDATE_POLICY notify)" "$(setting UPDATE_INTERVAL 6h)" \
+    "$([ -n "$(setting UPDATE_WINDOW)" ] && printf ', applied %s' "$(setting UPDATE_WINDOW)")" \
+    "$last_check"
+  [ -n "$available" ] && printf '  %-12s -> %s is available. To install it: armada update %s\n' '' "$available" "$available"
+  [ -n "$version" ] || return 0
+
+  if all_healthy; then health=OK; else health="NOT HEALTHY  (see: armada logs)"; fi
+  printf '  %-12s %s\n' Health "$health"
+  compose ps --all --format '{{.Service}} {{.State}} {{.Health}}' |
+    while read -r service status condition; do
+      printf '  %-12s %-20s %-10s %s\n' '' "$service" "$status" "${condition:--}"
+    done
+  expiry=$(certificate_expiry "$(setting DOMAIN)")
+  [ -n "$expiry" ] && printf '  %-12s renewed automatically; this one is valid until %s\n' Certificate "$expiry"
+  root=$(docker info --format '{{.DockerRootDir}}')
+  disk=$(df -h --output=used,size "$root" | tail -n 1 | awk '{print $1 " used of " $2}')
+  printf '  %-12s %s\n' Disk "$disk"
+}
+
+cmd_logs() {
+  local service="" lines=200
+  if [[ ${1:-} =~ ^[0-9]+$ ]]; then
+    lines=$1
+  else
+    service=${1:-}
+    [[ ${2:-} =~ ^[0-9]+$ ]] && lines=$2
+  fi
+  compose logs --follow --tail "$lines" ${service:+"$service"}
+}
+
+cmd_restart() {
+  compose restart
+  wait_healthy || die "Not healthy after restarting. See: armada logs"
+  say "Restarted."
+}
+
+cmd_stop() {
+  compose down
+  say "Stopped. Data is kept; start again with: armada start"
+}
+
+cmd_start() {
+  if ! compose up --detach --remove-orphans || ! wait_healthy; then
+    die "Not healthy after starting. See: armada logs"
+  fi
+  say "Started."
+}
+
+# ── settings ─────────────────────────────────────────────────────────────────────────────────────
+
+# Reads from the terminal even when the script itself arrived on standard input.
+ask() {
+  local prompt=$1 default=${2:-} answer
+  if [ -n "$default" ]; then prompt="$prompt [$default]"; fi
+  read -r -p "$prompt: " answer </dev/tty
+  printf '%s' "${answer:-$default}"
+}
+
+ask_valid() {
+  local key=$1 prompt=$2 default=${3:-} value reason
+  while :; do
+    value=$(ask "$prompt" "$default")
+    # check_value dies on a bad value; the subshell keeps that from ending armada, and its message
+    # says what was wrong.
+    if reason=$( (check_value "$key" "$value") 2>&1); then
+      printf '%s' "$value"
+      return 0
+    fi
+    say "${reason#armada: } Try again." >/dev/tty
+  done
+}
+
+# Warns, never blocks: somebody midway through a DNS change may continue on purpose.
+check_dns() {
+  local domain=$1 resolved
+  [[ $domain == :* ]] && return 0
+  resolved=$(getent ahosts "$domain" | awk '{print $1}' | sort -u) || resolved=""
+  if [ -z "$resolved" ]; then
+    warn "$domain does not resolve yet. HTTPS starts working once it points at this machine."
+  elif ! grep -qxF -f <(hostname -I | tr ' ' '\n' | grep .) <<<"$resolved"; then
+    warn "$domain resolves to $(tr '\n' ' ' <<<"$resolved")which is not this machine. HTTPS needs it to point here."
+  fi
+}
+
+# Writes the timer's settings from .env. The random spread is a quarter of the interval, at most 15
+# minutes, so a short interval on a testing machine is not swamped by it. The interval counts from
+# the last check and drifts, so it can miss a short update window for days; automatic updates with
+# a window therefore also check when the window opens.
+write_timer() {
+  local dir="$UNIT_DIR/$TIMER.d" interval window seconds spread
+  interval=$(setting UPDATE_INTERVAL 6h)
+  window=$(setting UPDATE_WINDOW)
+  seconds=$(($(systemd-analyze timespan "$interval" | awk '/μs:/ {print $2}') / 1000000))
+  spread=$((seconds / 4 < 900 ? seconds / 4 : 900))
+  mkdir -p "$dir"
+  printf '[Timer]\nOnUnitActiveSec=\nOnUnitActiveSec=%s\nRandomizedDelaySec=%ss\n' "$interval" "$spread" \
+    >"$dir/interval.conf"
+  if [ "$(setting UPDATE_POLICY notify)" = auto ] && [ -n "$window" ]; then
+    printf '[Timer]\nOnCalendar=*-*-* %s:00\n' "${window%-*}" >"$dir/window.conf"
+  else
+    rm -f "$dir/window.conf"
+  fi
+  systemctl daemon-reload
+  systemctl is-active --quiet "$TIMER" && systemctl restart "$TIMER"
+  return 0
+}
+
+# Shared by install.sh (with --install) and by people re-answering the questions. Flags answer a
+# question in advance; --non-interactive makes a missing answer an error instead of a prompt.
+cmd_reconfigure() {
+  local installing=false interactive=true domain="" email="" policy="" window="" interval="" set_window=false
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --install) installing=true ;;
+      --non-interactive) interactive=false ;;
+      --domain) domain=${2:?--domain needs a value}; shift ;;
+      --admin-email) email=${2:?--admin-email needs a value}; shift ;;
+      --update-policy) policy=${2:?--update-policy needs a value}; shift ;;
+      --update-window) window=${2-}; set_window=true; shift ;;
+      --update-interval) interval=${2:?--update-interval needs a value}; shift ;;
+      *) not_valid "$1" option "Run armada help." ;;
+    esac
+    shift
+  done
+
+  while :; do
+    if $interactive; then
+      if [ -z "$domain" ]; then
+        say ""
+        domain=$(ask_valid domain "Domain name for this server" "$(setting DOMAIN)")
+      fi
+      check_dns "$domain"
+      if [ -z "$email" ]; then
+        say ""
+        email=$(ask_valid admin-email "Administrator email address" "$(setting ADMIN_EMAIL)")
+      fi
+      if [ -z "$policy" ]; then
+        say ""
+        say "Updates: notify tells you a new version exists, auto installs it, off never checks."
+        policy=$(ask_valid update-policy "Update policy (notify, auto or off)" "$(setting UPDATE_POLICY notify)")
+      fi
+      if [ "$policy" = auto ] && ! $set_window; then
+        say ""
+        say "Automatic updates restart Armada, so they can be kept to a daily window. Times are"
+        say "24-hour, on this machine's clock (now $(date +%H:%M)), and a window may cross midnight,"
+        say "such as 23:00-02:00."
+        window=$(ask_valid update-window "Install updates only between, e.g. 02:00-05:00 (empty for any time)" "$(setting UPDATE_WINDOW)")
+        set_window=true
+      fi
+    fi
+    [ -n "$domain" ] || domain=$(setting DOMAIN)
+    [ -n "$email" ] || email=$(setting ADMIN_EMAIL)
+    [ -n "$policy" ] || policy=$(setting UPDATE_POLICY notify)
+    $set_window || window=$(setting UPDATE_WINDOW)
+    [ -n "$interval" ] || interval=$(setting UPDATE_INTERVAL 6h)
+    [ -n "$domain" ] || die "A domain is required: --domain"
+    [ -n "$email" ] || die "An administrator email is required: --admin-email"
+    check_value domain "$domain"
+    check_value admin-email "$email"
+    check_value update-policy "$policy"
+    check_value update-window "$window"
+    check_value update-interval "$interval"
+
+    $interactive || break
+    say ""
+    say "  Domain         $domain"
+    say "  Admin email    $email"
+    say "  Updates        $policy${window:+, between $window}"
+    [[ $(ask "Is this right? (y/n)" y) =~ ^[Yy] ]] && break
+    domain="" email="" policy="" window="" set_window=false
+  done
+
+  set_setting DOMAIN "$domain"
+  set_setting ADMIN_EMAIL "$email"
+  set_setting UPDATE_POLICY "$policy"
+  set_setting UPDATE_WINDOW "$window"
+  set_setting UPDATE_INTERVAL "$interval"
+  write_timer
+
+  if ! $installing && [ -n "$(setting VERSION)" ]; then
+    cmd_start
+  fi
+}
+
+cmd_config() {
+  local name=${1:-} key
+  if [ -z "$name" ]; then
+    cat >&2 <<'EOF'
+Usage: armada config <key>            shows the key's current value
+       armada config <key> <value>    changes it
+Keys:  domain, admin-email, update-policy, update-window, update-interval
+EOF
+    exit 1
+  fi
+  key=$(setting_key "$name")
+  if [ $# -lt 2 ]; then
+    say "$(setting "$key")"
+    return 0
+  fi
+  check_value "$name" "$2"
+  # Testing and staging share the private packages; production's are different packages with a
+  # different installer, so crossing between them is a reinstall.
+  if [ "$name" = track ] && [ "$(preview_track "$2" && echo y)" != "$(preview_track && echo y)" ]; then
+    die "Moving between production and testing or staging means reinstalling from the other channel. See infra/deploy/README.md."
+  fi
+  set_setting "$key" "$2"
+  case "$name" in
+    domain | admin-email) [ -n "$(setting VERSION)" ] && cmd_start ;;
+    update-policy | update-window | update-interval) write_timer ;;
+  esac
+  say "$name is now ${2:-empty}."
+}
+
+cmd_uninstall() {
+  local delete_data=false confirmed=false volumes
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --delete-data) delete_data=true ;;
+      --yes) confirmed=true ;;
+      *) not_valid "$1" option "Run armada help." ;;
+    esac
+    shift
+  done
+  # --yes skips only the plain confirmation. Deleting data always needs the domain typed back.
+  if $delete_data; then
+    say "This permanently deletes the database, every stored file and the certificates."
+    [ "$(ask "Type the domain, $(setting DOMAIN), to confirm")" = "$(setting DOMAIN)" ] ||
+      die "Not confirmed; nothing was removed."
+  elif ! $confirmed; then
+    [[ $(ask "Remove Armada from this machine? Data is kept. (y/n)" n) =~ ^[Yy] ]] ||
+      die "Nothing was removed."
+  fi
+
+  [ -n "$(setting VERSION)" ] && compose down
+  systemctl disable --now "$TIMER" >/dev/null 2>&1 || true
+  rm -rf "${UNIT_DIR:?}/$TIMER" "${UNIT_DIR:?}/$SERVICE" "${UNIT_DIR:?}/$TIMER.d"
+  systemctl daemon-reload
+  rm -rf "$RELEASES" "$STATE_FILE" "$BIN"
+
+  if $delete_data; then
+    volumes=$(docker volume ls --quiet --filter label=com.docker.compose.project=armada)
+    [ -z "$volumes" ] || xargs docker volume rm <<<"$volumes" >/dev/null
+    rm -rf "$ARMADA_HOME"
+    say "Armada and its data are removed."
+  else
+    # The data volumes only open with the passwords in .env, so it stays for a reinstall.
+    set_setting VERSION ""
+    say "Armada is removed. Data and $ENV_FILE are kept; installing again picks them up."
+  fi
+}
+
+# ── entry point ──────────────────────────────────────────────────────────────────────────────────
+
+# The timer and a person must never change the installation at the same time. A person waits for
+# the timer to finish; the timer skips a turn rather than queue behind a person.
+take_lock() {
+  exec 9>"$LOCK_FILE"
+  flock --nonblock 9 && return 0
+  [ "${1:-}" = --scheduled ] && return 1
+  say "Waiting for another armada command to finish..."
+  flock --wait 900 9 || die "Another armada command is still running."
+}
+
+main() {
+  local command=${1:-help}
+  [ $# -gt 0 ] && shift
+  case "$command" in
+    help | -h | --help)
+      usage
+      return 0
+      ;;
+  esac
+  [ "$(id -u)" -eq 0 ] || die "Run as root: sudo armada $command"
+  [ -f "$ENV_FILE" ] || die "Armada is not installed here ($ENV_FILE is missing). Run install.sh."
+  umask 022
+
+  case "$command" in
+    status | logs | version | config) ;;
+    check-for-updates)
+      if [ "${1:-}" = --scheduled ]; then
+        take_lock --scheduled || return 0
+      else
+        take_lock
+      fi
+      ;;
+    *) take_lock ;;
+  esac
+
+  case "$command" in
+    update) cmd_update "$@" ;;
+    rollback) cmd_rollback "$@" ;;
+    check-for-updates) cmd_check_for_updates "$@" ;;
+    version) say "$(setting VERSION)" ;;
+    status) cmd_status ;;
+    logs) cmd_logs "$@" ;;
+    restart) cmd_restart ;;
+    stop) cmd_stop ;;
+    start) cmd_start ;;
+    reconfigure) cmd_reconfigure "$@" ;;
+    config)
+      [ $# -lt 2 ] || take_lock
+      cmd_config "$@"
+      ;;
+    uninstall) cmd_uninstall "$@" ;;
+    *)
+      usage >&2
+      echo >&2
+      not_valid "$command" command "The commands are listed above."
+      ;;
+  esac
+}
+
+main "$@"

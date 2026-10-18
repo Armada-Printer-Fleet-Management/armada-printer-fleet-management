@@ -1,0 +1,15 @@
+# How often the update check runs. The interval is the installation's update-interval setting,
+# written by armada to armada-update.timer.d/interval.conf with a spread to match; the values here
+# apply until then. With automatic updates and a window, armada-update.timer.d/window.conf adds a
+# check when the window opens.
+[Unit]
+Description=Check for Armada updates periodically
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=6h
+# Spreads the checks so every installation does not ask the registry at the same moment.
+RandomizedDelaySec=15min
+
+[Install]
+WantedBy=timers.target
