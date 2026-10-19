@@ -1,0 +1,24 @@
+{
+  "name": "@armada/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./gen/*": "./src/gen/*.ts"
+  },
+  "scripts": {
+    "lint": "eslint src --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2",
+    "@connectrpc/connect": "^2.2.0",
+    "@connectrpc/connect-web": "^2.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vitest": "^5"
+  }
+}

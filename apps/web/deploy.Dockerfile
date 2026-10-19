@@ -1,7 +1,7 @@
 # The image that ships to deployed machines: Caddy serving the built frontend and forwarding /api
 # to the server, one edge component rather than two. dev.Dockerfile is the local development one.
-# Build from the repo root, which the shared packages and the .proto contract need. src/gen is
-# generated inside the build, never copied from the host.
+# Build from the repo root, which the shared packages and the .proto contract need. Generated API
+# client code is created inside the build, never copied from the host.
 
 ARG NODE_VERSION=22
 ARG CADDY_VERSION=2.11
@@ -21,8 +21,9 @@ WORKDIR /repo
 FROM base AS deps
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/web/package.json apps/web/
-COPY packages/ui-kit/package.json packages/ui-kit/
 COPY packages/organization-info/package.json packages/organization-info/
+COPY packages/ui-kit/package.json packages/ui-kit/
+COPY packages/api-client/package.json packages/api-client/
 # The exact versions in pnpm-lock.yaml, for the web app and the workspace packages it depends on
 # only; fails rather than updating the lock file if a package.json disagrees.
 RUN pnpm install --frozen-lockfile --filter apps-web...
@@ -46,10 +47,11 @@ COPY buf.yaml buf.gen.web_ts.yaml tsconfig.base.json ./
 COPY packages/proto packages/proto
 COPY packages/organization-info packages/organization-info
 COPY packages/ui-kit packages/ui-kit
+COPY packages/api-client packages/api-client
 COPY scripts/generate_proto.py scripts/
 COPY apps/web apps/web
-# Writes apps/web/src/gen from packages/proto using the web's buf template, with node_modules/.bin
-# on PATH so buf finds protoc-gen-es. Then vite build writes the static site to apps/web/dist.
+# Writes packages/api-client/src/gen from packages/proto using the web's buf template, with
+# node_modules/.bin on PATH so buf finds protoc-gen-es. Then vite build writes the static site.
 RUN python3 scripts/generate_proto.py buf.gen.web_ts.yaml --node-modules apps/web/node_modules \
  && cd apps/web && pnpm build
 

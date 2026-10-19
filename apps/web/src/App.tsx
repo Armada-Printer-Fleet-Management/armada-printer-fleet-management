@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@armada/ui-kit';
-import { OrganizationInfoSchema } from './gen/common/v1/organization_info_pb';
+import { OrganizationInfoSchema } from '@armada/api-client/gen/common/v1/organization_info_pb';
 import { version } from './lib/version';
 import { TempVerticalSlice } from './temp/TempVerticalSlice';
 

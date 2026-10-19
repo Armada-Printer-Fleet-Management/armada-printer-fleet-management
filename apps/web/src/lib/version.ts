@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf';
-import { VersionInfoSchema } from '../gen/common/v1/application_info_pb';
+import { VersionInfoSchema } from '@armada/api-client/gen/common/v1/application_info_pb';
 
 // The web app's own version: package.json's `version`, injected at build time by vite.config.ts.
 export function version() {
