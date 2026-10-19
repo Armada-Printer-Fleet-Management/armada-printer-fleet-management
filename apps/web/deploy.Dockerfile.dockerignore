@@ -14,13 +14,14 @@
 !packages/proto/
 !packages/organization-info/
 !packages/ui-kit/
+!packages/api-client/
 !buf.yaml
 !buf.gen.web_ts.yaml
 !scripts/generate_proto.py
 !infra/deploy/Caddyfile
 
-# Re-excluded inside the allowed paths: host-built or host-specific state. src/gen stays out: this
-# image generates its own.
+# Re-excluded inside the allowed paths: host-built or host-specific state. Generated output stays
+# out because this image generates its own.
 **/node_modules
 **/dist
 **/gen

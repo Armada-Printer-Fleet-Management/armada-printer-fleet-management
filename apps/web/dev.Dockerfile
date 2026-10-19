@@ -1,6 +1,6 @@
 # The development image, run by infra/dev/compose.yaml with live reload; deploy.Dockerfile is
-# the one that ships. Build from the repo root, which the shared packages need. src/gen is copied
-# from the host rather than generated here, so run web codegen first.
+# the one that ships. Build from the repo root, which the shared packages need. The generated API
+# client code is copied from the host rather than generated here, so run web codegen first.
 
 ARG NODE_VERSION=22
 
@@ -20,6 +20,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/web/package.json apps/web/
 COPY packages/ui-kit/package.json packages/ui-kit/
 COPY packages/organization-info/package.json packages/organization-info/
+COPY packages/api-client/package.json packages/api-client/
 # Only the web app and the workspace packages it depends on, not the desktop frontend.
 RUN pnpm install --frozen-lockfile --filter apps-web...
 
@@ -28,6 +29,7 @@ FROM deps AS dev
 COPY tsconfig.base.json ./
 COPY packages/organization-info packages/organization-info
 COPY packages/ui-kit packages/ui-kit
+COPY packages/api-client packages/api-client
 COPY apps/web apps/web
 WORKDIR /repo/apps/web
 EXPOSE 5174

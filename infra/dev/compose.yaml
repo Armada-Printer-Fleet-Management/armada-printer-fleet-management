@@ -62,7 +62,7 @@ services:
       - 127.0.0.1:5174:5174
     develop:
       watch:
-        # Includes src/gen, so rerunning web codegen on the host reaches the container too.
+        # Generated API client code is synced from the host after codegen.
         - action: sync
           path: ../../apps/web/src
           target: /repo/apps/web/src
@@ -74,6 +74,11 @@ services:
         - action: sync
           path: ../../packages/ui-kit
           target: /repo/packages/ui-kit
+          ignore:
+            - package.json
+        - action: sync
+          path: ../../packages/api-client
+          target: /repo/packages/api-client
           ignore:
             - package.json
         # Read once when the dev server starts, so a change needs a restart.
@@ -104,6 +109,8 @@ services:
           path: ../../packages/ui-kit/package.json
         - action: rebuild
           path: ../../packages/organization-info/package.json
+        - action: rebuild
+          path: ../../packages/api-client/package.json
 
   db:
     image: postgres:17-alpine
@@ -118,14 +125,14 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U armada"]
+      test: ['CMD-SHELL', 'pg_isready -U armada']
       interval: 5s
       timeout: 3s
       retries: 10
 
   garage-s3-storage:
     image: dxflrs/garage:v2.4.1
-    command: ["/garage", "server", "--single-node", "--default-bucket"]
+    command: ['/garage', 'server', '--single-node', '--default-bucket']
     environment:
       GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?}
       GARAGE_DEFAULT_ACCESS_KEY: ${GARAGE_DEFAULT_ACCESS_KEY:?}
@@ -139,7 +146,7 @@ services:
       - garage_data:/var/lib/garage/data
     stop_grace_period: 60s
     healthcheck:
-      test: ["CMD", "/garage", "status"]
+      test: ['CMD', '/garage', 'status']
       interval: 10s
       timeout: 5s
       retries: 10

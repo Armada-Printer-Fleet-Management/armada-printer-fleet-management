@@ -13,13 +13,14 @@
 !tsconfig.base.json
 !packages/organization-info/
 !packages/ui-kit/
+!packages/api-client/
 
 # Re-excluded inside the allowed paths: host-built or host-specific state.
 **/node_modules
 **/dist
 **/gen
-# Except the web app's generated code, which the image uses as built on the host.
-!apps/web/src/gen/
+# Except the API client's generated code, which the image uses as built on the host.
+!packages/api-client/src/gen/
 # packages/organization-info is a Python package too, so it can hold Python's local state.
 **/.venv
 **/__pycache__

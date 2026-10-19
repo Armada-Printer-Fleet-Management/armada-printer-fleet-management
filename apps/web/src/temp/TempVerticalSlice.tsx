@@ -13,7 +13,7 @@ import {
   GetPrintJobRequestSchema,
   GetPrintJobResponseSchema,
   PrintJobService,
-} from '../gen/server/v1/print_job_service_pb';
+} from '@armada/api-client/gen/server/v1/print_job_service_pb';
 
 // The submitted stub job seeded by the server's in-memory print job store.
 const TEMP_STUB_SUBMITTED_JOB_ID = '00000000-0000-4000-8000-000000000002';

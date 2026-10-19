@@ -13,6 +13,7 @@
     "lint": "eslint src vite.config.ts --max-warnings=0"
   },
   "dependencies": {
+    "@armada/api-client": "workspace:*",
     "@armada/ui-kit": "workspace:*",
     "@armada/organization-info": "workspace:*",
     "@bufbuild/protobuf": "^2",
