@@ -8,9 +8,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@armada/ui-kit';
+import { createApiClient } from '@armada/api-client';
 import { OrganizationInfoSchema } from '@armada/api-client/gen/common/v1/organization_info_pb';
 import { version } from './lib/version';
 import { TempVerticalSlice } from './temp/TempVerticalSlice';
+
+const apiClient = createApiClient();
 
 const App: React.FC = () => {
   return (
@@ -38,7 +41,7 @@ const App: React.FC = () => {
               </p>
             </CardContent>
           </Card>
-          <TempVerticalSlice />
+          <TempVerticalSlice printJobs={apiClient.printJobs} />
         </div>
       </main>
     </div>
