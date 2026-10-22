@@ -14,11 +14,12 @@
   },
   "dependencies": {
     "@armada/api-client": "workspace:*",
-    "@armada/ui-kit": "workspace:*",
     "@armada/organization-info": "workspace:*",
+    "@armada/ui-kit": "workspace:*",
     "@bufbuild/protobuf": "^2",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "react-router": "8.5.0"
   },
   "devDependencies": {
     "@bufbuild/protoc-gen-es": "^2",
