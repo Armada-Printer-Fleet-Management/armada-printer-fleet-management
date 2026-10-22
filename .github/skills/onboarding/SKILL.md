@@ -30,7 +30,7 @@ Report the version of each, and stop with installation guidance if one is missin
 | Tool | Check |
 |---|---|
 | Git | `git --version` |
-| Node | `node --version` (22.13 or newer) |
+| Node | `node --version` (22.22 or newer) |
 | Python | `python --version` (3.13 or newer) |
 | Docker | `docker --version` |
 
@@ -72,7 +72,7 @@ with `act --version`; `winget upgrade nektos.act` / `choco upgrade act-cli` (ele
 one.
 
 `pnpm` is installed with `npx get-pnpm`, the npm-based installer from <https://pnpm.io/installation>.
-On Windows, run it from PowerShell rather than Git Bash. It needs Node 22.13 or newer.
+On Windows, run it from PowerShell rather than Git Bash. It needs Node 22.22 or newer.
 
 `gitleaks` is required: without it the pre-commit hook cannot scan for secrets and will warn on
 every commit.
