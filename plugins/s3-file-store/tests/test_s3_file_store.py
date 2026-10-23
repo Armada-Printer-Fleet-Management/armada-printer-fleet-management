@@ -1,7 +1,7 @@
 """S3FileStore against a fake S3 client, so its error translation is tested without a store."""
 
 import asyncio
-from collections.abc import AsyncGenerator, Callable, Coroutine
+from collections.abc import AsyncGenerator, AsyncIterator, Callable, Coroutine
 from contextlib import asynccontextmanager
 
 import aioboto3
@@ -10,12 +10,24 @@ from botocore.exceptions import ClientError, EndpointConnectionError
 from plugin_api.file_store import FileStore, FileStoreError, StoredFileNotFoundError
 
 from s3_file_store import S3FileStore
+from s3_file_store.s3_file_store import PART_SIZE
 
 type Operation = Callable[[S3FileStore], Coroutine[object, object, object]]
 
+
+async def stream(*chunks: bytes) -> AsyncIterator[bytes]:
+    for chunk in chunks:
+        yield chunk
+
+
+async def read_all(store: S3FileStore, key: str) -> bytes:
+    return b"".join([chunk async for chunk in await store.read(key)])
+
+
 OPERATIONS: dict[str, Operation] = {
-    "read": lambda store: store.read("key"),
-    "write": lambda store: store.write("key", b"bytes"),
+    "read": lambda store: read_all(store, "key"),
+    "write": lambda store: store.write("key", stream(b"bytes")),
+    "exists": lambda store: store.exists("key"),
     "delete": lambda store: store.delete("key"),
     "health_check": lambda store: store.health_check(),
 }
@@ -29,21 +41,26 @@ class FakeBody:
     def __init__(self, data: bytes) -> None:
         self._data = data
 
-    async def __aenter__(self) -> "FakeBody":
-        return self
+    # Like aiobotocore's StreamingBody, entering yields the raw response, not the body.
+    async def __aenter__(self) -> object:
+        return object()
 
     async def __aexit__(self, *_: object) -> None:
         return None
 
-    async def read(self) -> bytes:
-        return self._data
+    async def iter_chunks(self, chunk_size: int) -> AsyncIterator[bytes]:
+        for start in range(0, len(self._data), chunk_size):
+            yield self._data[start : start + chunk_size]
 
 
 class FakeS3Client:
-    """Holds objects in memory, or raises `error` from every call when it is set."""
+    """Holds objects in memory, or raises `error` from every call when it is set. A multipart
+    upload becomes an object only when it completes."""
 
     def __init__(self) -> None:
         self.objects: dict[str, bytes] = {}
+        self.uploads: dict[str, dict[int, bytes]] = {}
+        self.aborted: list[str] = []
         self.error: Exception | None = None
 
     def _fail_if_set(self) -> None:
@@ -56,9 +73,44 @@ class FakeS3Client:
             raise client_error("NoSuchKey")
         return {"Body": FakeBody(self.objects[Key])}
 
+    async def head_object(self, *, Bucket: str, Key: str) -> None:
+        self._fail_if_set()
+        if Key not in self.objects:
+            raise client_error("404")
+
     async def put_object(self, *, Bucket: str, Key: str, Body: bytes) -> None:
         self._fail_if_set()
         self.objects[Key] = Body
+
+    async def create_multipart_upload(self, *, Bucket: str, Key: str) -> dict[str, str]:
+        self._fail_if_set()
+        upload_id = f"upload-{len(self.uploads)}"
+        self.uploads[upload_id] = {}
+        return {"UploadId": upload_id}
+
+    async def upload_part(
+        self, *, Bucket: str, Key: str, UploadId: str, PartNumber: int, Body: bytes
+    ) -> dict[str, str]:
+        self._fail_if_set()
+        self.uploads[UploadId][PartNumber] = Body
+        return {"ETag": f"etag-{PartNumber}"}
+
+    async def complete_multipart_upload(
+        self,
+        *,
+        Bucket: str,
+        Key: str,
+        UploadId: str,
+        MultipartUpload: dict[str, list[dict[str, object]]],
+    ) -> None:
+        self._fail_if_set()
+        parts = self.uploads.pop(UploadId)
+        numbers = [part["PartNumber"] for part in MultipartUpload["Parts"]]
+        self.objects[Key] = b"".join(parts[number] for number in numbers if isinstance(number, int))
+
+    async def abort_multipart_upload(self, *, Bucket: str, Key: str, UploadId: str) -> None:
+        self.aborted.append(UploadId)
+        self.uploads.pop(UploadId, None)
 
     async def delete_object(self, *, Bucket: str, Key: str) -> None:
         self._fail_if_set()
@@ -114,17 +166,48 @@ def test_s3_file_store_satisfies_the_port() -> None:
     accepts_a_file_store(new_store())
 
 
-def test_a_written_file_reads_back(client: FakeS3Client) -> None:
+def test_a_small_file_is_put_whole_and_reads_back(client: FakeS3Client) -> None:
     async def write_then_read(store: S3FileStore) -> bytes:
-        await store.write("key", b"bytes")
-        return await store.read("key")
+        await store.write("key", stream(b"by", b"tes"))
+        return await read_all(store, "key")
 
     assert run(new_store(), write_then_read) == b"bytes"
+    assert not client.uploads
+
+
+def test_a_large_file_is_uploaded_in_parts_and_reads_back(client: FakeS3Client) -> None:
+    data = bytes(range(256)) * (PART_SIZE // 256 * 2 + 3)
+
+    async def write_then_read(store: S3FileStore) -> bytes:
+        await store.write("key", stream(data[:1000], data[1000:]))
+        return await read_all(store, "key")
+
+    assert run(new_store(), write_then_read) == data
+    assert not client.uploads
+
+
+def test_a_source_that_fails_part_way_stores_nothing(client: FakeS3Client) -> None:
+    client.objects["key"] = b"original"
+
+    async def failing() -> AsyncIterator[bytes]:
+        yield b"x" * PART_SIZE
+        raise ValueError("rejected")
+
+    with pytest.raises(ValueError, match="rejected"):
+        run(new_store(), lambda store: store.write("key", failing()))
+    assert client.objects["key"] == b"original"
+    assert client.aborted == ["upload-0"]
+
+
+def test_exists_reports_whether_a_file_is_stored(client: FakeS3Client) -> None:
+    client.objects["key"] = b"bytes"
+    assert run(new_store(), lambda store: store.exists("key")) is True
+    assert run(new_store(), lambda store: store.exists("other")) is False
 
 
 def test_a_missing_file_raises_stored_file_not_found(client: FakeS3Client) -> None:
     with pytest.raises(StoredFileNotFoundError):
-        run(new_store(), OPERATIONS["read"])
+        run(new_store(), lambda store: store.read("key"))
 
 
 @pytest.mark.parametrize("name", OPERATIONS)

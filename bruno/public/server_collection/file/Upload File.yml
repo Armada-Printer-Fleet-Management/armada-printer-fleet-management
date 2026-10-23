@@ -1,0 +1,26 @@
+info:
+  name: Upload File
+  type: http
+  seq: 1
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/api/files/{{fileId}}"
+  headers:
+    - name: Content-Type
+      value: application/octet-stream
+  # The bytes Create Print Job Upload describes, so the size and sha256 match.
+  body:
+    type: text
+    data: |
+      G28
+      G1 X10 Y10 F3000
+  auth: inherit
+
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

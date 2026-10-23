@@ -14,3 +14,12 @@ class FileRepository(AsyncRepository[FileId, File], Protocol):
     async def get_many(self, file_ids: Iterable[FileId]) -> list[File]:
         """The files that exist among file_ids, in no particular order. Unknown IDs are skipped."""
         ...
+
+    async def delete(self, file_id: FileId) -> None:
+        """Raises EntityNotFound if there is no such file."""
+        ...
+
+    async def is_storage_key_used(self, storage_key: str) -> bool:
+        """Whether any file's bytes are stored under this key, which decides whether they are
+        still needed."""
+        ...

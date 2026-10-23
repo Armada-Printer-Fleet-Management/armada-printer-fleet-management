@@ -16,7 +16,7 @@ The server is authoritative: it owns every entity's state, and its domains follo
 | `tests/contract/`      | What every repository adapter must do. A new adapter joins by adding its factory to `ADAPTERS` |
 | `api/plugins.py`       | Builds the plugins each deployment chose in config, such as `FILE_STORE_BACKEND` |
 | `api/services/`        | Connect handlers: translate between the wire and domain services, composing several where an RPC spans domains. No rules |
-| `api/routers/`         | REST routes that do not fit Connect, such as the health check             |
+| `api/routers/`         | REST routes that do not fit Connect, such as the health check and file bytes. Built from services handed in by `api/main.py`; domain errors go through `domain_errors_as_http()` |
 | `api/gen/openapi/`     | Generated API documentation data. Gitignored                              |
 
 ## Adding a use case

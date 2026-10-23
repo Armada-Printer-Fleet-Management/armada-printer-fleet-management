@@ -56,3 +56,29 @@ def test_get_many_returns_the_known_files_and_skips_the_rest(repository: FileRep
 
     assert {stored.id for stored in found} == {first.id, second.id}
     assert len(found) == 2
+
+
+def test_delete_removes_the_file(repository: FileRepository) -> None:
+    stored = file()
+    asyncio.run(repository.save(stored))
+
+    asyncio.run(repository.delete(stored.id))
+
+    with pytest.raises(EntityNotFound):
+        asyncio.run(repository.get(stored.id))
+
+
+def test_delete_reports_an_unknown_id(repository: FileRepository) -> None:
+    with pytest.raises(EntityNotFound):
+        asyncio.run(repository.delete(FileId.new()))
+
+
+def test_is_storage_key_used_matches_a_stored_files_key(repository: FileRepository) -> None:
+    stored = file()
+    asyncio.run(repository.save(stored))
+    other_type = File.create("part.bgcode", FileType.CGCODE, 1024, stored.sha256, NOW)
+    other_content = File.create("part.gcode", FileType.GCODE, 1024, "f" * 64, NOW)
+
+    assert asyncio.run(repository.is_storage_key_used(stored.storage_key()))
+    assert not asyncio.run(repository.is_storage_key_used(other_type.storage_key()))
+    assert not asyncio.run(repository.is_storage_key_used(other_content.storage_key()))
