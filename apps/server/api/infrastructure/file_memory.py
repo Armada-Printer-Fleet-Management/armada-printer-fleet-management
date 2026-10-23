@@ -23,3 +23,10 @@ class InMemoryFileRepository:
 
     async def save(self, entity: File) -> None:
         self._files[entity.id] = replace(entity)
+
+    async def delete(self, file_id: FileId) -> None:
+        if self._files.pop(file_id, None) is None:
+            raise EntityNotFound(file_id)
+
+    async def is_storage_key_used(self, storage_key: str) -> bool:
+        return any(f.storage_key() == storage_key for f in self._files.values())

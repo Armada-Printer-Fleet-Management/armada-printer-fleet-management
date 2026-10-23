@@ -8,6 +8,7 @@ Maintenance scripts that run outside the applications.
 | `export_ai_audit.py` | Exports agent session transcripts to the team's audit log. |
 | `apply_rulesets.sh` | Applies branch protection rulesets to the GitHub repository. Needs admin rights. |
 | `generate_proto.py` | Runs `buf generate` for one template, prepending a local npm plugin's `.bin/` to `PATH` when `--node-modules` is given. Shared by every app/service that generates code from `packages/proto`. |
+| `upload_metadata.py` | Prints the Create Print Job Upload request body for a file, with its size and sha256 filled in, for uploading your own G-code from Bruno. See `bruno/README.md`. |
 | `install_nsis.py` | Installs the pinned NSIS version that builds the desktop app's Windows installer, after checking its SHA-256. Windows only; shows one administrator prompt. Used by `/onboarding` and CI. |
 
 ## `generate_proto.py` usage

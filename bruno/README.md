@@ -51,6 +51,25 @@ collection after `public/` changes, or if you're setting this up by hand.
 3. If `public/` gets new requests or environments, re-run the script to pick them up (see the
    overwrite note above).
 
+## Uploading your own G-code
+
+The server rejects an upload whose size or sha256 differs from what Create Print Job Upload
+declared, so generate that request's body from the file itself:
+
+```sh
+python scripts/upload_metadata.py path/to/part.gcode
+```
+
+Add `--file-type cgcode` for compressed or binary G-code, such as `.bgcode`.
+
+1. Paste the printed JSON into the body of **Create Print Job Upload** and send it. It attaches
+   the file to `{{printJobId}}`, a DRAFT job, and saves the returned `fileId` for the requests in
+   `file/`.
+2. In **Upload File**, set the body to **File** and pick the same file, then send it.
+
+Keep that edit to your private copy: the public request's default body matches its small
+built-in example.
+
 ## `copy_collection.sh`
 
 ```sh
