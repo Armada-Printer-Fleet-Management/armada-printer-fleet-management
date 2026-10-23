@@ -8,7 +8,7 @@ vendor happens to offer. Implementations live in `plugins/`, and only `apps/` ma
 
 | Port | Module | What it stores or does | Plugins |
 |---|---|---|---|
-| `FileStore` | `plugin_api.file_store` | Reads, writes and deletes files by key | `s3-file-store` |
+| `FileStore` | `plugin_api.file_store` | Streams files in and out by key, and deletes them | `s3-file-store` |
 
 A port's errors describe the external system, not the domain. The app's infrastructure adapter
 that wraps a port translates them into domain errors, so no domain or handler sees them: a

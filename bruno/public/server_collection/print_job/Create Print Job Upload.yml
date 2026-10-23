@@ -16,12 +16,18 @@ http:
         "printJobId": { "value": "{{printJobId}}" },
         "metadata": {
           "filename": "part.gcode",
-          "sizeBytes": "1024",
-          "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "sizeBytes": "21",
+          "sha256": "497c3b63405166a45743bd32d82ac00430d2236baf4d8b8754febf58b9680e13",
           "fileType": "FILE_TYPE_GCODE"
         }
       }
   auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        bru.setVar("fileId", res.body.slot.fileId.value);
 
 settings:
   encodeUrl: true

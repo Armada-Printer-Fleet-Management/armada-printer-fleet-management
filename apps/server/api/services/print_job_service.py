@@ -28,7 +28,9 @@ from proto_utils.mappers import FileMapper, PrintJobMapper
 
 from api.domains.file.service import FileService
 from api.domains.print_job.service import PrintJobService
+from api.routers.file import upload_path
 from api.services.domain_errors import domain_errors_as_connect, request_id
+from api.services.request_url import absolute_url
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -121,7 +123,7 @@ class PrintJobServiceImplementation:
         except ValueError as error:
             raise ConnectError(Code.INVALID_ARGUMENT, "metadata.file_type must be set") from error
 
-        created: list[tuple[File, str]] = []
+        created: list[File] = []
 
         async def new_file() -> FileId:
             created.append(
@@ -129,13 +131,14 @@ class PrintJobServiceImplementation:
                     metadata.filename, file_type, metadata.size_bytes, metadata.sha256
                 )
             )
-            return created[0][0].id
+            return created[0].id
 
         with domain_errors_as_connect():
             await self._print_jobs.attach_new_file(print_job_id, new_file)
-        file, upload_url = created[0]
+        file = created[0]
         slot = FileUploadSlot(
-            file_id=FileMapper.id_to_proto(FileIdMessage, file.id), upload_url=upload_url
+            file_id=FileMapper.id_to_proto(FileIdMessage, file.id),
+            upload_url=absolute_url(ctx, upload_path(file.id)),
         )
         return CreatePrintJobUploadResponse(slot=slot)
 

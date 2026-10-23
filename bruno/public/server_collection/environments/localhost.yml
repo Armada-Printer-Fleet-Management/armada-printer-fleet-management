@@ -6,3 +6,6 @@ variables:
   # job you created instead, set this to the ID that Create Print Job returns.
   - name: printJobId
     value: 00000000-0000-4000-8000-000000000001
+  # Set to the slot's fileId that Create Print Job Upload returns, for the file requests.
+  - name: fileId
+    value: 00000000-0000-0000-0000-000000000000

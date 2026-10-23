@@ -1,16 +1,22 @@
+import asyncio
+import hashlib
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 import pytest
 from core_domain.file import File
+from core_domain.ids import FileId
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from proto_utils.gen.server.v1.print_job_service_connect import PrintJobServiceASGIApplication
 
+from api.common.consts import API_PREFIX
 from api.domains.file.service import FileService
 from api.domains.print_job.service import PrintJobService
 from api.infrastructure.file_memory import InMemoryFileRepository
-from api.infrastructure.file_storage_mock import MockFileStorage
+from api.infrastructure.file_store_files import FileStoreFiles
 from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 from api.infrastructure.stub_data import (
     STUB_APPROVED_JOB_ID,
@@ -22,13 +28,16 @@ from api.infrastructure.stub_data import (
     stub_print_jobs,
 )
 from api.main import app
+from api.routers.file import file_router, upload_path
 from api.services.print_job_service import PrintJobServiceImplementation
+from tests.fakes import MemoryFileStore
 
 _RPC = "/server.v1.PrintJobService"
+_CONTENT = b"G28\nG1 X10 Y10 F3000\n"
 _METADATA = {
     "filename": "part.gcode",
-    "sizeBytes": "1024",
-    "sha256": "e" * 64,
+    "sizeBytes": str(len(_CONTENT)),
+    "sha256": hashlib.sha256(_CONTENT).hexdigest(),
     "fileType": "FILE_TYPE_GCODE",
 }
 
@@ -46,12 +55,18 @@ def client() -> TestClient:
 
 
 def _client(files: list[File], clock: Callable[[], datetime]) -> TestClient:
+    """Serves the file routes beside the RPC, so an upload_url can be PUT to."""
+    storage = FileStoreFiles(MemoryFileStore)
+    asyncio.run(storage.__aenter__())
     print_jobs = PrintJobService(InMemoryPrintJobRepository(stub_print_jobs()), clock)
-    file_service = FileService(InMemoryFileRepository(files), MockFileStorage(), clock)
+    file_service = FileService(InMemoryFileRepository(files), storage, clock)
     handler = PrintJobServiceImplementation(
         print_jobs, file_service, caller=lambda: STUB_STUDENT_ID
     )
-    return TestClient(PrintJobServiceASGIApplication(handler))
+    rest = FastAPI()
+    rest.include_router(file_router(file_service), prefix=API_PREFIX)
+    rest.mount("/", PrintJobServiceASGIApplication(handler))
+    return TestClient(rest)
 
 
 def _id(entity_id: object) -> dict[str, str]:
@@ -112,7 +127,9 @@ def test_a_job_goes_from_creation_to_a_printer(client: TestClient) -> None:
     job = {"printJobId": created["id"]}
 
     slot = call(client, "CreatePrintJobUpload", {**job, "metadata": _METADATA})["slot"]
-    assert slot["fileId"]["value"] in slot["uploadUrl"]
+    file_path = upload_path(FileId(UUID(slot["fileId"]["value"])))
+    assert slot["uploadUrl"] == f"http://testserver{file_path}"
+    assert client.put(slot["uploadUrl"], content=_CONTENT).status_code == 204
 
     submitted = call(client, "SubmitPrintJob", job)
     assert submitted["printJob"]["status"] == "PRINT_JOB_STATUS_SUBMITTED"
@@ -125,6 +142,16 @@ def test_a_job_goes_from_creation_to_a_printer(client: TestClient) -> None:
 
     assert assigned["printJob"]["status"] == "PRINT_JOB_STATUS_ASSIGNED"
     assert assigned["printJob"]["printerId"] == printer
+
+
+def test_upload_url_is_https_behind_a_proxy_that_terminates_it(client: TestClient) -> None:
+    response = client.post(
+        f"{_RPC}/CreatePrintJobUpload",
+        json={"printJobId": _id(STUB_DRAFT_JOB_ID), "metadata": _METADATA},
+        headers={"Host": "fleet.example.test", "X-Forwarded-Proto": "https"},
+    )
+
+    assert response.json()["slot"]["uploadUrl"].startswith("https://fleet.example.test/api/files/")
 
 
 def test_a_second_upload_replaces_the_file(client: TestClient) -> None:

@@ -1,12 +1,16 @@
 import asyncio
+from collections.abc import AsyncIterable, AsyncIterator
+from datetime import UTC, datetime
 from types import TracebackType
 from typing import Self
 
 import pytest
-from core_domain.ddd import Unavailable
+from core_domain.ddd import EntityNotFound, Unavailable
+from core_domain.file import File, FileType
 from plugin_api.file_store import FileStoreError
 
 from api.infrastructure.file_store_files import FileStoreFiles
+from tests.fakes import MemoryFileStore
 
 
 class RecordingFileStore:
@@ -28,10 +32,13 @@ class RecordingFileStore:
     ) -> None:
         self.events.append("closed")
 
-    async def read(self, key: str) -> bytes:
+    async def read(self, key: str) -> AsyncIterator[bytes]:
         raise NotImplementedError
 
-    async def write(self, key: str, file: bytes) -> None:
+    async def write(self, key: str, chunks: AsyncIterable[bytes]) -> None:
+        raise NotImplementedError
+
+    async def exists(self, key: str) -> bool:
         raise NotImplementedError
 
     async def delete(self, key: str) -> None:
@@ -90,3 +97,29 @@ def test_a_store_outage_is_unavailable_without_its_details() -> None:
 def test_a_store_that_is_not_open_is_unavailable() -> None:
     with pytest.raises(Unavailable):
         asyncio.run(files_over([]).health_check())
+
+
+def opened_over(store: MemoryFileStore) -> FileStoreFiles:
+    files = FileStoreFiles(lambda: store)
+    asyncio.run(files.__aenter__())
+    return files
+
+
+def test_bytes_missing_from_the_store_are_not_found_for_the_file() -> None:
+    file = File.create("part.gcode", FileType.GCODE, 1, "a" * 64, datetime.now(UTC))
+
+    with pytest.raises(EntityNotFound) as raised:
+        asyncio.run(opened_over(MemoryFileStore()).read(file))
+
+    assert raised.value.entity_id == file.id
+
+
+@pytest.mark.parametrize("name", ["has_upload", "read", "delete"])
+def test_a_store_outage_is_unavailable_for_every_operation(name: str) -> None:
+    file = File.create("part.gcode", FileType.GCODE, 1, "a" * 64, datetime.now(UTC))
+    store = MemoryFileStore()
+    files = opened_over(store)
+    store.healthy = False
+
+    with pytest.raises(Unavailable):
+        asyncio.run(getattr(files, name)(file))

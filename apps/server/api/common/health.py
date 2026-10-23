@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 
 import structlog
 
@@ -10,6 +10,16 @@ logger = structlog.stdlib.get_logger(__name__)
 
 # A dependency that hangs must not hang the health endpoint with it.
 DEPENDENCY_CHECK_TIMEOUT_SECONDS = 3.0
+
+
+def raising_probe(health_check: Callable[[], Awaitable[None]]) -> Callable[[], Awaitable[bool]]:
+    """A probe for a health check that raises on failure rather than returning False."""
+
+    async def probe() -> bool:
+        await health_check()
+        return True
+
+    return probe
 
 
 async def run_dependency_checks(checks: Mapping[str, DependencyCheck]) -> dict[str, str]:
