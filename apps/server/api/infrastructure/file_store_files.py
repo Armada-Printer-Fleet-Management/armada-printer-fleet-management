@@ -1,16 +1,11 @@
-# Stub: the file domain's bytes in the deployment's FileStore plugin. For now it only owns the
-# store's lifetime and health; MockFileStorage still serves the domain's FileStorage port, because
-# the server has no endpoints for file bytes yet. Filling it in means reading, writing and deleting
-# a file's bytes here by a storage key built from its FileId, turning StoredFileNotFoundError into
-# EntityNotFound(file_id), and passing it to FileService in api/main.py in place of
-# MockFileStorage.
-from collections.abc import Callable, Generator
+from collections.abc import AsyncIterable, AsyncIterator, Callable, Generator
 from contextlib import AsyncExitStack, contextmanager
 from types import TracebackType
 from typing import Self
 
-from core_domain.ddd import Unavailable
-from plugin_api.file_store import FileStore, FileStoreError
+from core_domain.ddd import EntityNotFound, Unavailable
+from core_domain.file import File
+from plugin_api.file_store import FileStore, FileStoreError, StoredFileNotFoundError
 
 _DEPENDENCY = "file storage"
 
@@ -24,8 +19,8 @@ def _store_errors() -> Generator[None]:
 
 
 class FileStoreFiles:
-    """Builds the store when opened, not when constructed, so importing the app reads no
-    configuration."""
+    """The file domain's bytes in the deployment's FileStore plugin. Builds the store when
+    opened, not when constructed, so importing the app reads no configuration."""
 
     def __init__(self, open_store: Callable[[], FileStore]) -> None:
         self._open_store = open_store
@@ -46,7 +41,7 @@ class FileStoreFiles:
         self._store = None
         await self._exit_stack.aclose()
 
-    def _opened(self) -> FileStore:
+    def _file_store(self) -> FileStore:
         if self._store is None:
             raise Unavailable(_DEPENDENCY)
         return self._store
@@ -54,4 +49,31 @@ class FileStoreFiles:
     async def health_check(self) -> None:
         """Raises Unavailable if the store cannot be reached or is not open."""
         with _store_errors():
-            await self._opened().health_check()
+            await self._file_store().health_check()
+
+    async def has_upload(self, file: File) -> bool:
+        with _store_errors():
+            return await self._file_store().exists(file.storage_key())
+
+    async def write(self, file: File, chunks: AsyncIterable[bytes]) -> None:
+        with _store_errors():
+            await self._file_store().write(file.storage_key(), chunks)
+
+    async def read(self, file: File) -> AsyncIterator[bytes]:
+        try:
+            stored = await self._file_store().read(file.storage_key())
+        except StoredFileNotFoundError as error:
+            raise EntityNotFound(file.id) from error
+        except FileStoreError as error:
+            raise Unavailable(_DEPENDENCY) from error
+
+        async def chunks() -> AsyncIterator[bytes]:
+            with _store_errors():
+                async for chunk in stored:
+                    yield chunk
+
+        return chunks()
+
+    async def delete(self, file: File) -> None:
+        with _store_errors():
+            await self._file_store().delete(file.storage_key())

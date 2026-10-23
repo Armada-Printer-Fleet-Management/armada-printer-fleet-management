@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterable, AsyncIterator
 from types import TracebackType
 from typing import Protocol, Self
 
@@ -23,20 +24,27 @@ class FileStore(Protocol):
         tb: TracebackType | None,
     ) -> None: ...
 
-    async def read(self, key: str) -> bytes:
+    async def read(self, key: str) -> AsyncIterator[bytes]:
         """
-        Get a file from the store.
+        Get a file from the store as a stream of chunks.
 
-        raises StoredFileNotFoundError if the file is not found.
+        raises StoredFileNotFoundError when awaited if the file is not found, before any chunk is
+        read, so a caller can still report it before it starts sending the file on.
         """
         ...
 
-    async def write(self, key: str, file: bytes) -> None:
+    async def write(self, key: str, chunks: AsyncIterable[bytes]) -> None:
         """
-        Put a file into the store.
+        Put a file into the store from a stream of chunks.
 
-        If an existing file with the same key exists, it will be overwritten.
+        If an existing file with the same key exists, it will be overwritten. If `chunks` raises,
+        nothing is stored, any existing file is left unchanged, and that exception propagates as
+        it is rather than as a FileStoreError, so a caller can reject a file part way through.
         """
+        ...
+
+    async def exists(self, key: str) -> bool:
+        """Whether a file is stored under the key."""
         ...
 
     async def delete(self, key: str) -> None:

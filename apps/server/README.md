@@ -115,6 +115,16 @@ Every route, REST and ConnectRPC, is served under `/api`, so Connect clients use
 `http://<host>:8000/api` as their base URL. Mount new RPC services with `mount_rpc` in
 `api/main.py`; a plain `app.mount` under the prefix returns 404.
 
+File bytes are REST, because Connect cannot stream them from a browser. A `Create<Thing>Upload`
+RPC creates the file record and returns its `upload_url`, an absolute URL on the origin the caller reached the server through
+(the `Host` header, and `X-Forwarded-Proto` when a proxy terminates HTTPS):
+
+- `PUT /api/files/{file_id}` stores the raw body. It must match the record's size and SHA-256, or
+  it is refused with a 400 and nothing is stored.
+- `GET /api/files/{file_id}` streams the bytes back as an attachment named after the file.
+- `DELETE /api/files/{file_id}` deletes the record, and its bytes unless another file holds the
+  same content. Bytes are stored once per content, under `<sha256>.<file type>`.
+
 Health is exposed twice, from the same logic in `api/common/health.py`:
 
 - `GET /api/health_check` (REST) returns plain `pass`/`degraded`/`fail` text; `?full=true` returns JSON
