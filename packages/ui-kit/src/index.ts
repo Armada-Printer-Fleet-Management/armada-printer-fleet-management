@@ -8,6 +8,7 @@ export {
 } from './components/card';
 export { AboutBox } from './components/about-box';
 export { cn } from './lib/utils';
+export { TempRoutePage, type TempRoutePageProps } from './temp/TempRoutePage';
 export {
   TempVerticalSlicePage,
   type TempSliceAction,

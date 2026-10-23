@@ -40,7 +40,7 @@ allow-lists and copy its `package.json` in both Dockerfiles' `deps` stage.
 
 Prerequisites:
 
-- Node.js (16+ recommended) and pnpm installed globally. See https://pnpm.io/installation
+- Node.js 22.22 or newer and pnpm installed globally. See https://pnpm.io/installation
 
 Commands:
 
