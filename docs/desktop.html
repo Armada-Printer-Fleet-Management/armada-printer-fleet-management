@@ -71,7 +71,7 @@
             </thead>
             <tbody>
               <tr>
-                <td rowspan="5">Backend</td>
+                <td rowspan="6">Backend</td>
                 <td>Python</td>
                 <td><code>&gt;=3.13</code></td>
                 <td>The host process</td>
@@ -90,6 +90,11 @@
                 <td>packaging</td>
                 <td><code>&gt;=24</code></td>
                 <td>Parses the backend's own version string (PEP 440)</td>
+              </tr>
+              <tr>
+                <td><a href="https://github.com/yaml/pyyaml">PyYAML</a></td>
+                <td><code>&gt;=6.0.3,&lt;7</code></td>
+                <td>Reads the per-user connection settings file</td>
               </tr>
               <tr>
                 <td>uv, hatchling</td>
@@ -715,6 +720,28 @@
             <text x="376" y="222" font-size="0.66rem">_internal/frontend/dist/index.html</text>
           </svg>
         </div>
+
+        <h3>Connection settings</h3>
+
+        <p>
+          The application server's address comes from a per-user settings file,
+          <code>%APPDATA%\&lt;exe name&gt;\settings.yaml</code>, found through
+          <code>Environment.settings_path()</code>. Running from source uses
+          <code>settings.dev.yaml</code> in the same folder, so development never
+          edits an installed app's file.
+        </p>
+
+        <p>
+          On first launch the file is generated from the commented template in
+          <code>armada_runtime/settings.py</code>, so there is no bundled file
+          that could go missing; after that it is only
+          read, never overwritten, and an edit takes effect on the next launch.
+          From source, <code>server_url</code> starts as the dev compose
+          server's address, and a test fails if the two drift apart. Packaged,
+          it starts empty: the app still opens, and each call that needs the
+          server fails with a "server not configured" error naming the file to
+          edit.
+        </p>
 
         <h3>The spec file</h3>
 
