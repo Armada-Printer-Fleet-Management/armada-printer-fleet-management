@@ -11,6 +11,10 @@ from core_domain.ddd.errors import (
 )
 from core_domain.ddd.page import Page
 from core_domain.ddd.repository import (
+    AbstractAsyncReadRepository,
+    AbstractAsyncRepository,
+    AbstractReadRepository,
+    AbstractRepository,
     AsyncReadRepository,
     AsyncRepository,
     ReadRepository,
@@ -20,6 +24,10 @@ from core_domain.ddd.service import Service, change, change_async
 from core_domain.ddd.typed_id import TypedId
 
 __all__ = [
+    "AbstractAsyncReadRepository",
+    "AbstractAsyncRepository",
+    "AbstractReadRepository",
+    "AbstractRepository",
     "AsyncReadRepository",
     "AsyncRepository",
     "DomainError",

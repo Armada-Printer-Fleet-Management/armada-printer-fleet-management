@@ -1,5 +1,5 @@
 from abc import ABC
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from core_domain.ddd.repository import AsyncRepository, Repository
 from core_domain.ddd.typed_id import TypedId
@@ -25,10 +25,16 @@ def change[IdT: TypedId, EntityT](
 
 
 async def change_async[IdT: TypedId, EntityT](
-    repository: AsyncRepository[IdT, EntityT], entity_id: IdT, rule: Callable[[EntityT], None]
+    repository: AsyncRepository[IdT, EntityT],
+    entity_id: IdT,
+    rule: Callable[[EntityT], Awaitable[None] | None],
 ) -> EntityT:
-    """`change` for async repositories."""
+    """`change` for async repositories. The rule may be async, so it can await another domain's
+    fact or side effect between its own checks. If any part of it raises, the entity is not
+    saved, but a side effect the rule already caused is not undone."""
     entity = await repository.get(entity_id)
-    rule(entity)
+    pending = rule(entity)
+    if pending is not None:
+        await pending
     await repository.save(entity)
     return entity
