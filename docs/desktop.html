@@ -237,7 +237,7 @@
               </tr>
               <tr>
                 <td><code>armada_domains</code></td>
-                <td>Domains: a repository port and a service each, over entities shared from <code>core-domain</code>. The port reads and requests changes; it never saves a shared entity, because the server validates and applies every change. An entity specific to the desktop may be saved locally</td>
+                <td>Domains: a repository port and a service each, over entities shared from <code>core-domain</code>. The port reads and requests changes; it never saves a shared entity, because the server validates and applies every change. An entity specific to the desktop may be saved locally. Each port extends an abstract repository base from <code>core-domain</code>, and the infrastructure that implements it inherits the port</td>
               </tr>
               <tr>
                 <td><code>armada_infrastructure</code></td>

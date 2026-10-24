@@ -11,11 +11,11 @@ The server is authoritative: it owns every entity's state, and its domains follo
 | Path                   | Owns                                                                      |
 | ---------------------- | ------------------------------------------------------------------------- |
 | `api/main.py`          | Composition root: builds infrastructure, hands it to domain services, mounts RPC handlers |
-| `api/domains/`         | Domains: a repository port and a service per domain                      |
+| `api/domains/`         | Domains: a repository port and a service per domain. Every port extends a `core_domain.ddd` `Abstract*Repository` base, and its adapter inherits it; a port over state another service owns, such as printers, requests changes rather than saving |
 | `api/infrastructure/`  | The server's own persistence behind those ports, in memory until the database exists, and the adapters over plugins |
 | `tests/contract/`      | What every repository adapter must do. A new adapter joins by adding its factory to `ADAPTERS` |
 | `api/plugins.py`       | Builds the plugins each deployment chose in config, such as `FILE_STORE_BACKEND` |
-| `api/services/`        | Connect handlers: translate between the wire and domain services, composing several where an RPC spans domains. No rules |
+| `api/services/`        | Connect handlers: translate between the wire and domain services, composing several where an RPC spans domains. No rules. `PrinterPoller` is the same kind of composer, run by the lifespan instead of a request |
 | `api/routers/`         | REST routes that do not fit Connect, such as the health check and file bytes. Built from services handed in by `api/main.py`; domain errors go through `domain_errors_as_http()` |
 | `api/gen/openapi/`     | Generated API documentation data. Gitignored                              |
 

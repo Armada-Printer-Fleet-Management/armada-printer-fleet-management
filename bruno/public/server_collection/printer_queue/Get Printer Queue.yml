@@ -1,0 +1,23 @@
+info:
+  name: Get Printer Queue
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/server.v1.PrinterQueueService/GetPrinterQueue"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      { "printerQueueId": { "value": "{{printerQueueId}}" } }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

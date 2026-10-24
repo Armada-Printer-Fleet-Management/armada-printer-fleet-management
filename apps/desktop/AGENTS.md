@@ -38,7 +38,7 @@ project, each with its own manifest. Generated proto code is the only thing tyin
 | `backend/src/armada_app/`         | Entry point `desktop-backend` (`--target`), window lifecycle         |
 | `backend/src/armada_app/composition.py` | Composition root: builds infrastructure and hands it to domain services |
 | `backend/src/armada_ipc/`         | `Ipc` root object, `IpcModule` base, one module per capability       |
-| `backend/src/armada_domains/`     | Domains: a repository port (reads, requests changes; never saves shared entities. Can save desktop specific entities) and a service per domain |
+| `backend/src/armada_domains/`     | Domains: a repository port (reads, requests changes; never saves shared entities. Can save desktop specific entities) and a service per domain. Ports extend a `core_domain.ddd` `Abstract*Repository` base, and infrastructure inherits the port |
 | `backend/src/armada_infrastructure/` | The backend's own I/O clients implementing those ports, e.g. `application_server/` over Connect |
 | `backend/src/armada_runtime/`     | `Environment` (dev vs packaged paths), packaging names               |
 | `packages/proto/utils/` (shared)  | Generated Python protobuf (`proto_utils.gen`) and entity mappers     |

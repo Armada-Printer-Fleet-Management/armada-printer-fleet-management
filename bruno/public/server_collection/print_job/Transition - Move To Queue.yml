@@ -1,0 +1,26 @@
+info:
+  name: Transition - Move To Queue
+  type: http
+  seq: 10
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/server.v1.PrintJobService/TransitionPrintJob"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "printJobId": { "value": "{{printJobId}}" },
+        "moveToQueue": { "printerQueueId": { "value": "{{printerQueueId}}" } }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

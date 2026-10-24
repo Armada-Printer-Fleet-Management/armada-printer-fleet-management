@@ -1,0 +1,7 @@
+info:
+  name: printer
+  type: folder
+  seq: 4
+
+request:
+  auth: inherit

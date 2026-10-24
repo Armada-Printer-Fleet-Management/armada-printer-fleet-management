@@ -6,6 +6,13 @@ variables:
   # job you created instead, set this to the ID that Create Print Job returns.
   - name: printJobId
     value: 00000000-0000-4000-8000-000000000001
-  # Set to the slot's fileId that Create Print Job Upload returns, for the file requests.
+  # The seeded submitted job's file record. For the byte requests, set this to the slot's fileId
+  # that Create Print Job Upload returns.
   - name: fileId
-    value: 00000000-0000-0000-0000-000000000000
+    value: 00000000-0000-4000-8000-000000000201
+  # A seeded idle printer, for dispatching a job and then marking the printer ready.
+  - name: printerId
+    value: 00000000-0000-4000-8000-000000000301
+  # The seeded open queue.
+  - name: printerQueueId
+    value: 00000000-0000-4000-8000-000000000401

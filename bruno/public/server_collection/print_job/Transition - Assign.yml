@@ -14,7 +14,7 @@ http:
     data: |-
       {
         "printJobId": { "value": "{{printJobId}}" },
-        "assign": { "printerId": { "value": "00000000-0000-4000-8000-000000000301" } }
+        "assign": { "printerId": { "value": "{{printerId}}" } }
       }
   auth: inherit
 

@@ -167,7 +167,7 @@
             viewBox="0 0 800 300"
             width="100%"
             role="img"
-            aria-label="Domains are rows: print job, printer and queue. Each has one shared entity in core-domain, used by a service in each app that needs it. Print job refers to printer only by PrinterId."
+            aria-label="Domains are rows: print job, printer and printer queue. Each has one shared entity in core-domain, used by a service in each app that needs it. Print job refers to printer only by PrinterId."
           >
             <text x="140" y="32" text-anchor="middle" class="label-title" font-size="12">application server</text>
             <text x="400" y="32" text-anchor="middle" class="label-title" font-size="12">core-domain (shared)</text>
@@ -183,34 +183,34 @@
             <text x="660" y="74" text-anchor="middle" font-size="12">PrintJobService</text>
             <text x="660" y="92" text-anchor="middle" class="label-muted">never saves · asks the server</text>
 
-            <rect x="40" y="136" width="200" height="56" rx="8" class="box-future" />
+            <rect x="40" y="136" width="200" height="56" rx="8" class="box" />
             <text x="140" y="160" text-anchor="middle" font-size="12">PrinterService</text>
-            <text x="140" y="178" text-anchor="middle" class="label-muted">printer records</text>
-            <rect x="300" y="136" width="200" height="56" rx="8" class="box-future" />
-            <text x="400" y="160" text-anchor="middle" font-size="12">Printer</text>
-            <text x="400" y="178" text-anchor="middle" class="label-muted">capabilities, status</text>
-            <rect x="560" y="136" width="200" height="56" rx="8" class="box-future" />
+            <text x="140" y="178" text-anchor="middle" class="label-muted">asks the printer server</text>
+            <rect x="300" y="136" width="200" height="56" rx="8" class="box-accent" />
+            <text x="400" y="160" text-anchor="middle" class="label-title" font-size="12">Printer</text>
+            <text x="400" y="178" text-anchor="middle" class="label-muted">dispatch and release rules</text>
+            <rect x="560" y="136" width="200" height="56" rx="8" class="box" />
             <text x="660" y="160" text-anchor="middle" font-size="12">PrinterService</text>
-            <text x="660" y="178" text-anchor="middle" class="label-muted">dispatch to a printer</text>
+            <text x="660" y="178" text-anchor="middle" class="label-muted">reads · marks ready</text>
 
-            <rect x="40" y="222" width="200" height="56" rx="8" class="box-future" />
-            <text x="140" y="246" text-anchor="middle" font-size="12">QueueService</text>
-            <text x="140" y="264" text-anchor="middle" class="label-muted">queue membership</text>
-            <rect x="300" y="222" width="200" height="56" rx="8" class="box-future" />
-            <text x="400" y="246" text-anchor="middle" font-size="12">Queue</text>
-            <text x="400" y="264" text-anchor="middle" class="label-muted">who may submit</text>
-            <rect x="560" y="222" width="200" height="56" rx="8" class="box-future" />
-            <text x="660" y="246" text-anchor="middle" font-size="12">QueueService</text>
+            <rect x="40" y="222" width="200" height="56" rx="8" class="box" />
+            <text x="140" y="246" text-anchor="middle" font-size="12">PrinterQueueService</text>
+            <text x="140" y="264" text-anchor="middle" class="label-muted">authoritative · saves</text>
+            <rect x="300" y="222" width="200" height="56" rx="8" class="box-accent" />
+            <text x="400" y="246" text-anchor="middle" class="label-title" font-size="12">PrinterQueue</text>
+            <text x="400" y="264" text-anchor="middle" class="label-muted">accepts jobs or not</text>
+            <rect x="560" y="222" width="200" height="56" rx="8" class="box" />
+            <text x="660" y="246" text-anchor="middle" font-size="12">PrinterQueueService</text>
             <text x="660" y="264" text-anchor="middle" class="label-muted">reads queues</text>
 
             <line x1="240" y1="78" x2="297" y2="78" class="flow" />
             <text x="269" y="71" text-anchor="middle" class="label-muted">uses</text>
             <line x1="560" y1="78" x2="503" y2="78" class="flow" />
             <text x="531" y="71" text-anchor="middle" class="label-muted">uses</text>
-            <line x1="240" y1="164" x2="297" y2="164" class="flow-muted" />
-            <line x1="560" y1="164" x2="503" y2="164" class="flow-muted" />
-            <line x1="240" y1="250" x2="297" y2="250" class="flow-muted" />
-            <line x1="560" y1="250" x2="503" y2="250" class="flow-muted" />
+            <line x1="240" y1="164" x2="297" y2="164" class="flow" />
+            <line x1="560" y1="164" x2="503" y2="164" class="flow" />
+            <line x1="240" y1="250" x2="297" y2="250" class="flow" />
+            <line x1="560" y1="250" x2="503" y2="250" class="flow" />
 
             <line x1="400" y1="106" x2="400" y2="133" class="flow-return" />
             <text x="408" y="124" class="label-muted">by PrinterId only</text>
@@ -222,6 +222,17 @@
             by holding a <code>Printer Entity</code>. Doing this prevents coupling.
           </figcaption>
         </figure>
+        <p>
+          The owner of each entity's state decides which side asks. The application server owns
+          print jobs and printer queues, so it saves them. The printer server owns printer state,
+          so for printers the application server is the client: its <code>PrinterRepository</code>
+          requests a dispatch or a release, and the printer returned is the confirmed result.
+          A print job rule that depends on a printer takes that confirmation as a value. A poller
+          on the application server moves a job to <code>PRINTING</code> and then
+          <code>FINISHED</code> as its printer reports them. Only staff move a job to
+          <code>COMPLETED</code> or <code>FAILED</code>: a printer reporting an error never fails
+          a job by itself. Only an operator marks a finished or faulted printer ready again.
+        </p>
 
         <h2>Server and desktop domains differ</h2>
         <p>

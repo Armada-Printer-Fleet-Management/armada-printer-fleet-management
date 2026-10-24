@@ -25,10 +25,10 @@ only through typed IDs:
             id.v1   (one typed ID per entity: UserId, FileId, PrintJobId, ...)
           common.v1 (base units: TimeStatus, PageRequest, PageResponse)
               ▲
-   ┌──────────┼───────────┬─────────────┐
- user.v1   file.v1   print_job.v1   printer.v1      domains: entities, enums
-   ▲          ▲           ▲             ▲           (never import each other)
-   └──────────┴─────┬─────┴─────────────┘
+   ┌──────────┼───────────┬─────────────┬──────────────────┐
+ user.v1   file.v1   print_job.v1   printer.v1   printer_queue.v1   domains: entities, enums
+   ▲          ▲           ▲             ▲              ▲            (never import each other)
+   └──────────┴─────┬─────┴─────────────┴──────────────┘
                     │
       server.v1             printer_server.v1       servers: services and RPCs,
    (remote server)      (on-premise printer server)  composing domains into responses
