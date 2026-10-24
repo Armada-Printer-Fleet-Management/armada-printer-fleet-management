@@ -5,15 +5,16 @@ import inspect
 import pkgutil
 from collections.abc import Callable
 from typing import get_type_hints
+from unittest.mock import create_autospec
 
 import pytest
-from core_domain.ddd import EntityNotFound
-from core_domain.ids import PrintJobId
-from core_domain.print_job import PrintJob
 from google.protobuf.message import Message
 
 import armada_ipc
+from armada_domains.file.service import FileService
 from armada_domains.print_job.service import PrintJobService
+from armada_domains.printer.service import PrinterService
+from armada_domains.printer_queue.service import PrinterQueueService
 from armada_ipc import Ipc
 from armada_ipc._base import PROTO_CALL_MARKER, PROTO_RESPONSE_MARKER, IpcModule
 
@@ -70,15 +71,14 @@ def exposed(
     return methods, objects
 
 
-class _NoPrintJobs:
-    def get(self, entity_id: PrintJobId) -> PrintJob:
-        raise EntityNotFound(entity_id)
-
-    def request_start_review(self, print_job_id: PrintJobId) -> PrintJob:
-        raise EntityNotFound(print_job_id)
-
-
-EXPOSED_METHODS, EXPOSED_OBJECTS = exposed(Ipc(print_jobs=PrintJobService(_NoPrintJobs())))
+EXPOSED_METHODS, EXPOSED_OBJECTS = exposed(
+    Ipc(
+        print_jobs=create_autospec(PrintJobService, instance=True),
+        printers=create_autospec(PrinterService, instance=True),
+        printer_queues=create_autospec(PrinterQueueService, instance=True),
+        files=create_autospec(FileService, instance=True),
+    )
+)
 SWEPT_METHODS = swept_methods()
 
 

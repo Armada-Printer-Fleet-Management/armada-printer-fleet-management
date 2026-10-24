@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, create_autospec, patch
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from core_domain.ddd import EntityNotFound
+from core_domain.ddd import EntityNotFound, Unavailable
 from core_domain.ids import PrintJobId, UserId
 from core_domain.print_job import PrintJob, PrintJobStatus
 from proto_utils.gen.server.v1.print_job_service_pb2 import GetPrintJobResponse
@@ -56,10 +56,19 @@ def test_get_turns_not_found_into_entity_not_found(
         print_jobs.get(KNOWN.id)
 
 
-def test_get_passes_other_connect_errors_through(
+def test_get_turns_an_outage_into_unavailable(
     client: MagicMock, print_jobs: ApplicationServerPrintJobs
 ) -> None:
     client.get_print_job.side_effect = ConnectError(Code.UNAVAILABLE, "server down")
+
+    with pytest.raises(Unavailable):
+        print_jobs.get(KNOWN.id)
+
+
+def test_get_passes_other_connect_errors_through(
+    client: MagicMock, print_jobs: ApplicationServerPrintJobs
+) -> None:
+    client.get_print_job.side_effect = ConnectError(Code.INTERNAL, "server bug")
 
     with pytest.raises(ConnectError):
         print_jobs.get(KNOWN.id)

@@ -8,6 +8,8 @@ import {
 import {
   GetPrintJobRequestSchema,
   GetPrintJobResponseSchema,
+  ListPrintJobsRequestSchema,
+  ListPrintJobsResponseSchema,
   TransitionPrintJobRequestSchema,
   TransitionPrintJobResponseSchema,
 } from '../gen/server/v1/print_job_service_pb';
@@ -17,9 +19,23 @@ declare global {
   interface PywebviewIpc {
     print_job: {
       print_job(request: JsonValue): Promise<JsonValue>;
+      list_print_jobs(request: JsonValue): Promise<JsonValue>;
       transition_print_job(request: JsonValue): Promise<JsonValue>;
     };
   }
+}
+
+export async function listPrintJobs(
+  request: MessageInitShape<typeof ListPrintJobsRequestSchema> = {},
+) {
+  const ipc = await waitForPywebviewIpc();
+  const raw = await ipc.print_job.list_print_jobs(
+    toJson(
+      ListPrintJobsRequestSchema,
+      create(ListPrintJobsRequestSchema, request),
+    ),
+  );
+  return fromJson(ListPrintJobsResponseSchema, raw);
 }
 
 export async function printJob(
