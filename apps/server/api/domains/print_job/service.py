@@ -33,22 +33,26 @@ class PrintJobService(Service[PrintJobRepository]):
     ) -> PrintJob:
         """Attaches the file new_file creates. It is called only once the job is known to accept
         a file, so a refused job leaves no file behind."""
-        print_job = await self._repository.get(print_job_id)
-        print_job.require_can_attach_file()
-        print_job.attach_file(await new_file(), self._clock())
-        await self._repository.save(print_job)
-        return print_job
+        now = self._clock()
+
+        async def rule(print_job: PrintJob) -> None:
+            print_job.require_can_attach_file()
+            print_job.attach_file(await new_file(), now)
+
+        return await change_async(self._repository, print_job_id, rule)
 
     async def submit(
         self, print_job_id: PrintJobId, is_uploaded: Callable[[FileId], Awaitable[bool]]
     ) -> PrintJob:
         """Submits the job, checking the upload of the file on the same copy that is saved."""
-        print_job = await self._repository.get(print_job_id)
-        file_id = print_job.file_id
-        uploaded = file_id is not None and await is_uploaded(file_id)
-        print_job.submit(uploaded, self._clock())
-        await self._repository.save(print_job)
-        return print_job
+        now = self._clock()
+
+        async def rule(print_job: PrintJob) -> None:
+            file_id = print_job.file_id
+            uploaded = file_id is not None and await is_uploaded(file_id)
+            print_job.submit(uploaded, now)
+
+        return await change_async(self._repository, print_job_id, rule)
 
     async def start_review(self, print_job_id: PrintJobId) -> PrintJob:
         now = self._clock()
