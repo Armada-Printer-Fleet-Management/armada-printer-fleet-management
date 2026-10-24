@@ -1,0 +1,23 @@
+info:
+  name: Transition - Fail
+  type: http
+  seq: 12
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/server.v1.PrintJobService/TransitionPrintJob"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      { "printJobId": { "value": "{{printJobId}}" }, "fail": { "reason": "Layers shifted halfway up" } }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

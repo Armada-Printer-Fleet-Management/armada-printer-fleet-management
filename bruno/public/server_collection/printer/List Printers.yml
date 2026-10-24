@@ -1,0 +1,23 @@
+info:
+  name: List Printers
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/server.v1.PrinterService/ListPrinters"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -12,7 +12,7 @@ Packages follow the domains in `data-management-choices.md`. There are four kind
 | --- | --- | --- | --- |
 | ID kernel | `id.v1` | One strongly typed ID per entity | nothing |
 | Shared units | `common.v1` | Base units every package reuses (`TimeStatus`, `PageRequest`/`PageResponse`) and application metadata | `google.protobuf.*` |
-| Domain | `user.v1`, `file.v1`, `print_job.v1`, `printer.v1` | One bounded context's entities, value types and enums | `id.v1`, `common.v1`, `google.protobuf.*` |
+| Domain | `user.v1`, `file.v1`, `print_job.v1`, `printer.v1`, `printer_queue.v1` | One bounded context's entities, value types and enums | `id.v1`, `common.v1`, `google.protobuf.*` |
 | Server (API layer) | `server.v1` (remote server), `printer_server.v1` (on-premise printer server) | Services, RPCs and their request/response messages | domains, `id.v1`, `common.v1`, `google.protobuf.*` |
 
 Never put domain types in `common.v1`. It holds only units with no domain meaning.

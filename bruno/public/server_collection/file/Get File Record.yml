@@ -1,0 +1,23 @@
+info:
+  name: Get File Record
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/server.v1.FileService/GetFile"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      { "fileId": { "value": "{{fileId}}" } }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
