@@ -12,6 +12,7 @@ dependencies = [
   "organization-info",  # packages/organization-info -- reads the shared organization identity (organization.json)
   "core-domain",        # packages/core-domain -- shared entities, typed IDs and the DDD bases
   "connectrpc>=0.12.1,<0.13",  # https://github.com/connectrpc/connect-py, Apache-2.0 -- client to the remote server; pinned as on the server
+  "pyyaml>=6.0.3,<7",   # https://github.com/yaml/pyyaml, MIT -- reads the per-user settings file
 ]
 
 [tool.uv.sources]
@@ -27,6 +28,7 @@ dev = [
   "pyright",
   "pytest>=9,<10",  # https://github.com/pytest-dev/pytest, MIT
   "import-linter>=2.15,<3", # https://github.com/seddonym/import-linter, BSD-2-Clause -- layer contracts
+  "types-pyyaml>=6.0.12,<7", # https://github.com/python/typeshed, Apache-2.0 -- PyYAML stubs for pyright
 ]
 build = [
   "pyinstaller>=6,<7",

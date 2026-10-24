@@ -305,6 +305,11 @@ Skip this step if `--skip-app` was passed.
 this verification run; the dev stack from step 7 already reloads the server and web app. Report the
 server and web URLs; the desktop app opens its own native window. Leave everything running.
 
+The desktop's first launch creates `%APPDATA%\<exe name>\settings.dev.yaml`, pointing at the dev
+stack's server. To use another server, edit `server_url` there and restart the app. An installed
+build reads `settings.yaml` in the same folder, which starts empty and must be set before the app
+can reach a server.
+
 ## 10. Open the documentation
 
 The docs are hand-written HTML and need no build step. Open `docs/index.html` in the default

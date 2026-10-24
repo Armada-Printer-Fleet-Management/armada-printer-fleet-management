@@ -22,7 +22,7 @@ Never import from `apps/web/`. Share UI through `packages/ui-kit/`.
 
 | Layer     | Stack                                                                                 |
 | --------- | ------------------------------------------------------------------------------------- |
-| Backend   | Python >=3.13, pywebview >=6.2,<7, protobuf >=7,<8, connectrpc >=0.12.1,<0.13, packaging; uv + hatchling |
+| Backend   | Python >=3.13, pywebview >=6.2,<7, protobuf >=7,<8, connectrpc >=0.12.1,<0.13, packaging, pyyaml >=6.0.3,<7; uv + hatchling |
 | Frontend  | React 19, TypeScript 5 (strict, `noUncheckedIndexedAccess`), Vite 6, @bufbuild/protobuf 2; pnpm 12.3.4 |
 | Contract  | `packages/proto/` via buf; `protoc` for Python, `protoc-gen-es` for TypeScript       |
 | Quality   | ruff, pyright strict; ESLint 9 + typescript-eslint 8                                  |
@@ -40,7 +40,7 @@ project, each with its own manifest. Generated proto code is the only thing tyin
 | `backend/src/armada_ipc/`         | `Ipc` root object, `IpcModule` base, one module per capability       |
 | `backend/src/armada_domains/`     | Domains: a repository port (reads, requests changes; never saves shared entities. Can save desktop specific entities) and a service per domain. Ports extend a `core_domain.ddd` `Abstract*Repository` base, and infrastructure inherits the port |
 | `backend/src/armada_infrastructure/` | The backend's own I/O clients implementing those ports, e.g. `application_server/` over Connect |
-| `backend/src/armada_runtime/`     | `Environment` (dev vs packaged paths), packaging names               |
+| `backend/src/armada_runtime/`     | `Environment` (dev vs packaged paths), packaging names, the settings file loader |
 | `packages/proto/utils/` (shared)  | Generated Python protobuf (`proto_utils.gen`) and entity mappers     |
 | `frontend/src/ipc/`               | One TS module per backend capability, plus `pywebview.ts` and `global.d.ts` |
 | `frontend/src/gen/`               | Generated protobuf. Gitignored, never edited                         |
@@ -75,6 +75,13 @@ Getters are `x()` / `set_x()` on the Python side, because the bridged name is wh
   in `desktop_backend.spec`** (`datas`, `hiddenimports`, `copy_metadata`, `collect_data_files`).
   Tests and type checks do not catch a missing one. Run `python apps/desktop/build_run.py` and
   launch the exe after changing backend dependencies or runtime-read files.
+- **The server address comes from the per-user settings file**, `Environment.settings_path()`:
+  `%APPDATA%/<exe name>/settings.yaml`, or `settings.dev.yaml` from source. It is generated from
+  `settings_template()` in `armada_runtime/settings.py` only when missing and never overwritten,
+  so no template is bundled. Packaged, it starts empty, and calls raise `ServerNotConfigured`
+  rather than failing at startup: each `application_server/` adapter builds its Connect client on
+  first use. `DEV_SERVER_URL` must match `infra/dev/compose.yaml`; `tests/test_settings.py` checks
+  it.
 - **Names come from `packages/organization-info/organization.json`.** Window title, page
   `<title>`, exe name, and installer names all read it. Never hardcode them.
 - **The uninstaller deletes only the exe, `_internal/` and itself.** If the bundle gains another

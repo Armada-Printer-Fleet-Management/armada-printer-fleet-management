@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from core_domain.ddd import Page
 from core_domain.ids import PrinterId
 from core_domain.printer import Printer
@@ -25,7 +27,14 @@ class ApplicationServerPrinters(
     _mapper = PrinterMapper()
 
     def __init__(self, server: ApplicationServerConnection) -> None:
-        self._client = PrinterServiceClientSync(server.address, http_client=server.http_client)
+        self._server = server
+
+    @cached_property
+    def _client(self) -> PrinterServiceClientSync:
+        # Built on first use, so a missing server address fails the call rather than startup.
+        return PrinterServiceClientSync(
+            self._server.address(), http_client=self._server.http_client
+        )
 
     def get(self, entity_id: PrinterId) -> Printer:
         request = GetPrinterRequest(printer_id=self._id(entity_id))
