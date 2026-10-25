@@ -4,10 +4,20 @@
 # certificates.
 name: armada
 
+# Docker's default driver keeps every log line forever; local rotates and compresses them, so each
+# container keeps at most 5 files of 20 MB.
+x-logging: &logging
+  driver: local
+  options:
+    max-size: "20m"
+    max-file: "5"
+    compress: "true"
+
 services:
   web:
     image: ${REGISTRY:-ghcr.io}/${GHCR_OWNER:?}/armada-web${IMAGE_SUFFIX:-}:${VERSION:?}
     restart: always
+    logging: *logging
     depends_on:
       server:
         condition: service_healthy
@@ -25,6 +35,7 @@ services:
   server:
     image: ${REGISTRY:-ghcr.io}/${GHCR_OWNER:?}/armada-server${IMAGE_SUFFIX:-}:${VERSION:?}
     restart: always
+    logging: *logging
     depends_on:
       db:
         condition: service_healthy
@@ -41,6 +52,7 @@ services:
   db:
     image: postgres:17-alpine
     restart: always
+    logging: *logging
     environment:
       POSTGRES_USER: armada
       POSTGRES_PASSWORD: ${DB_PASSWORD:?}
@@ -56,6 +68,7 @@ services:
   garage-s3-storage:
     image: dxflrs/garage:v2.4.1
     restart: always
+    logging: *logging
     # Creates the single-node layout, access key and bucket on first start; later starts find
     # them already there.
     command: ["/garage", "server", "--single-node", "--default-bucket"]
