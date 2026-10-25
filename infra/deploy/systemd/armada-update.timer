@@ -6,7 +6,9 @@
 Description=Check for Armada updates periodically
 
 [Timer]
-OnBootSec=5min
+# Counts from whenever the timer starts: at boot, at install and when armada rewrites the timer.
+# OnUnitActiveSec has nothing to count from until the service has run once, so this starts it.
+OnActiveSec=5min
 OnUnitActiveSec=6h
 # Spreads the checks so every installation does not ask the registry at the same moment.
 RandomizedDelaySec=15min

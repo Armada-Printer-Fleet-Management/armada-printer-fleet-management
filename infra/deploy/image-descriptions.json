@@ -1,0 +1,5 @@
+{
+  "armada-server": "The Armada server: the API behind the web and desktop apps.",
+  "armada-web": "The Armada web app, served by Caddy with automatic HTTPS.",
+  "armada-release": "The files that install and update an Armada testing or staging machine."
+}

@@ -156,8 +156,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Adds a name to an image already in the registry; nothing is rebuilt, and a copy between
-          # packages keeps the digest.
+          # Adds a name to an image already in the registry; nothing is rebuilt. deploy.yml pushes
+          # single-platform manifests, which imagetools would otherwise wrap in a new index with a
+          # new digest; --prefer-index=false copies the manifest as it is, so every name shares it.
           if [ "$POINTER" = production ]; then
             images=("armada-server=$SERVER" "armada-web=$WEB")
             suffix=""
@@ -167,7 +168,8 @@ jobs:
           fi
           for name in "$TAG" "$POINTER"; do
             for image in "${images[@]}"; do
-              docker buildx imagetools create -t "ghcr.io/$OWNER/${image%%=*}$suffix:$name" "${image#*=}"
+              docker buildx imagetools create --prefer-index=false \
+                -t "ghcr.io/$OWNER/${image%%=*}$suffix:$name" "${image#*=}"
             done
           done
 
@@ -233,11 +235,12 @@ jobs:
           git archive "$COMMIT" infra/deploy | tar -x -C "$deploy"
           bash "$deploy/infra/deploy/release.sh" release "$TAG" "$GITHUB_REPOSITORY" "$OWNER" "$files"
 
+          # The notes are public, so they name the public packages; the copy kept each digest.
           notes="$RUNNER_TEMP/notes.md"
           { echo "## Images"
             echo
-            echo "- \`$SERVER\`"
-            echo "- \`$WEB\`"
+            echo "- \`${SERVER/-preview@/@}\`"
+            echo "- \`${WEB/-preview@/@}\`"
             echo
             echo "## Changes since ${PRODUCTION:-the first commit}"
             echo
