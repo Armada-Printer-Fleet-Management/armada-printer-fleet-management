@@ -2,7 +2,7 @@
 # fresh runner, through both channels: preview (testing, from the release image) and release
 # (production, from release files). Images go to a registry inside the job, so no test image ever
 # reaches GHCR.
-name: CI (deploy)
+name: CI (test deploy)
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ on:
       - apps/server/deploy.Dockerfile
       - apps/web/deploy.Dockerfile
       - scripts/compose_run.py
-      - .github/workflows/deploy.ci.yml
+      - .github/workflows/test-deploy.ci.yml
   workflow_dispatch:
 
 concurrency:
@@ -136,6 +136,14 @@ jobs:
           grep -qF -- '--track testing|staging' <<< "$help"
           bash "$dir/install.sh" --non-interactive --domain :80 \
             --admin-email ci@example.invalid --update-policy auto --update-interval 5min
+          # A fresh install has its first check scheduled, rather than waiting for a reboot.
+          timers=$(systemctl list-timers armada-update.timer --all --no-legend)
+          echo "$timers"
+          next=$(awk '{ print $1; exit }' <<< "$timers")
+          if [ -z "$next" ] || [ "$next" = n/a ] || [ "$next" = - ]; then
+            echo "::error::The update timer has no next run after a fresh install"
+            exit 1
+          fi
           quiet_timer
           expect "$GOOD_1"
           [ "$(armada config track)" = testing ]
@@ -171,8 +179,12 @@ jobs:
           expect "$GOOD_2"
           echo "::endgroup::"
 
-          echo "::group::Roll back"
+          echo "::group::Roll back, and automatic updates leave the rolled back version alone"
           armada rollback --yes
+          expect "$GOOD_1"
+          out=$(armada check-for-updates --scheduled)
+          echo "$out"
+          grep -qF "rolled back from $GOOD_2" <<< "$out"
           expect "$GOOD_1"
           echo "::endgroup::"
 
@@ -188,6 +200,7 @@ jobs:
           echo "::group::Notify only records the new build"
           armada config update-policy notify
           [ "$(armada config update-policy)" = notify ]
+          [ "$(armada config update-policy notify)" = "update-policy is already notify." ]
           armada check-for-updates --scheduled
           expect "$GOOD_1"
           status=$(armada status)
@@ -244,11 +257,15 @@ jobs:
           fi
           echo "::endgroup::"
 
-          echo "::group::Reinstall as production, from the latest release"
+          echo "::group::Reinstall as production; an older release's installer installs its own version"
           armada uninstall --yes
-          bash "$github/download/v0.0.1/install.sh" --non-interactive --update-policy auto
+          ln -sfn ../download/v0.0.2 "$github/latest/download"
+          out=$(bash "$github/download/v0.0.1/install.sh" --non-interactive --update-policy auto 2>&1)
+          echo "$out"
           quiet_timer
           expect 0.0.1
+          grep -qF "0.0.2 is available" <<< "$out"
+          grep -qF "installs itself at the next scheduled check" <<< "$out"
           [ "$(armada config track)" = production ]
           curl -fsS http://localhost/api/health_check
           # Production has only one track, so nothing shown to its operators names one.
@@ -258,14 +275,13 @@ jobs:
             echo "::error::A production installation's status shows a track"
             exit 1
           fi
-          out=$(armada check-for-updates)
-          grep -qxF "Up to date: 0.0.1 is the newest version." <<< "$out"
           echo "::endgroup::"
 
           echo "::group::The scheduled check follows the latest release"
-          ln -sfn ../download/v0.0.2 "$github/latest/download"
           armada check-for-updates --scheduled
           expect 0.0.2
+          out=$(armada check-for-updates)
+          grep -qxF "Up to date: 0.0.2 is the newest version." <<< "$out"
           echo "::endgroup::"
 
           echo "::group::Only the running and previous versions' files and images are kept"

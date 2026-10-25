@@ -169,7 +169,10 @@ jobs:
           set -euo pipefail
           files="$RUNNER_TEMP/release"
           bash infra/deploy/release.sh preview "$TAG" "$GITHUB_REPOSITORY" "$OWNER" "$files"
-          docker build -f infra/deploy/release.Dockerfile -t "ghcr.io/$OWNER/armada-release-preview:$TAG" "$files"
+          docker build -f infra/deploy/release.Dockerfile -t "ghcr.io/$OWNER/armada-release-preview:$TAG" \
+            --label "org.opencontainers.image.description=$(jq -r '."armada-release"' infra/deploy/image-descriptions.json)" \
+            --label "org.opencontainers.image.source=$(jq -r .repositoryUrl packages/organization-info/organization.json)" \
+            "$files"
 
       # Every image is pushed before any pointer moves, so a pointer never names a server from one
       # build and a web app or release files from another.
