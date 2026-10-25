@@ -6,14 +6,14 @@ from fastapi.testclient import TestClient
 from proto_utils.gen.server.v1.printer_service_connect import PrinterServiceASGIApplication
 
 from api.domains.printer.service import PrinterService
-from api.infrastructure.printer_server_mock import MockPrinterServer
-from api.infrastructure.stub_data import (
+from api.infrastructure.dev_data import (
     STUB_FINISHED_PRINTER_ID,
     STUB_IDLE_PRINTER_ID,
     STUB_PRINTER_QUEUE_ID,
     STUB_SUBMITTED_FILE_ID,
     stub_printers,
 )
+from api.infrastructure.printer_server_mock import MockPrinterServer
 from api.main import app
 from api.services.printer_service import PrinterServiceImplementation
 

@@ -13,6 +13,10 @@ The server is authoritative: it owns every entity's state, and its domains follo
 | `api/main.py`          | Composition root: builds infrastructure, hands it to domain services, mounts RPC handlers |
 | `api/domains/`         | Domains: a repository port and a service per domain. Every port extends a `core_domain.ddd` `Abstract*Repository` base, and its adapter inherits it; a port over state another service owns, such as printers, requests changes rather than saving |
 | `api/infrastructure/`  | The server's own persistence behind those ports, in memory until the database exists, and the adapters over plugins |
+| `api/infrastructure/enum_ids.py` | The UUID the database stores for each enum member. Never change or reuse one |
+| `api/infrastructure/dev_data.py` | The one set of development data: the in-memory repositories start with it, tests use its IDs, `dev_seed.py` writes it |
+| `migrations/`          | Alembic migrations. Foreign keys only inside a domain; enum columns are `uuid` from `enum_ids.py` |
+| `dev_seed.py`          | Writes `dev_data.py` into the development database, run by the dev stack's `migrate` service. Never run by a deployment |
 | `tests/contract/`      | What every repository adapter must do. A new adapter joins by adding its factory to `ADAPTERS` |
 | `api/plugins.py`       | Builds the plugins each deployment chose in config, such as `FILE_STORE_BACKEND` |
 | `api/services/`        | Connect handlers: translate between the wire and domain services, composing several where an RPC spans domains. No rules. `PrinterPoller` is the same kind of composer, run by the lifespan instead of a request |

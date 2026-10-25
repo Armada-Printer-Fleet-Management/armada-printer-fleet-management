@@ -18,6 +18,9 @@ dependencies = [
   "plugin-api",         # packages/plugin-api -- the ports plugins implement, such as FileStore
   "s3-file-store",      # plugins/s3-file-store -- the FileStore plugin for S3-compatible storage
   "pydantic-settings>=2.15.0,<2.16", # https://github.com/pydantic/pydantic-settings, MIT -- reads plugin settings from environment variables
+  "alembic>=1.20,<2",       # https://github.com/sqlalchemy/alembic, MIT -- versioned database migrations in migrations/
+  "sqlalchemy>=2.1,<2.2",   # https://github.com/sqlalchemy/sqlalchemy, MIT -- required by Alembic; Core builds the tables and the dev seed
+  "psycopg[binary]>=3.3,<4", # https://github.com/psycopg/psycopg, LGPL-3.0 -- the Postgres driver, sync and async
 ]
 
 [tool.uv.sources]
@@ -48,7 +51,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
-include = ["api"]
+include = ["api", "migrations", "dev_seed.py"]
 exclude = ["api/gen"]
 
 [tool.pytest.ini_options]
@@ -84,6 +87,9 @@ forbidden_modules = [
   "aioboto3",
   "aiobotocore",
   "botocore",
+  "sqlalchemy",
+  "alembic",
+  "psycopg",
 ]
 
 # Only api/infrastructure and the composition root (api.main, api.plugins) touch a plugin

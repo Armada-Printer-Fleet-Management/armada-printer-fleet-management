@@ -6,12 +6,35 @@
 name: armada-dev
 
 services:
+  # Brings the database up to the latest migration and seeds the development data, then exits.
+  # The server waits for it. After adding a migration, apply it with
+  # `docker compose -p armada-dev run --rm migrate`.
+  migrate:
+    build:
+      context: ../..
+      dockerfile: apps/server/dev.Dockerfile
+    image: armada-server-dev
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: armada
+      DB_USER: armada
+      DB_PASSWORD: ${DB_PASSWORD:?}
+    command: ['sh', '-c', 'uv run alembic upgrade head && uv run python dev_seed.py']
+    # The image's check probes the server's port, which this one-shot container never opens.
+    healthcheck:
+      disable: true
+
   server:
     build:
       context: ../..
       dockerfile: apps/server/dev.Dockerfile
     image: armada-server-dev
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       garage-s3-storage:

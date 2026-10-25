@@ -7,14 +7,14 @@ from core_domain.ids import FileId, PrinterId, PrintJobId, UserId
 from core_domain.print_job import PrintJobStatus
 
 from api.domains.print_job.service import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, PrintJobService
-from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
-from api.infrastructure.stub_data import (
+from api.infrastructure.dev_data import (
     STUB_APPROVED_JOB_ID,
     STUB_DRAFT_JOB_ID,
     STUB_PRINTER_QUEUE_ID,
     STUB_SUBMITTED_JOB_ID,
     stub_print_jobs,
 )
+from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 
 NOW = datetime(2026, 10, 7, 12, 0, tzinfo=UTC)
 
