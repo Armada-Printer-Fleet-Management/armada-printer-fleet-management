@@ -157,8 +157,9 @@ The server publishes one OpenAPI spec covering both kinds of endpoint:
   codegen and writes one document per `.proto` file into `api/gen/openapi/`.
 - **REST routes** are described by FastAPI as usual.
 
-`api/common/openapi.py` merges the two, and FastAPI serves the result at `/openapi.json`, `/docs`
-(Swagger UI, with "Try it out") and `/redoc`. The version shown is the one in `pyproject.toml`.
+`api/common/openapi.py` merges the two, and FastAPI serves the result at `/api/openapi.json`,
+`/api/docs` (Swagger UI, with "Try it out") and `/api/redoc`, under the API prefix so the deployed
+reverse proxy forwards them to the server. The version shown is the one in `pyproject.toml`.
 
 `export_openapi.py` writes the same spec into `docs/api/`, which `docs/api.html` renders. The
 pre-commit hook runs codegen and the export whenever files under `api/`, `packages/proto/`,

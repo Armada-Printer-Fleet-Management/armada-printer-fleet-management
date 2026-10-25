@@ -8,20 +8,20 @@ from api.main import app
 
 
 def test_spec_covers_rest_and_connect_routes() -> None:
-    paths = TestClient(app).get("/openapi.json").json()["paths"]
+    paths = TestClient(app).get("/api/openapi.json").json()["paths"]
 
     assert "/api/health_check" in paths
     assert "/api/server.v1.HealthCheckService/HealthCheck" in paths
 
 
 def test_spec_leaves_out_other_servers_services() -> None:
-    paths = TestClient(app).get("/openapi.json").json()["paths"]
+    paths = TestClient(app).get("/api/openapi.json").json()["paths"]
 
     assert not [path for path in paths if path.startswith("/printer_server.")]
 
 
 def test_spec_reports_the_server_version() -> None:
-    info = TestClient(app).get("/openapi.json").json()["info"]
+    info = TestClient(app).get("/api/openapi.json").json()["info"]
 
     assert info["version"] == application_info().version_string()
 
