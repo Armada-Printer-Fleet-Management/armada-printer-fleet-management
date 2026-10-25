@@ -69,6 +69,9 @@ app = FastAPI(
     title=read(organization_info_pb2.OrganizationInfo()).title,
     version=application_info().version_string(),
     lifespan=lifespan(files, background=[printer_poller.run]),
+    docs_url=f"{API_PREFIX}/docs",
+    redoc_url=f"{API_PREFIX}/redoc",
+    openapi_url=f"{API_PREFIX}/openapi.json",
 )
 app.openapi = lambda: openapi_schema(app)
 dependency_checks = {"file_storage": DependencyCheck(raising_probe(files.health_check))}

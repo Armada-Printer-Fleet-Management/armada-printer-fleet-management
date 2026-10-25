@@ -1,0 +1,11 @@
+name: testing
+variables:
+  - name: baseUrl
+    value: https://testing.armada-dev.com
+    description: ""
+  - name: printJobId
+    value: 00000000-0000-4000-8000-000000000001
+    description: ""
+  - name: fileId
+    value: 00000000-0000-0000-0000-000000000000
+    description: ""
