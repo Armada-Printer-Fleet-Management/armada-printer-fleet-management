@@ -341,6 +341,10 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Build a deploy image           | `docker build -f apps/<server|web>/deploy.Dockerfile -t armada-<server|web> .` |
 | Run server natively            | `python apps/server/dev_run.py`                                      |
 | Run server natively (hot reload) | `python apps/server/dev_run.py --dev`                              |
+| Migrate the dev database       | `docker compose -f infra/dev/compose.yaml --env-file config/compose.dev.env run --rm --build migrate` (the dev stack also runs it on start) |
+| Migrate natively               | `uv run --directory apps/server alembic upgrade head` (set `DB_*`; see `apps/server/README.md`) |
+| Seed the dev database natively | `uv run --directory apps/server python dev_seed.py` (set `DB_*`)     |
+| New migration                  | `uv run --directory apps/server alembic revision --rev-id <next number> -m "<change>"` |
 | Regenerate API docs (`docs/api/`) | `uv run --project apps/server python apps/server/export_openapi.py` (pre-commit runs it; never hand-edit `docs/api/`) |
 | Build desktop app (Windows)    | `python apps/desktop/build_run.py`                                   |
 | Build desktop installer        | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test]` |

@@ -263,14 +263,13 @@ stays in the foreground following the logs, so run it in the background. It copi
 generated code from step 5. Wait until `docker compose -p armada-dev ps` shows `db`,
 `garage-s3-storage`, `server` and `web` healthy.
 
+The stack migrates the database itself: its one-shot `migrate` service applies
+`apps/server/migrations/` and seeds the development data (`apps/server/dev_seed.py`) before the
+server starts. Confirm it with `docker compose -p armada-dev ps -a`, which shows `migrate`
+exited with code 0, and read `docker compose -p armada-dev logs migrate` if it did not.
+
 If it fails with "Ports are not available" on 5432, a Postgres installed natively on the machine
 holds that port. Set `DB_PORT` to a free port in `config/compose.dev.env` and run it again.
-
-If `alembic.ini` exists, apply migrations:
-
-```
-uv run alembic upgrade head
-```
 
 ## 8. Run the tests
 

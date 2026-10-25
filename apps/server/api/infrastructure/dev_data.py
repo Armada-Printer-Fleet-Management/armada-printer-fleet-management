@@ -1,6 +1,7 @@
-# Stub: seed data for the in-memory repositories, so a freshly started server has jobs in each
-# early status for the web and desktop apps to work against. Remove it once the server runs on
-# its real database, which seeds through migrations or fixtures instead.
+"""Development data: what the in-memory repositories start with, what the tests work against, and
+what dev_seed.py writes into the development database. One set, so every route to it agrees."""
+
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -9,8 +10,14 @@ from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserI
 from core_domain.print_job import PrintJob, PrintJobStatus
 from core_domain.printer import Printer, PrinterStatus
 from core_domain.printer_queue import PrinterQueue
+from proto_utils.gen.user.v1 import user_pb2
 
 STUB_STUDENT_ID = UserId(UUID("00000000-0000-4000-8000-000000000100"))
+STUB_STAFF_ID = UserId(UUID("00000000-0000-4000-8000-000000000101"))
+# Stub: placeholders for the users' Keycloak subjects. Replace them with real subjects once users
+# are created by signing in through Keycloak.
+_STUB_STUDENT_KEYCLOAK_ID = UUID("00000000-0000-4000-8000-000000000110")
+_STUB_STAFF_KEYCLOAK_ID = UUID("00000000-0000-4000-8000-000000000111")
 STUB_DRAFT_JOB_ID = PrintJobId(UUID("00000000-0000-4000-8000-000000000001"))
 STUB_SUBMITTED_JOB_ID = PrintJobId(UUID("00000000-0000-4000-8000-000000000002"))
 STUB_APPROVED_JOB_ID = PrintJobId(UUID("00000000-0000-4000-8000-000000000003"))
@@ -28,7 +35,47 @@ STUB_OFFLINE_PRINTER_ID = PrinterId(UUID("00000000-0000-4000-8000-000000000305")
 # The mock printer server reports this one as faulted partway through any print.
 STUB_FAULTY_PRINTER_ID = PrinterId(UUID("00000000-0000-4000-8000-000000000306"))
 STUB_PRINTER_QUEUE_ID = PrinterQueueId(UUID("00000000-0000-4000-8000-000000000401"))
+STUB_FLEET_SECTION_ID = UUID("00000000-0000-4000-8000-000000000601")
 _STUB_TIME = datetime(2026, 10, 1, 9, 0, tzinfo=UTC)
+
+
+# Users and fleet sections have no domain entity, so they are plain records only the seed reads.
+@dataclass(frozen=True)
+class StubUser:
+    id: UserId
+    keycloak_user_id: UUID
+    email: str
+    display_name: str
+    role: user_pb2.UserRole
+
+
+@dataclass(frozen=True)
+class StubFleetSection:
+    id: UUID
+    name: str
+
+
+def stub_users() -> list[StubUser]:
+    return [
+        StubUser(
+            STUB_STUDENT_ID,
+            _STUB_STUDENT_KEYCLOAK_ID,
+            "student@example.com",
+            "Stub Student",
+            user_pb2.USER_ROLE_STUDENT,
+        ),
+        StubUser(
+            STUB_STAFF_ID,
+            _STUB_STAFF_KEYCLOAK_ID,
+            "staff@example.com",
+            "Stub Staff",
+            user_pb2.USER_ROLE_STAFF,
+        ),
+    ]
+
+
+def stub_fleet_sections() -> list[StubFleetSection]:
+    return [StubFleetSection(STUB_FLEET_SECTION_ID, "Default section")]
 
 
 def stub_print_jobs() -> list[PrintJob]:

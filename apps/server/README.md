@@ -30,6 +30,9 @@ apps/server/
 ├── deploy.Dockerfile  # the image that ships, which generates its own code; see "Images"
 ├── *.Dockerfile.dockerignore  # each image's allow-list for its build context (the repo root)
 ├── dev_run.py       # runs the server natively; see "Running natively"
+├── dev_seed.py      # seeds the development database; see "Database"
+├── migrations/      # Alembic migrations of the application database; see "Database"
+├── alembic.ini      # Alembic configuration (holds no connection details)
 ├── export_openapi.py  # writes the API spec into docs/api/; see "API reference"
 ├── tests/
 │   ├── unit/
@@ -110,6 +113,40 @@ they are:
 | `FILE_STORE_BUCKET` | `GARAGE_DEFAULT_BUCKET` from `config/compose.dev.env` |
 | `FILE_STORE_ACCESS_KEY` | `GARAGE_DEFAULT_ACCESS_KEY` from `config/compose.dev.env` |
 | `FILE_STORE_SECRET_KEY` | `GARAGE_DEFAULT_SECRET_KEY` from `config/compose.dev.env` |
+
+## Database
+
+The schema lives in `migrations/`, applied by Alembic. The dev stack's `migrate` service runs
+`alembic upgrade head` and then `dev_seed.py` before the server starts, so a fresh stack comes up
+migrated and seeded. The seed only inserts rows that are missing, so rerunning it is safe, but
+it never changes a row that is already there.
+
+The development data itself is in `api/infrastructure/dev_data.py`, which the in-memory
+repositories and the tests also use. To add some, add it there, with a fixed ID; if it belongs to
+a table the seed does not write yet, add that table to `SEED` in `dev_seed.py`, after the tables
+it refers to.
+
+After adding a migration or data, apply it to the running stack from the repo root with
+`docker compose -f infra/dev/compose.yaml --env-file config/compose.dev.env run --rm --build migrate`,
+or restart the stack. To run either natively against the dev stack's Postgres, set the connection
+in your shell and run from `apps/server`:
+
+| Variable | Value |
+|---|---|
+| `DB_HOST` | `127.0.0.1`, not `localhost`: the stack publishes Postgres on IPv4 only, and `localhost` can try IPv6 first and hang |
+| `DB_PORT` | Optional; `5432`, or `DB_PORT` from `config/compose.dev.env` if set |
+| `DB_NAME` | `armada` |
+| `DB_USER` | `armada` |
+| `DB_PASSWORD` | `DB_PASSWORD` from `config/compose.dev.env` |
+
+```
+uv run alembic upgrade head
+uv run python dev_seed.py
+uv run alembic revision --rev-id 0002 -m "describe the change"   # a new, empty migration
+```
+
+Number each new revision one past the latest, so files sort in the order they apply. With `DB_*` set, `pytest` also runs `tests/integration/test_migrations.py`, which upgrades,
+seeds and downgrades a throwaway database it creates and drops itself. Without them it is skipped.
 
 Every route, REST and ConnectRPC, is served under `/api`, so Connect clients use
 `http://<host>:8000/api` as their base URL. Mount new RPC services with `mount_rpc` in
