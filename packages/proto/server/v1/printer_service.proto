@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package server.v1;
+
+import "common/v1/page.proto";
+import "id/v1/printer_id.proto";
+import "printer/v1/printer.proto";
+
+// The printers the remote server knows of, with their latest reported state.
+service PrinterService {
+  // Lists printers, one page at a time.
+  rpc ListPrinters(ListPrintersRequest) returns (ListPrintersResponse);
+  // Gets one printer.
+  rpc GetPrinter(GetPrinterRequest) returns (GetPrinterResponse);
+  // An operator changes a printer's state. The server asks the printer server, and rejects an
+  // action that is not valid from the printer's current status.
+  rpc TransitionPrinter(TransitionPrinterRequest) returns (TransitionPrinterResponse);
+}
+
+// Gets one printer.
+message GetPrinterRequest {
+  // The printer to get.
+  id.v1.PrinterId printer_id = 1;
+}
+
+// One printer.
+message GetPrinterResponse {
+  // The printer as the printer server reports it.
+  printer.v1.Printer printer = 1;
+}
+
+// Changes a printer's state through one operator action.
+message TransitionPrinterRequest {
+  // The operator cleared a FINISHED or ERROR printer, so it is IDLE and ready for its next job.
+  message Ready {}
+
+  // The printer to change.
+  id.v1.PrinterId printer_id = 1;
+  // What to do to it. Exactly one must be set.
+  oneof action {
+    // Mark ready for the next job.
+    Ready ready = 2;
+  }
+}
+
+// The printer after the change.
+message TransitionPrinterResponse {
+  // The printer as the printer server reports it.
+  printer.v1.Printer printer = 1;
+}
+
+// Lists printers.
+message ListPrintersRequest {
+  // Which page to return.
+  common.v1.PageRequest page = 1;
+}
+
+// One page of printers.
+message ListPrintersResponse {
+  // The printers.
+  repeated printer.v1.Printer printers = 1;
+  // How to get the next page.
+  common.v1.PageResponse page = 2;
+}

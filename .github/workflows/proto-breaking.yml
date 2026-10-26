@@ -1,0 +1,43 @@
+# Flags breaking changes to the proto contract against the pull request's base branch. A break
+# fails this check until the PR carries the proto-breaking-change label, which records that the
+# break is intended; the label lets it pass while still printing the break as a warning.
+name: Proto breaking changes
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    paths: ["packages/proto/**", "buf.yaml"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  breaking:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-buf
+      - name: Compare against the base branch
+        env:
+          BASE: origin/${{ github.event.pull_request.base.ref }}
+          APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'proto-breaking-change') }}
+        run: |
+          if ! git cat-file -e "$BASE:buf.yaml" 2>/dev/null; then
+            echo "No buf.yaml on $BASE yet -- nothing to compare against."
+            exit 0
+          fi
+          if buf breaking --against ".git#branch=$BASE"; then
+            exit 0
+          fi
+          if [ "$APPROVED" = "true" ]; then
+            echo "::warning::Breaking proto changes, approved by the proto-breaking-change label."
+            exit 0
+          fi
+          echo "::error::Breaking proto changes. If they are intended, add the proto-breaking-change label to this PR."
+          exit 1

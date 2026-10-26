@@ -7,6 +7,7 @@ import "file/v1/file.proto";
 import "file/v1/file_upload.proto";
 import "id/v1/print_job_id.proto";
 import "id/v1/printer_id.proto";
+import "id/v1/printer_queue_id.proto";
 import "print_job/v1/print_job.proto";
 
 // Print job intake and review, served by the remote server. A job is created first, as a
@@ -17,7 +18,8 @@ service PrintJobService {
   // Step 2, and upload pair call 1 of 2. Creates the job's file record, links it to the job,
   // and returns where to PUT the bytes (call 2 of 2). Calling it again replaces the file.
   rpc CreatePrintJobUpload(CreatePrintJobUploadRequest) returns (CreatePrintJobUploadResponse);
-  // Step 3. Submits a DRAFT job whose file has finished uploading, moving it to SUBMITTED.
+  // Step 3. Submits a DRAFT job whose file has finished uploading, moving it to SUBMITTED. The
+  // server places it in a queue.
   rpc SubmitPrintJob(SubmitPrintJobRequest) returns (SubmitPrintJobResponse);
   // Lists print jobs with their files, one page at a time.
   rpc ListPrintJobs(ListPrintJobsRequest) returns (ListPrintJobsResponse);
@@ -109,10 +111,24 @@ message TransitionPrintJobRequest {
     // Why, shown to the student. Required.
     string reason = 1;
   }
-  // Chooses the printer for an APPROVED job, moving it to ASSIGNED.
+  // Dispatches an APPROVED job to an idle printer, moving it to ASSIGNED. The server moves it
+  // to PRINTING once the printer reports the print started.
   message Assign {
     // The printer to print it on.
     id.v1.PrinterId printer_id = 1;
+  }
+  // Moves a job that is not yet assigned to another queue.
+  message MoveToQueue {
+    // The queue to move it to.
+    id.v1.PrinterQueueId printer_queue_id = 1;
+  }
+  // Staff checked the print of a FINISHED job and accept it, moving it to COMPLETED.
+  message Complete {}
+  // Staff mark an ASSIGNED, PRINTING or FINISHED job's print failed, moving it to FAILED. The
+  // printer is left as it is; an operator readies it separately.
+  message Fail {
+    // Why, shown to the student. Required.
+    string reason = 1;
   }
 
   // The job to change.
@@ -127,6 +143,12 @@ message TransitionPrintJobRequest {
     Reject reject = 4;
     // Assign to a printer.
     Assign assign = 5;
+    // Move to another queue.
+    MoveToQueue move_to_queue = 6;
+    // Confirm the finished print.
+    Complete complete = 7;
+    // Mark the print failed with a reason.
+    Fail fail = 8;
   }
 }
 

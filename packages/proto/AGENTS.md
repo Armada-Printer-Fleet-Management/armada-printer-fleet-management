@@ -58,7 +58,8 @@ agent, rather than in review.
 ## Enums
 
 - `_UNSPECIFIED = 0` and is never valid. Values are prefixed with the enum name.
-- **Append only.** Never remove or renumber a value; `buf breaking` rejects it.
+- **Append only by default.** Removing or renumbering a value is a breaking change: CI flags it,
+  and it lands only when the PR carries the `proto-breaking-change` label to confirm it is intended.
 - Mark staff-only values in their comment (`PRINT_JOB_STATUS_UNDER_REVIEW`).
 - `UserRole` is numbered from least to most access, but never compare roles numerically. Check
   for the roles a permission allows.
@@ -105,7 +106,7 @@ chosen by the caller. A retry with the same ID returns the first result.
 | Check | Command |
 | --- | --- |
 | Lint, including a comment on every element | `buf lint` |
-| No breaking change against `main` | `buf breaking --against ".git#branch=main"` |
+| No unconfirmed breaking change against `main` (CI: `proto-breaking.yml`; the `proto-breaking-change` label confirms an intended one) | `buf breaking --against ".git#branch=main"` |
 | Typed-ID and TimeStatus rules | `uv run --project packages/proto/utils pytest packages/proto/utils/tests` |
 
 Every message, field, enum, enum value, oneof, service and RPC needs a one-line `//` comment

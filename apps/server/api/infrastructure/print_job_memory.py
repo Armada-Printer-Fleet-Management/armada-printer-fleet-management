@@ -12,6 +12,8 @@ from core_domain.ddd import EntityNotFound, InvalidPageToken, Page
 from core_domain.ids import PrintJobId
 from core_domain.print_job import PrintJob
 
+from api.domains.print_job.repository import PrintJobRepository
+
 type _SortKey = tuple[datetime, UUID]
 
 
@@ -37,7 +39,7 @@ def _decode_token(token: str) -> _SortKey:
     return key
 
 
-class InMemoryPrintJobRepository:
+class InMemoryPrintJobRepository(PrintJobRepository):
     def __init__(self, print_jobs: Iterable[PrintJob] = ()) -> None:
         self._print_jobs = {print_job.id: print_job for print_job in print_jobs}
 

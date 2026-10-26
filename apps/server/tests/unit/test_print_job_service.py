@@ -11,6 +11,7 @@ from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 from api.infrastructure.stub_data import (
     STUB_APPROVED_JOB_ID,
     STUB_DRAFT_JOB_ID,
+    STUB_PRINTER_QUEUE_ID,
     STUB_SUBMITTED_JOB_ID,
     stub_print_jobs,
 )
@@ -59,12 +60,13 @@ def test_attach_new_file_then_submit(service: PrintJobService) -> None:
         return file_id
 
     asyncio.run(service.attach_new_file(STUB_DRAFT_JOB_ID, new_file))
-    asyncio.run(service.submit(STUB_DRAFT_JOB_ID, uploaded))
+    asyncio.run(service.submit(STUB_DRAFT_JOB_ID, uploaded, STUB_PRINTER_QUEUE_ID))
 
     stored = asyncio.run(service.print_job(STUB_DRAFT_JOB_ID))
-    assert (stored.status, stored.file_id, stored.updated_at) == (
+    assert (stored.status, stored.file_id, stored.printer_queue_id, stored.updated_at) == (
         PrintJobStatus.SUBMITTED,
         file_id,
+        STUB_PRINTER_QUEUE_ID,
         NOW,
     )
 
@@ -93,13 +95,13 @@ def test_submit_checks_the_upload_of_the_jobs_own_file(service: PrintJobService)
         return True
 
     asyncio.run(service.attach_new_file(STUB_DRAFT_JOB_ID, new_file))
-    asyncio.run(service.submit(STUB_DRAFT_JOB_ID, is_uploaded))
+    asyncio.run(service.submit(STUB_DRAFT_JOB_ID, is_uploaded, STUB_PRINTER_QUEUE_ID))
     assert checked == [file_id]
 
 
 def test_submit_refused_by_the_rule_saves_nothing(service: PrintJobService) -> None:
     with pytest.raises(RuleViolation):
-        asyncio.run(service.submit(STUB_DRAFT_JOB_ID, uploaded))
+        asyncio.run(service.submit(STUB_DRAFT_JOB_ID, uploaded, STUB_PRINTER_QUEUE_ID))
     assert status(service, STUB_DRAFT_JOB_ID) is PrintJobStatus.DRAFT
 
 
@@ -132,12 +134,37 @@ def test_reject_saves_the_reason(service: PrintJobService) -> None:
     assert (stored.status, stored.status_reason) == (PrintJobStatus.REJECTED, "Too large")
 
 
+async def dispatched() -> bool:
+    return True
+
+
 def test_assign_saves_the_printer(service: PrintJobService) -> None:
     printer_id = PrinterId.new()
-    asyncio.run(service.assign(STUB_APPROVED_JOB_ID, printer_id))
+    asyncio.run(service.assign(STUB_APPROVED_JOB_ID, printer_id, dispatched))
 
     stored = asyncio.run(service.print_job(STUB_APPROVED_JOB_ID))
     assert (stored.status, stored.printer_id) == (PrintJobStatus.ASSIGNED, printer_id)
+
+
+def test_assign_never_dispatches_a_job_that_is_not_approved(service: PrintJobService) -> None:
+    calls: list[None] = []
+
+    async def dispatch() -> bool:
+        calls.append(None)
+        return True
+
+    with pytest.raises(RuleViolation):
+        asyncio.run(service.assign(STUB_SUBMITTED_JOB_ID, PrinterId.new(), dispatch))
+    assert calls == []
+
+
+def test_assign_saves_nothing_when_the_printer_refuses(service: PrintJobService) -> None:
+    async def refuse() -> bool:
+        raise RuleViolation("A PRINTING printer cannot take a print job")
+
+    with pytest.raises(RuleViolation):
+        asyncio.run(service.assign(STUB_APPROVED_JOB_ID, PrinterId.new(), refuse))
+    assert status(service, STUB_APPROVED_JOB_ID) is PrintJobStatus.APPROVED
 
 
 @pytest.mark.parametrize(

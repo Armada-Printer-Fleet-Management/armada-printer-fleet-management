@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package server.v1;
+
+import "common/v1/page.proto";
+import "id/v1/printer_queue_id.proto";
+import "printer_queue/v1/printer_queue.proto";
+
+// The queues print jobs wait in, served by the remote server.
+service PrinterQueueService {
+  // Lists queues, one page at a time.
+  rpc ListPrinterQueues(ListPrinterQueuesRequest) returns (ListPrinterQueuesResponse);
+  // Gets one queue.
+  rpc GetPrinterQueue(GetPrinterQueueRequest) returns (GetPrinterQueueResponse);
+}
+
+// Gets one queue.
+message GetPrinterQueueRequest {
+  // The queue to get.
+  id.v1.PrinterQueueId printer_queue_id = 1;
+}
+
+// One queue.
+message GetPrinterQueueResponse {
+  // The queue.
+  printer_queue.v1.PrinterQueue printer_queue = 1;
+}
+
+// Lists queues.
+message ListPrinterQueuesRequest {
+  // Which page to return.
+  common.v1.PageRequest page = 1;
+}
+
+// The queues returned for the requested page, and the token for the page after it.
+message ListPrinterQueuesResponse {
+  // The queues.
+  repeated printer_queue.v1.PrinterQueue printer_queues = 1;
+  // How to get the next page.
+  common.v1.PageResponse page = 2;
+}

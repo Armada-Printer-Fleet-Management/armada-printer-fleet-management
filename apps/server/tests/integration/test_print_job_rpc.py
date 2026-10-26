@@ -1,7 +1,7 @@
 import asyncio
 import hashlib
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -15,21 +15,33 @@ from proto_utils.gen.server.v1.print_job_service_connect import PrintJobServiceA
 from api.common.consts import API_PREFIX
 from api.domains.file.service import FileService
 from api.domains.print_job.service import PrintJobService
+from api.domains.printer.service import PrinterService
+from api.domains.printer_queue.service import PrinterQueueService
 from api.infrastructure.file_memory import InMemoryFileRepository
 from api.infrastructure.file_store_files import FileStoreFiles
 from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
+from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
+from api.infrastructure.printer_server_mock import STEP, MockPrinterServer
 from api.infrastructure.stub_data import (
+    STUB_APPROVED_FILE_ID,
     STUB_APPROVED_JOB_ID,
     STUB_DRAFT_JOB_ID,
+    STUB_FINISHED_JOB_ID,
+    STUB_IDLE_PRINTER_ID,
+    STUB_PRINTER_QUEUE_ID,
+    STUB_PRINTING_JOB_ID,
     STUB_STUDENT_ID,
     STUB_SUBMITTED_FILE_ID,
     STUB_SUBMITTED_JOB_ID,
     stub_files,
     stub_print_jobs,
+    stub_printer_queues,
+    stub_printers,
 )
 from api.main import app
 from api.routers.file import file_router, upload_path
 from api.services.print_job_service import PrintJobServiceImplementation
+from api.services.printer_poller import PrinterPoller
 from tests.fakes import MemoryFileStore
 
 _RPC = "/server.v1.PrintJobService"
@@ -55,18 +67,27 @@ def client() -> TestClient:
 
 
 def _client(files: list[File], clock: Callable[[], datetime]) -> TestClient:
+    return _client_and_poller(files, clock)[0]
+
+
+def _client_and_poller(
+    files: list[File], clock: Callable[[], datetime]
+) -> tuple[TestClient, PrinterPoller]:
     """Serves the file routes beside the RPC, so an upload_url can be PUT to."""
     storage = FileStoreFiles(MemoryFileStore)
     asyncio.run(storage.__aenter__())
     print_jobs = PrintJobService(InMemoryPrintJobRepository(stub_print_jobs()), clock)
     file_service = FileService(InMemoryFileRepository(files), storage, clock)
+    printers = PrinterService(MockPrinterServer(stub_printers(), clock))
+    printer_queues = PrinterQueueService(InMemoryPrinterQueueRepository(stub_printer_queues()))
     handler = PrintJobServiceImplementation(
-        print_jobs, file_service, caller=lambda: STUB_STUDENT_ID
+        print_jobs, file_service, printers, printer_queues, caller=lambda: STUB_STUDENT_ID
     )
     rest = FastAPI()
     rest.include_router(file_router(file_service), prefix=API_PREFIX)
     rest.mount("/", PrintJobServiceASGIApplication(handler))
-    return TestClient(rest)
+    poller = PrinterPoller(printers, print_jobs, timedelta(seconds=1))
+    return TestClient(rest), poller
 
 
 def _id(entity_id: object) -> dict[str, str]:
@@ -120,7 +141,9 @@ def test_get_print_job_rejects_a_malformed_id(client: TestClient) -> None:
     assert body == {"code": "invalid_argument", "message": "print_job_id must be a UUID"}
 
 
-def test_a_job_goes_from_creation_to_a_printer(client: TestClient) -> None:
+def test_a_job_goes_from_creation_to_completed() -> None:
+    now = [datetime(2026, 10, 7, 12, 0, tzinfo=UTC)]
+    client, poller = _client_and_poller(stub_files(), lambda: now[0])
     created = call(client, "CreatePrintJob", {"userNotes": "Please use PLA"})["printJob"]
     assert created["status"] == "PRINT_JOB_STATUS_DRAFT"
     assert created["userId"] == _id(STUB_STUDENT_ID)
@@ -133,15 +156,50 @@ def test_a_job_goes_from_creation_to_a_printer(client: TestClient) -> None:
 
     submitted = call(client, "SubmitPrintJob", job)
     assert submitted["printJob"]["status"] == "PRINT_JOB_STATUS_SUBMITTED"
+    assert submitted["printJob"]["printerQueueId"] == _id(STUB_PRINTER_QUEUE_ID)
     assert submitted["file"]["id"] == slot["fileId"]
 
     call(client, "TransitionPrintJob", {**job, "startReview": {}})
     call(client, "TransitionPrintJob", {**job, "approve": {}})
-    printer = _id("00000000-0000-4000-8000-000000000301")
+    printer = _id(STUB_IDLE_PRINTER_ID)
     assigned = call(client, "TransitionPrintJob", {**job, "assign": {"printerId": printer}})
-
     assert assigned["printJob"]["status"] == "PRINT_JOB_STATUS_ASSIGNED"
     assert assigned["printJob"]["printerId"] == printer
+
+    asyncio.run(poller.poll())
+    assert call(client, "GetPrintJob", job)["printJob"]["status"] == "PRINT_JOB_STATUS_PRINTING"
+    refused = call(client, "TransitionPrintJob", {**job, "complete": {}}, expect=400)
+    assert refused["code"] == "failed_precondition"
+
+    now[0] += STEP * 4
+    asyncio.run(poller.poll())
+    assert call(client, "GetPrintJob", job)["printJob"]["status"] == "PRINT_JOB_STATUS_FINISHED"
+    completed = call(client, "TransitionPrintJob", {**job, "complete": {}})
+    assert completed["printJob"]["status"] == "PRINT_JOB_STATUS_COMPLETED"
+
+
+def test_assign_refused_by_a_busy_printer(client: TestClient) -> None:
+    busy = _id(STUB_IDLE_PRINTER_ID)
+    call(
+        client,
+        "TransitionPrintJob",
+        {"printJobId": _id(STUB_APPROVED_JOB_ID), "assign": {"printerId": busy}},
+    )
+    call(
+        client, "TransitionPrintJob", {"printJobId": _id(STUB_SUBMITTED_JOB_ID), "startReview": {}}
+    )
+    call(client, "TransitionPrintJob", {"printJobId": _id(STUB_SUBMITTED_JOB_ID), "approve": {}})
+
+    second = {"printJobId": _id(STUB_SUBMITTED_JOB_ID), "assign": {"printerId": busy}}
+    assert call(client, "TransitionPrintJob", second, expect=400)["code"] == "failed_precondition"
+    unchanged = call(client, "GetPrintJob", {"printJobId": _id(STUB_SUBMITTED_JOB_ID)})
+    assert unchanged["printJob"]["status"] == "PRINT_JOB_STATUS_APPROVED"
+
+
+def test_move_to_queue_refuses_an_unknown_queue(client: TestClient) -> None:
+    unknown = {"value": "00000000-0000-4000-8000-0000000004ff"}
+    job = {"printJobId": _id(STUB_APPROVED_JOB_ID), "moveToQueue": {"printerQueueId": unknown}}
+    assert call(client, "TransitionPrintJob", job, expect=404)["code"] == "not_found"
 
 
 def test_upload_url_is_https_behind_a_proxy_that_terminates_it(client: TestClient) -> None:
@@ -228,16 +286,33 @@ def test_transition_requires_an_action(client: TestClient) -> None:
 
 
 def test_list_pages_through_every_job_with_its_files(client: TestClient) -> None:
-    first = call(client, "ListPrintJobs", {"page": {"pageSize": 2}})
+    first = call(client, "ListPrintJobs", {"page": {"pageSize": 3}})
     token = first["page"]["nextPageToken"]
-    second = call(client, "ListPrintJobs", {"page": {"pageSize": 2, "pageToken": token}})
+    second = call(client, "ListPrintJobs", {"page": {"pageSize": 3, "pageToken": token}})
 
     ids = [job["id"] for page in (first, second) for job in page["printJobs"]]
-    assert ids == [_id(STUB_DRAFT_JOB_ID), _id(STUB_SUBMITTED_JOB_ID), _id(STUB_APPROVED_JOB_ID)]
-    assert [file["id"] for file in first["files"]] == [_id(STUB_SUBMITTED_FILE_ID)]
+    assert ids == [
+        _id(STUB_DRAFT_JOB_ID),
+        _id(STUB_SUBMITTED_JOB_ID),
+        _id(STUB_APPROVED_JOB_ID),
+        _id(STUB_PRINTING_JOB_ID),
+        _id(STUB_FINISHED_JOB_ID),
+    ]
+    assert {file["id"]["value"] for file in first["files"]} == {
+        str(STUB_SUBMITTED_FILE_ID),
+        str(STUB_APPROVED_FILE_ID),
+    }
     assert "nextPageToken" not in second.get("page", {})
 
 
 def test_list_rejects_a_bad_page_token(client: TestClient) -> None:
     body = call(client, "ListPrintJobs", {"page": {"pageToken": "nope"}}, expect=400)
     assert body["code"] == "invalid_argument"
+
+
+def test_staff_fail_a_printing_job_with_a_reason(client: TestClient) -> None:
+    job = {"printJobId": _id(STUB_PRINTING_JOB_ID)}
+    body = call(client, "TransitionPrintJob", {**job, "fail": {"reason": "Spaghetti at layer 40"}})
+
+    assert body["printJob"]["status"] == "PRINT_JOB_STATUS_FAILED"
+    assert body["printJob"]["statusReason"] == "Spaghetti at layer 40"

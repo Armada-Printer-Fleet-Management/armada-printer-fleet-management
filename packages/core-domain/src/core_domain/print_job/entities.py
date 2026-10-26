@@ -4,7 +4,7 @@ from enum import Enum, auto
 from typing import Self
 
 from core_domain.ddd import Entity, RuleViolation
-from core_domain.ids import FileId, PrinterId, PrintJobId, QueueId, UserId
+from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserId
 
 
 class PrintJobStatus(Enum):
@@ -17,6 +17,7 @@ class PrintJobStatus(Enum):
     REJECTED = auto()
     ASSIGNED = auto()
     PRINTING = auto()
+    FINISHED = auto()
     COMPLETED = auto()
     FAILED = auto()
     CANCELLED = auto()
@@ -33,7 +34,7 @@ class PrintJob(Entity[PrintJobId]):
     created_at: datetime
     updated_at: datetime
     user_notes: str = ""
-    queue_id: QueueId | None = None
+    printer_queue_id: PrinterQueueId | None = None
     file_id: FileId | None = None
     status_reason: str | None = None
     printer_id: PrinterId | None = None
@@ -57,12 +58,26 @@ class PrintJob(Entity[PrintJobId]):
     def can_submit(self, file_uploaded: bool) -> bool:
         return self.status is PrintJobStatus.DRAFT and self.file_id is not None and file_uploaded
 
-    def submit(self, file_uploaded: bool, now: datetime) -> None:
+    def submit(self, file_uploaded: bool, printer_queue_id: PrinterQueueId, now: datetime) -> None:
         if self.status is not PrintJobStatus.DRAFT:
             raise RuleViolation(f"A {self.status.name} print job cannot be submitted")
         if not self.can_submit(file_uploaded):
             raise RuleViolation("A print job cannot be submitted until its file is uploaded")
         self.status = PrintJobStatus.SUBMITTED
+        self.printer_queue_id = printer_queue_id
+        self.updated_at = now
+
+    def can_move_to_queue(self) -> bool:
+        return self.status in (
+            PrintJobStatus.SUBMITTED,
+            PrintJobStatus.UNDER_REVIEW,
+            PrintJobStatus.APPROVED,
+        )
+
+    def move_to_queue(self, printer_queue_id: PrinterQueueId, now: datetime) -> None:
+        if not self.can_move_to_queue():
+            raise RuleViolation(f"A {self.status.name} print job cannot change queue")
+        self.printer_queue_id = printer_queue_id
         self.updated_at = now
 
     def can_start_review(self) -> bool:
@@ -98,9 +113,66 @@ class PrintJob(Entity[PrintJobId]):
     def can_assign(self) -> bool:
         return self.status is PrintJobStatus.APPROVED
 
-    def assign(self, printer_id: PrinterId, now: datetime) -> None:
+    def require_can_assign(self) -> None:
         if not self.can_assign():
             raise RuleViolation(f"A {self.status.name} print job cannot be assigned")
+
+    def assign(self, printer_id: PrinterId, dispatched: bool, now: datetime) -> None:
+        """dispatched is the printer server's confirmation that it accepted the job."""
+        self.require_can_assign()
+        if not dispatched:
+            raise RuleViolation("A print job cannot be assigned until its printer accepts it")
         self.status = PrintJobStatus.ASSIGNED
         self.printer_id = printer_id
+        self.updated_at = now
+
+    def can_start_printing(self, printer_printing: bool) -> bool:
+        return self.status is PrintJobStatus.ASSIGNED and printer_printing
+
+    def start_printing(self, printer_printing: bool, now: datetime) -> None:
+        """printer_printing is the printer server's report that this job's print started."""
+        if self.status is not PrintJobStatus.ASSIGNED:
+            raise RuleViolation(f"A {self.status.name} print job cannot start printing")
+        if not printer_printing:
+            raise RuleViolation("A print job cannot start printing until its printer reports it")
+        self.status = PrintJobStatus.PRINTING
+        self.updated_at = now
+
+    def can_finish(self, printer_finished: bool) -> bool:
+        return self.status is PrintJobStatus.PRINTING and printer_finished
+
+    def finish(self, printer_finished: bool, now: datetime) -> None:
+        """printer_finished is the printer server's report that this job's print ended."""
+        if self.status is not PrintJobStatus.PRINTING:
+            raise RuleViolation(f"A {self.status.name} print job cannot finish")
+        if not printer_finished:
+            raise RuleViolation("A print job cannot finish until its printer reports it")
+        self.status = PrintJobStatus.FINISHED
+        self.updated_at = now
+
+    def can_complete(self) -> bool:
+        return self.status is PrintJobStatus.FINISHED
+
+    def complete(self, now: datetime) -> None:
+        """Staff checked the finished print and accept it; a printer never completes a job."""
+        if not self.can_complete():
+            raise RuleViolation(f"A {self.status.name} print job cannot be completed")
+        self.status = PrintJobStatus.COMPLETED
+        self.updated_at = now
+
+    def can_fail(self) -> bool:
+        return self.status in (
+            PrintJobStatus.ASSIGNED,
+            PrintJobStatus.PRINTING,
+            PrintJobStatus.FINISHED,
+        )
+
+    def fail(self, reason: str, now: datetime) -> None:
+        """Staff decide a print failed; a printer reporting an error never fails a job itself."""
+        if not self.can_fail():
+            raise RuleViolation(f"A {self.status.name} print job cannot be failed")
+        if not reason.strip():
+            raise RuleViolation("A print job cannot be failed without a reason")
+        self.status = PrintJobStatus.FAILED
+        self.status_reason = reason
         self.updated_at = now
