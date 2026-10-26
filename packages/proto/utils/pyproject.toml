@@ -2,7 +2,7 @@
 name = "proto-utils"
 version = "0.1.0"
 description = "The Python boundary edge: code generated from packages/proto, plus the mappers between it and core-domain's entities. Used by every Python app."
-requires-python = ">=3.13"
+requires-python = "==3.13.*"
 dependencies = [
   "protobuf>=7,<8",
   "connectrpc>=0.12.1,<0.13",  # https://github.com/connectrpc/connect-py, Apache-2.0 -- runtime for the generated Connect code

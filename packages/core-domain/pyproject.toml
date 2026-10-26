@@ -2,7 +2,7 @@
 name = "core-domain"
 version = "0.1.0"
 description = "Domain entities, their rules, and the generic DDD bases every Python app builds its domains on. No I/O, no framework."
-requires-python = ">=3.13"
+requires-python = "==3.13.*"
 dependencies = []
 
 [dependency-groups]

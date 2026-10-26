@@ -2,7 +2,7 @@
 name = "organization-info"
 version = "0.1.0"
 description = "Reads packages/organization-info/organization.json, the identity shared by every application."
-requires-python = ">=3.13"
+requires-python = "==3.13.*"
 dependencies = [
   "protobuf>=7,<8",
 ]

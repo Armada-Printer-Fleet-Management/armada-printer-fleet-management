@@ -2,7 +2,7 @@
 name = "s3-file-store"
 version = "0.1.0"
 description = "Access layer implementation of FileStore plugin for communicating with garage-s3-storage"
-requires-python = ">=3.13"
+requires-python = "==3.13.*"
 
 dependencies = [
   "plugin-api",
