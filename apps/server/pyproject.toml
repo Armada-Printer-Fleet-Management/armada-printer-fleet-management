@@ -1,7 +1,7 @@
 [project]
 name = "backend-server"
 # major.minor.maintenance, optionally -postfix (e.g. "0.1.0-rc1") for special releases
-version = "0.1.4"
+version = "0.1.5"
 description = "Hosted server for handling requests from the frontend webapp"
 readme = "README.md"
 requires-python = "==3.13.*"
@@ -19,7 +19,7 @@ dependencies = [
   "s3-file-store",      # plugins/s3-file-store -- the FileStore plugin for S3-compatible storage
   "pydantic-settings>=2.15.0,<2.16", # https://github.com/pydantic/pydantic-settings, MIT -- reads plugin settings from environment variables
   "alembic>=1.20,<2",       # https://github.com/sqlalchemy/alembic, MIT -- versioned database migrations in migrations/
-  "sqlalchemy>=2.1,<2.2",   # https://github.com/sqlalchemy/sqlalchemy, MIT -- required by Alembic; Core builds the tables and the dev seed
+  "sqlalchemy[asyncio]>=2.1,<2.2", # https://github.com/sqlalchemy/sqlalchemy, MIT -- required by Alembic; Core builds the tables and the dev seed, and is the server's async connection (asyncio adds greenlet)
   "psycopg[binary]>=3.3,<4", # https://github.com/psycopg/psycopg, LGPL-3.0 -- the Postgres driver, sync and async
 ]
 

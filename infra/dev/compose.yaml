@@ -47,6 +47,10 @@ services:
       FILE_STORE_BUCKET: ${GARAGE_DEFAULT_BUCKET:?}
       FILE_STORE_ACCESS_KEY: ${GARAGE_DEFAULT_ACCESS_KEY:?}
       FILE_STORE_SECRET_KEY: ${GARAGE_DEFAULT_SECRET_KEY:?}
+      DB_HOST: db
+      DB_NAME: armada
+      DB_USER: armada
+      DB_PASSWORD: ${DB_PASSWORD:?}
     ports:
       - 127.0.0.1:8000:8000
     develop:

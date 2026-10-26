@@ -1,6 +1,6 @@
 import asyncio
 from collections.abc import AsyncGenerator, Callable, Coroutine, Iterable
-from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from contextlib import AbstractAsyncContextManager, AsyncExitStack, asynccontextmanager
 
 import structlog
 from fastapi import FastAPI
@@ -12,7 +12,7 @@ logger = structlog.stdlib.get_logger(__name__)
 
 
 def lifespan(
-    infrastructure: AbstractAsyncContextManager[object],
+    infrastructure: Iterable[AbstractAsyncContextManager[object]],
     background: Iterable[Callable[[], Coroutine[object, object, None]]] = (),
 ) -> Callable[[FastAPI], AbstractAsyncContextManager[None]]:
     """Startup and shutdown: configures logging, keeps the infrastructure open while serving, and
@@ -26,7 +26,9 @@ def lifespan(
             version=application_info().version_string(),
             log_format=log_format(),
         )
-        async with infrastructure:
+        async with AsyncExitStack() as stack:
+            for each in infrastructure:
+                await stack.enter_async_context(each)
             tasks = [asyncio.create_task(task()) for task in background]
             try:
                 yield
