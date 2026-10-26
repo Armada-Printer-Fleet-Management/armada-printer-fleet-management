@@ -334,7 +334,7 @@ Explanations of decisions belong in the commit message and its ticket, not in co
 | Run desktop app (hot reload)   | `python apps/desktop/dev_run.py --dev`                               |
 | Server Python deps             | `uv sync --project apps/server`                                      |
 | Server tests                   | `uv run --directory apps/server pytest`                                |
-| Run dev stack (Docker, live reload) | `python scripts/compose_run.py dev` (server, web, Postgres, Garage) |
+| Run dev stack (Docker, live reload) | `python scripts/compose_run.py dev` (server, web, Postgres, Garage, Keycloak) |
 | Stop dev stack                 | `python scripts/compose_run.py dev down`                             |
 | Run deploy stack locally       | `python scripts/compose_run.py deploy --domain :80 --admin-email <email>` (builds the deploy images first) |
 | Stop deploy stack              | `python scripts/compose_run.py deploy down` (never add `-v`)         |

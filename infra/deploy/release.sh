@@ -19,7 +19,7 @@ channel=$1 version=$2 repository=$3 owner=$4 out=$5
 deploy=$(cd "$(dirname "$0")" && pwd)
 
 mkdir -p "$out"
-cp "$deploy/compose.yaml" "$deploy/garage.toml" "$deploy/armada" \
+cp "$deploy/compose.yaml" "$deploy/garage.toml" "$deploy/armada-realm.json" "$deploy/armada" \
   "$deploy/systemd/armada-update.service" "$deploy/systemd/armada-update.timer" "$out/"
 sed -e "s|@ARMADA_CHANNEL@|$channel|g" \
   -e "s|@ARMADA_VERSION@|$version|g" \
@@ -29,6 +29,6 @@ sed -e "s|@ARMADA_CHANNEL@|$channel|g" \
 printf '%s\n' "$version" >"$out/VERSION"
 (
   cd "$out"
-  sha256sum compose.yaml garage.toml armada armada-update.service armada-update.timer install.sh \
+  sha256sum compose.yaml garage.toml armada-realm.json armada armada-update.service armada-update.timer install.sh \
     VERSION >SHA256SUMS
 )

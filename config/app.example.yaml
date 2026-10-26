@@ -11,9 +11,9 @@ server_url: "http://localhost:8000"
 identity:
   # OIDC issuer discovery URL. Any standards-compliant provider works.
   # Required. Obtain from your identity provider's admin console.
-  issuer: "http://localhost:8080/.well-known/openid-configuration"
+  issuer: "http://localhost:5174/auth/realms/armada/.well-known/openid-configuration"
   # Public client identifier issued by that provider. Required. Not a secret.
-  client_id: "REPLACE_ME"
+  client_id: "armada-web"
   # Claim used to correlate an authenticated user with an existing account.
   # Required. Common values: "sub", "oid", "email".
   external_id_claim: "sub"

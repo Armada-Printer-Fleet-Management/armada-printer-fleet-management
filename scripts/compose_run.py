@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Starts or stops a whole Armada stack in Docker.
 
-    dev     server and web with live reload, plus Postgres and Garage (infra/dev/compose.yaml)
+    dev     server and web with live reload, plus Postgres, Garage and Keycloak
+            (infra/dev/compose.yaml)
     deploy  the deployment stack (infra/deploy/compose.yaml), from deploy images built and tagged
             here rather than pulled; the deploy workflow runs it the same way before pushing
 
@@ -51,8 +52,10 @@ GENERATED: dict[str, Callable[[], str]] = {
     "GARAGE_RPC_SECRET": lambda: secrets.token_hex(32),
     "GARAGE_DEFAULT_ACCESS_KEY": lambda: "GK" + secrets.token_hex(16),
     "GARAGE_DEFAULT_SECRET_KEY": lambda: secrets.token_hex(32),
+    "KEYCLOAK_DB_PASSWORD": lambda: secrets.token_hex(16),
+    "KEYCLOAK_ADMIN_PASSWORD": lambda: secrets.token_hex(16),
 }
-DEFAULTS = {"GARAGE_DEFAULT_BUCKET": "armada"}
+DEFAULTS = {"GARAGE_DEFAULT_BUCKET": "armada", "KEYCLOAK_ADMIN_USERNAME": "admin"}
 DEPLOY_DEFAULTS = {"GHCR_OWNER": "local", "VERSION": "dev"}
 
 
