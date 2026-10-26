@@ -2,7 +2,7 @@
 name = "plugin-api"
 version = "0.1.0"
 description = "Defines generalized protocols for plugins.  Concrete implementations are handled in plugins"
-requires-python = ">=3.13"
+requires-python = "==3.13.*"
 
 [dependency-groups]
 dev = [

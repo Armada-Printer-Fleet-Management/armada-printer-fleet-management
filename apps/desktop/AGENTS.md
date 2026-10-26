@@ -22,7 +22,7 @@ Never import from `apps/web/`. Share UI through `packages/ui-kit/`.
 
 | Layer     | Stack                                                                                 |
 | --------- | ------------------------------------------------------------------------------------- |
-| Backend   | Python >=3.13, pywebview >=6.2,<7, protobuf >=7,<8, connectrpc >=0.12.1,<0.13, packaging, pyyaml >=6.0.3,<7; uv + hatchling |
+| Backend   | Python ==3.13.*, pywebview >=6.2,<7, protobuf >=7,<8, connectrpc >=0.12.1,<0.13, packaging, pyyaml >=6.0.3,<7; uv + hatchling |
 | Frontend  | React 19, TypeScript 5 (strict, `noUncheckedIndexedAccess`), Vite 6, @bufbuild/protobuf 2; pnpm 12.3.4 |
 | Contract  | `packages/proto/` via buf; `protoc` for Python, `protoc-gen-es` for TypeScript       |
 | Quality   | ruff, pyright strict; ESLint 9 + typescript-eslint 8                                  |

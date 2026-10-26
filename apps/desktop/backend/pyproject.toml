@@ -3,7 +3,7 @@ name = "backend"
 # major.minor.maintenance, optionally -postfix (e.g. "0.1.0-rc1") for special releases
 version = "0.1.0-alpha"
 description = "The desktop application's Python backend: opens the native window and bridges IPC to the frontend."
-requires-python = ">=3.13"
+requires-python = "==3.13.*"
 dependencies = [
   "pywebview>=6.2,<7",  # https://github.com/r0x0r/pywebview, BSD-3-Clause
   "protobuf>=7,<8",     # runtime for the buf-generated _pb2 classes; must track protoc's own version line

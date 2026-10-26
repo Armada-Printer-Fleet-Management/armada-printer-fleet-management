@@ -4,7 +4,7 @@ name = "backend-server"
 version = "0.1.4"
 description = "Hosted server for handling requests from the frontend webapp"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = "==3.13.*"
 dependencies = [
   "fastapi>=0.141,<1",        # https://github.com/fastapi/fastapi, MIT -- REST routes that don't fit the ConnectRPC model
   "uvicorn[standard]>=0.53,<1", # https://github.com/encode/uvicorn, BSD-3-Clause -- ASGI server for api.main:app

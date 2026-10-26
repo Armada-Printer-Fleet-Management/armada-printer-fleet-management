@@ -31,7 +31,7 @@ Report the version of each, and stop with installation guidance if one is missin
 |---|---|
 | Git | `git --version` |
 | Node | `node --version` (22.22 or newer) |
-| Python | `python --version` (3.13 or newer) |
+| Python | `python --version` (3.13; newer versions are not supported until every dependency ships wheels for them) |
 | Docker | `docker --version` |
 
 **Bruno is optional.** It's the desktop app used to exercise the server's API by hand from
