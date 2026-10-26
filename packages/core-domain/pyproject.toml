@@ -47,7 +47,7 @@ root_package = "core_domain"
 name = "Domains -> ids -> ddd"
 type = "layers"
 layers = [
-  "core_domain.print_job",
+  "core_domain.print_job | core_domain.printer | core_domain.printer_queue",
   "core_domain.ids",
   "core_domain.ddd",
 ]

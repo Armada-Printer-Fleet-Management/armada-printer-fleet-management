@@ -2,7 +2,7 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime
 
 from core_domain.ddd import Page, Service, change_async
-from core_domain.ids import FileId, PrinterId, PrintJobId, UserId
+from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserId
 from core_domain.print_job import PrintJob
 
 from api.domains.print_job.repository import PrintJobRepository
@@ -42,15 +42,19 @@ class PrintJobService(Service[PrintJobRepository]):
         return await change_async(self._repository, print_job_id, rule)
 
     async def submit(
-        self, print_job_id: PrintJobId, is_uploaded: Callable[[FileId], Awaitable[bool]]
+        self,
+        print_job_id: PrintJobId,
+        is_uploaded: Callable[[FileId], Awaitable[bool]],
+        printer_queue_id: PrinterQueueId,
     ) -> PrintJob:
-        """Submits the job, checking the upload of the file on the same copy that is saved."""
+        """Submits the job into the queue, checking the upload of the file on the same copy that
+        is saved."""
         now = self._clock()
 
         async def rule(print_job: PrintJob) -> None:
             file_id = print_job.file_id
             uploaded = file_id is not None and await is_uploaded(file_id)
-            print_job.submit(uploaded, now)
+            print_job.submit(uploaded, printer_queue_id, now)
 
         return await change_async(self._repository, print_job_id, rule)
 
@@ -72,8 +76,56 @@ class PrintJobService(Service[PrintJobRepository]):
             self._repository, print_job_id, lambda print_job: print_job.reject(reason, now)
         )
 
-    async def assign(self, print_job_id: PrintJobId, printer_id: PrinterId) -> PrintJob:
+    async def assign(
+        self,
+        print_job_id: PrintJobId,
+        printer_id: PrinterId,
+        dispatch: Callable[[], Awaitable[bool]],
+    ) -> PrintJob:
+        """Assigns the job once dispatch confirms the printer accepted it. dispatch is called only
+        once the job is known to be assignable, so a refused job never reaches a printer."""
+        now = self._clock()
+
+        async def rule(print_job: PrintJob) -> None:
+            print_job.require_can_assign()
+            print_job.assign(printer_id, await dispatch(), now)
+
+        return await change_async(self._repository, print_job_id, rule)
+
+    async def start_printing(self, print_job_id: PrintJobId, printer_printing: bool) -> PrintJob:
         now = self._clock()
         return await change_async(
-            self._repository, print_job_id, lambda print_job: print_job.assign(printer_id, now)
+            self._repository,
+            print_job_id,
+            lambda print_job: print_job.start_printing(printer_printing, now),
+        )
+
+    async def finish(self, print_job_id: PrintJobId, printer_finished: bool) -> PrintJob:
+        now = self._clock()
+        return await change_async(
+            self._repository,
+            print_job_id,
+            lambda print_job: print_job.finish(printer_finished, now),
+        )
+
+    async def complete(self, print_job_id: PrintJobId) -> PrintJob:
+        now = self._clock()
+        return await change_async(
+            self._repository, print_job_id, lambda print_job: print_job.complete(now)
+        )
+
+    async def fail(self, print_job_id: PrintJobId, reason: str) -> PrintJob:
+        now = self._clock()
+        return await change_async(
+            self._repository, print_job_id, lambda print_job: print_job.fail(reason, now)
+        )
+
+    async def move_to_queue(
+        self, print_job_id: PrintJobId, printer_queue_id: PrinterQueueId
+    ) -> PrintJob:
+        now = self._clock()
+        return await change_async(
+            self._repository,
+            print_job_id,
+            lambda print_job: print_job.move_to_queue(printer_queue_id, now),
         )

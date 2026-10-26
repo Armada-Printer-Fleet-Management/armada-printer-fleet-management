@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
 import pytest
-from core_domain.ids import FileId, PrinterId, PrintJobId, QueueId, UserId
+from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserId
 from core_domain.print_job import PrintJob, PrintJobStatus
 
 from proto_utils.gen.print_job.v1 import print_job_pb2
@@ -18,7 +18,7 @@ def every_field_set() -> PrintJob:
         created_at=TIME,
         updated_at=TIME,
         user_notes="notes",
-        queue_id=QueueId.new(),
+        printer_queue_id=PrinterQueueId.new(),
         file_id=FileId.new(),
         status_reason="reason",
         printer_id=PrinterId.new(),

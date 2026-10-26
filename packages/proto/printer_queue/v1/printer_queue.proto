@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package printer_queue.v1;
+
+import "common/v1/time_status.proto";
+import "id/v1/printer_queue_id.proto";
+
+// A line of print jobs waiting for a printer.
+message PrinterQueue {
+  // This queue.
+  id.v1.PrinterQueueId id = 1;
+  // Display name.
+  string name = 2;
+  // Whether it accepts new jobs.
+  bool is_active = 3;
+  // When the queue was created and last changed.
+  common.v1.TimeStatus time_status = 4;
+}

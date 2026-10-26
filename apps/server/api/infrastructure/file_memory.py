@@ -8,8 +8,10 @@ from core_domain.ddd import EntityNotFound
 from core_domain.file import File
 from core_domain.ids import FileId
 
+from api.domains.file.repository import FileRepository
 
-class InMemoryFileRepository:
+
+class InMemoryFileRepository(FileRepository):
     def __init__(self, files: Iterable[File] = ()) -> None:
         self._files = {file.id: file for file in files}
 

@@ -6,7 +6,7 @@ import "common/v1/time_status.proto";
 import "id/v1/file_id.proto";
 import "id/v1/print_job_id.proto";
 import "id/v1/printer_id.proto";
-import "id/v1/queue_id.proto";
+import "id/v1/printer_queue_id.proto";
 import "id/v1/user_id.proto";
 
 // Where a print job is in its life. The server alone decides transitions.
@@ -27,12 +27,15 @@ enum PrintJobStatus {
   PRINT_JOB_STATUS_ASSIGNED = 6;
   // The printer confirmed the print started.
   PRINT_JOB_STATUS_PRINTING = 7;
-  // The printer reported the print finished.
-  PRINT_JOB_STATUS_COMPLETED = 8;
-  // The print or its dispatch failed. status_reason says why.
-  PRINT_JOB_STATUS_FAILED = 9;
+  // Staff-only. The printer reported the print ended, successful or not, and staff have yet to
+  // check it. Students are shown PRINTING instead.
+  PRINT_JOB_STATUS_FINISHED = 8;
+  // Staff checked the finished print and accepted it.
+  PRINT_JOB_STATUS_COMPLETED = 9;
+  // Staff marked the print failed. status_reason says why.
+  PRINT_JOB_STATUS_FAILED = 10;
   // An authorized user cancelled it. status_reason says why.
-  PRINT_JOB_STATUS_CANCELLED = 10;
+  PRINT_JOB_STATUS_CANCELLED = 11;
 }
 
 // A request to print one file. It is created first, as a DRAFT, and its file is attached to it.
@@ -41,8 +44,8 @@ message PrintJob {
   id.v1.PrintJobId id = 1;
   // The user who created it.
   id.v1.UserId user_id = 2;
-  // The queue staff placed it in after approval. Students never choose it.
-  id.v1.QueueId queue_id = 3;
+  // The queue the server placed it in on submission. Staff may move it; students never choose it.
+  id.v1.PrinterQueueId printer_queue_id = 3;
   // The file to print. Unset until an upload is created for the job.
   id.v1.FileId file_id = 4;
   // Current status.

@@ -404,9 +404,9 @@ window.OPENAPI_SPEC = {
         "title": "PrinterId",
         "type": "object"
       },
-      "id.v1.QueueId": {
+      "id.v1.PrinterQueueId": {
         "additionalProperties": false,
-        "description": "Identifies a queue.",
+        "description": "Identifies a printer_queue.v1.PrinterQueue.",
         "properties": {
           "value": {
             "description": "UUID.",
@@ -414,7 +414,7 @@ window.OPENAPI_SPEC = {
             "type": "string"
           }
         },
-        "title": "QueueId",
+        "title": "PrinterQueueId",
         "type": "object"
       },
       "id.v1.UserId": {
@@ -461,14 +461,14 @@ window.OPENAPI_SPEC = {
             "description": "The printer it is assigned to. Unset until assigned.",
             "title": "printer_id"
           },
-          "queueId": {
+          "printerQueueId": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/id.v1.QueueId"
+                "$ref": "#/components/schemas/id.v1.PrinterQueueId"
               }
             ],
-            "description": "The queue staff placed it in after approval. Students never choose it.",
-            "title": "queue_id"
+            "description": "The queue the server placed it in on submission. Staff may move it; students never choose it.",
+            "title": "printer_queue_id"
           },
           "status": {
             "allOf": [
@@ -525,12 +525,124 @@ window.OPENAPI_SPEC = {
           "PRINT_JOB_STATUS_REJECTED",
           "PRINT_JOB_STATUS_ASSIGNED",
           "PRINT_JOB_STATUS_PRINTING",
+          "PRINT_JOB_STATUS_FINISHED",
           "PRINT_JOB_STATUS_COMPLETED",
           "PRINT_JOB_STATUS_FAILED",
           "PRINT_JOB_STATUS_CANCELLED"
         ],
         "title": "PrintJobStatus",
         "type": "string"
+      },
+      "printer.v1.Printer": {
+        "additionalProperties": false,
+        "description": "A physical printer.",
+        "properties": {
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.PrinterId"
+              }
+            ],
+            "description": "This printer.",
+            "title": "id"
+          },
+          "model": {
+            "description": "The printer's model.",
+            "title": "model",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name, stable across restarts.",
+            "title": "name",
+            "type": "string"
+          },
+          "printJobId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.PrintJobId"
+              }
+            ],
+            "description": "The job it is running. Unset when idle.",
+            "title": "print_job_id"
+          },
+          "progressPercent": {
+            "description": "Progress of the current job, 0 to 100, when the printer reports it.",
+            "title": "progress_percent",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/printer.v1.PrinterStatus"
+              }
+            ],
+            "description": "Latest observed status.",
+            "title": "status"
+          },
+          "timeStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.TimeStatus"
+              }
+            ],
+            "description": "When the printer was added. updated_at is when its status was last observed, which\n clients use to show stale data.",
+            "title": "time_status"
+          }
+        },
+        "title": "Printer",
+        "type": "object"
+      },
+      "printer.v1.PrinterStatus": {
+        "description": "A printer's normalized state. Adapters map each vendor's states onto these.",
+        "enum": [
+          "PRINTER_STATUS_UNSPECIFIED",
+          "PRINTER_STATUS_OFFLINE",
+          "PRINTER_STATUS_IDLE",
+          "PRINTER_STATUS_PRINTING",
+          "PRINTER_STATUS_FINISHED",
+          "PRINTER_STATUS_ERROR"
+        ],
+        "title": "PrinterStatus",
+        "type": "string"
+      },
+      "printer_queue.v1.PrinterQueue": {
+        "additionalProperties": false,
+        "description": "A line of print jobs waiting for a printer.",
+        "properties": {
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.PrinterQueueId"
+              }
+            ],
+            "description": "This queue.",
+            "title": "id"
+          },
+          "isActive": {
+            "description": "Whether it accepts new jobs.",
+            "title": "is_active",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Display name.",
+            "title": "name",
+            "type": "string"
+          },
+          "timeStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.TimeStatus"
+              }
+            ],
+            "description": "When the queue was created and last changed.",
+            "title": "time_status"
+          }
+        },
+        "title": "PrinterQueue",
+        "type": "object"
       },
       "server.v1.CreatePrintJobRequest": {
         "additionalProperties": false,
@@ -605,6 +717,40 @@ window.OPENAPI_SPEC = {
         "title": "CreatePrintJobUploadResponse",
         "type": "object"
       },
+      "server.v1.GetFileRequest": {
+        "additionalProperties": false,
+        "description": "Gets one file.",
+        "properties": {
+          "fileId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.FileId"
+              }
+            ],
+            "description": "The file to get.",
+            "title": "file_id"
+          }
+        },
+        "title": "GetFileRequest",
+        "type": "object"
+      },
+      "server.v1.GetFileResponse": {
+        "additionalProperties": false,
+        "description": "One file.",
+        "properties": {
+          "file": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/file.v1.File"
+              }
+            ],
+            "description": "The file.",
+            "title": "file"
+          }
+        },
+        "title": "GetFileResponse",
+        "type": "object"
+      },
       "server.v1.GetPrintJobRequest": {
         "additionalProperties": false,
         "description": "Gets one print job.",
@@ -646,6 +792,74 @@ window.OPENAPI_SPEC = {
           }
         },
         "title": "GetPrintJobResponse",
+        "type": "object"
+      },
+      "server.v1.GetPrinterQueueRequest": {
+        "additionalProperties": false,
+        "description": "Gets one queue.",
+        "properties": {
+          "printerQueueId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.PrinterQueueId"
+              }
+            ],
+            "description": "The queue to get.",
+            "title": "printer_queue_id"
+          }
+        },
+        "title": "GetPrinterQueueRequest",
+        "type": "object"
+      },
+      "server.v1.GetPrinterQueueResponse": {
+        "additionalProperties": false,
+        "description": "One queue.",
+        "properties": {
+          "printerQueue": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/printer_queue.v1.PrinterQueue"
+              }
+            ],
+            "description": "The queue.",
+            "title": "printer_queue"
+          }
+        },
+        "title": "GetPrinterQueueResponse",
+        "type": "object"
+      },
+      "server.v1.GetPrinterRequest": {
+        "additionalProperties": false,
+        "description": "Gets one printer.",
+        "properties": {
+          "printerId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.PrinterId"
+              }
+            ],
+            "description": "The printer to get.",
+            "title": "printer_id"
+          }
+        },
+        "title": "GetPrinterRequest",
+        "type": "object"
+      },
+      "server.v1.GetPrinterResponse": {
+        "additionalProperties": false,
+        "description": "One printer.",
+        "properties": {
+          "printer": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/printer.v1.Printer"
+              }
+            ],
+            "description": "The printer as the printer server reports it.",
+            "title": "printer"
+          }
+        },
+        "title": "GetPrinterResponse",
         "type": "object"
       },
       "server.v1.HealthCheckRequest": {
@@ -711,6 +925,38 @@ window.OPENAPI_SPEC = {
         "title": "Status",
         "type": "string"
       },
+      "server.v1.ListFilesRequest": {
+        "additionalProperties": false,
+        "description": "Gets several files.",
+        "properties": {
+          "fileIds": {
+            "description": "The files to get.",
+            "items": {
+              "$ref": "#/components/schemas/id.v1.FileId"
+            },
+            "title": "file_ids",
+            "type": "array"
+          }
+        },
+        "title": "ListFilesRequest",
+        "type": "object"
+      },
+      "server.v1.ListFilesResponse": {
+        "additionalProperties": false,
+        "description": "The files that were found.",
+        "properties": {
+          "files": {
+            "description": "The files. An unknown ID is left out.",
+            "items": {
+              "$ref": "#/components/schemas/file.v1.File"
+            },
+            "title": "files",
+            "type": "array"
+          }
+        },
+        "title": "ListFilesResponse",
+        "type": "object"
+      },
       "server.v1.ListPrintJobsRequest": {
         "additionalProperties": false,
         "description": "Lists print jobs.",
@@ -759,6 +1005,90 @@ window.OPENAPI_SPEC = {
           }
         },
         "title": "ListPrintJobsResponse",
+        "type": "object"
+      },
+      "server.v1.ListPrinterQueuesRequest": {
+        "additionalProperties": false,
+        "description": "Lists queues.",
+        "properties": {
+          "page": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.PageRequest"
+              }
+            ],
+            "description": "Which page to return.",
+            "title": "page"
+          }
+        },
+        "title": "ListPrinterQueuesRequest",
+        "type": "object"
+      },
+      "server.v1.ListPrinterQueuesResponse": {
+        "additionalProperties": false,
+        "description": "The queues returned for the requested page, and the token for the page after it.",
+        "properties": {
+          "page": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.PageResponse"
+              }
+            ],
+            "description": "How to get the next page.",
+            "title": "page"
+          },
+          "printerQueues": {
+            "description": "The queues.",
+            "items": {
+              "$ref": "#/components/schemas/printer_queue.v1.PrinterQueue"
+            },
+            "title": "printer_queues",
+            "type": "array"
+          }
+        },
+        "title": "ListPrinterQueuesResponse",
+        "type": "object"
+      },
+      "server.v1.ListPrintersRequest": {
+        "additionalProperties": false,
+        "description": "Lists printers.",
+        "properties": {
+          "page": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.PageRequest"
+              }
+            ],
+            "description": "Which page to return.",
+            "title": "page"
+          }
+        },
+        "title": "ListPrintersRequest",
+        "type": "object"
+      },
+      "server.v1.ListPrintersResponse": {
+        "additionalProperties": false,
+        "description": "One page of printers.",
+        "properties": {
+          "page": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.PageResponse"
+              }
+            ],
+            "description": "How to get the next page.",
+            "title": "page"
+          },
+          "printers": {
+            "description": "The printers.",
+            "items": {
+              "$ref": "#/components/schemas/printer.v1.Printer"
+            },
+            "title": "printers",
+            "type": "array"
+          }
+        },
+        "title": "ListPrintersResponse",
         "type": "object"
       },
       "server.v1.SubmitPrintJobRequest": {
@@ -838,6 +1168,51 @@ window.OPENAPI_SPEC = {
           },
           {
             "properties": {
+              "complete": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/server.v1.TransitionPrintJobRequest.Complete"
+                  }
+                ],
+                "description": "Confirm the finished print.",
+                "title": "complete"
+              }
+            },
+            "title": "complete",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "fail": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/server.v1.TransitionPrintJobRequest.Fail"
+                  }
+                ],
+                "description": "Mark the print failed with a reason.",
+                "title": "fail"
+              }
+            },
+            "title": "fail",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "moveToQueue": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/server.v1.TransitionPrintJobRequest.MoveToQueue"
+                  }
+                ],
+                "description": "Move to another queue.",
+                "title": "move_to_queue"
+              }
+            },
+            "title": "move_to_queue",
+            "type": "object"
+          },
+          {
+            "properties": {
               "reject": {
                 "allOf": [
                   {
@@ -884,6 +1259,21 @@ window.OPENAPI_SPEC = {
                 },
                 {
                   "required": [
+                    "complete"
+                  ]
+                },
+                {
+                  "required": [
+                    "fail"
+                  ]
+                },
+                {
+                  "required": [
+                    "moveToQueue"
+                  ]
+                },
+                {
+                  "required": [
                     "reject"
                   ]
                 },
@@ -905,6 +1295,21 @@ window.OPENAPI_SPEC = {
                   {
                     "required": [
                       "assign"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "complete"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "fail"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "moveToQueue"
                     ]
                   },
                   {
@@ -945,7 +1350,7 @@ window.OPENAPI_SPEC = {
       },
       "server.v1.TransitionPrintJobRequest.Assign": {
         "additionalProperties": false,
-        "description": "Chooses the printer for an APPROVED job, moving it to ASSIGNED.",
+        "description": "Dispatches an APPROVED job to an idle printer, moving it to ASSIGNED. The server moves it\n to PRINTING once the printer reports the print started.",
         "properties": {
           "printerId": {
             "allOf": [
@@ -958,6 +1363,42 @@ window.OPENAPI_SPEC = {
           }
         },
         "title": "Assign",
+        "type": "object"
+      },
+      "server.v1.TransitionPrintJobRequest.Complete": {
+        "additionalProperties": false,
+        "description": "Staff checked the print of a FINISHED job and accept it, moving it to COMPLETED.",
+        "title": "Complete",
+        "type": "object"
+      },
+      "server.v1.TransitionPrintJobRequest.Fail": {
+        "additionalProperties": false,
+        "description": "Staff mark an ASSIGNED, PRINTING or FINISHED job's print failed, moving it to FAILED. The\n printer is left as it is; an operator readies it separately.",
+        "properties": {
+          "reason": {
+            "description": "Why, shown to the student. Required.",
+            "title": "reason",
+            "type": "string"
+          }
+        },
+        "title": "Fail",
+        "type": "object"
+      },
+      "server.v1.TransitionPrintJobRequest.MoveToQueue": {
+        "additionalProperties": false,
+        "description": "Moves a job that is not yet assigned to another queue.",
+        "properties": {
+          "printerQueueId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.PrinterQueueId"
+              }
+            ],
+            "description": "The queue to move it to.",
+            "title": "printer_queue_id"
+          }
+        },
+        "title": "MoveToQueue",
         "type": "object"
       },
       "server.v1.TransitionPrintJobRequest.Reject": {
@@ -994,6 +1435,63 @@ window.OPENAPI_SPEC = {
           }
         },
         "title": "TransitionPrintJobResponse",
+        "type": "object"
+      },
+      "server.v1.TransitionPrinterRequest": {
+        "anyOf": [
+          {
+            "properties": {
+              "ready": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/server.v1.TransitionPrinterRequest.Ready"
+                  }
+                ],
+                "description": "Mark ready for the next job.",
+                "title": "ready"
+              }
+            },
+            "title": "ready",
+            "type": "object"
+          }
+        ],
+        "description": "Changes a printer's state through one operator action.",
+        "properties": {
+          "printerId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.PrinterId"
+              }
+            ],
+            "description": "The printer to change.",
+            "title": "printer_id"
+          }
+        },
+        "title": "TransitionPrinterRequest",
+        "type": "object",
+        "unevaluatedProperties": false
+      },
+      "server.v1.TransitionPrinterRequest.Ready": {
+        "additionalProperties": false,
+        "description": "The operator cleared a FINISHED or ERROR printer, so it is IDLE and ready for its next job.",
+        "title": "Ready",
+        "type": "object"
+      },
+      "server.v1.TransitionPrinterResponse": {
+        "additionalProperties": false,
+        "description": "The printer after the change.",
+        "properties": {
+          "printer": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/printer.v1.Printer"
+              }
+            ],
+            "description": "The printer as the printer server reports it.",
+            "title": "printer"
+          }
+        },
+        "title": "TransitionPrinterResponse",
         "type": "object"
       }
     }
@@ -1186,6 +1684,130 @@ window.OPENAPI_SPEC = {
         "summary": "Health",
         "tags": [
           "General"
+        ]
+      }
+    },
+    "/api/server.v1.FileService/GetFile": {
+      "post": {
+        "description": "Gets one file.",
+        "operationId": "server.v1.FileService.GetFile",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.GetFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.GetFileResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "GetFile",
+        "tags": [
+          "server.v1.FileService"
+        ]
+      }
+    },
+    "/api/server.v1.FileService/ListFiles": {
+      "post": {
+        "description": "Gets several files by ID.",
+        "operationId": "server.v1.FileService.ListFiles",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.ListFilesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.ListFilesResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "ListFiles",
+        "tags": [
+          "server.v1.FileService"
         ]
       }
     },
@@ -1501,7 +2123,7 @@ window.OPENAPI_SPEC = {
     },
     "/api/server.v1.PrintJobService/SubmitPrintJob": {
       "post": {
-        "description": "Step 3. Submits a DRAFT job whose file has finished uploading, moving it to SUBMITTED.",
+        "description": "Step 3. Submits a DRAFT job whose file has finished uploading, moving it to SUBMITTED. The\n server places it in a queue.",
         "operationId": "server.v1.PrintJobService.SubmitPrintJob",
         "parameters": [
           {
@@ -1622,9 +2244,323 @@ window.OPENAPI_SPEC = {
           "server.v1.PrintJobService"
         ]
       }
+    },
+    "/api/server.v1.PrinterQueueService/GetPrinterQueue": {
+      "post": {
+        "description": "Gets one queue.",
+        "operationId": "server.v1.PrinterQueueService.GetPrinterQueue",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.GetPrinterQueueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.GetPrinterQueueResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "GetPrinterQueue",
+        "tags": [
+          "server.v1.PrinterQueueService"
+        ]
+      }
+    },
+    "/api/server.v1.PrinterQueueService/ListPrinterQueues": {
+      "post": {
+        "description": "Lists queues, one page at a time.",
+        "operationId": "server.v1.PrinterQueueService.ListPrinterQueues",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.ListPrinterQueuesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.ListPrinterQueuesResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "ListPrinterQueues",
+        "tags": [
+          "server.v1.PrinterQueueService"
+        ]
+      }
+    },
+    "/api/server.v1.PrinterService/GetPrinter": {
+      "post": {
+        "description": "Gets one printer.",
+        "operationId": "server.v1.PrinterService.GetPrinter",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.GetPrinterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.GetPrinterResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "GetPrinter",
+        "tags": [
+          "server.v1.PrinterService"
+        ]
+      }
+    },
+    "/api/server.v1.PrinterService/ListPrinters": {
+      "post": {
+        "description": "Lists printers, one page at a time.",
+        "operationId": "server.v1.PrinterService.ListPrinters",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.ListPrintersRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.ListPrintersResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "ListPrinters",
+        "tags": [
+          "server.v1.PrinterService"
+        ]
+      }
+    },
+    "/api/server.v1.PrinterService/TransitionPrinter": {
+      "post": {
+        "description": "An operator changes a printer's state. The server asks the printer server, and rejects an\n action that is not valid from the printer's current status.",
+        "operationId": "server.v1.PrinterService.TransitionPrinter",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.TransitionPrinterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.TransitionPrinterResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "TransitionPrinter",
+        "tags": [
+          "server.v1.PrinterService"
+        ]
+      }
     }
   },
   "tags": [
+    {
+      "description": "File records, served by the remote server. The bytes are never sent through this service.",
+      "name": "server.v1.FileService"
+    },
     {
       "description": "Reports server health, for monitoring and deployment checks.",
       "name": "server.v1.HealthCheckService"
@@ -1632,6 +2568,14 @@ window.OPENAPI_SPEC = {
     {
       "description": "Print job intake and review, served by the remote server. A job is created first, as a\n DRAFT; its file is then uploaded and attached to it, and the job is submitted.",
       "name": "server.v1.PrintJobService"
+    },
+    {
+      "description": "The queues print jobs wait in, served by the remote server.",
+      "name": "server.v1.PrinterQueueService"
+    },
+    {
+      "description": "The printers the remote server knows of, with their latest reported state.",
+      "name": "server.v1.PrinterService"
     }
   ]
 };

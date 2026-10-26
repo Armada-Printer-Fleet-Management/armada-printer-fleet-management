@@ -5,7 +5,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from core_domain.file import File
-from core_domain.ids import FileId, PrinterId, PrintJobId, UserId
+from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserId
 from core_domain.print_job import PrintJob
 from proto_utils.gen.common.v1.page_pb2 import PageResponse
 from proto_utils.gen.file.v1.file_upload_pb2 import FileUploadSlot
@@ -28,6 +28,8 @@ from proto_utils.mappers import FileMapper, PrintJobMapper
 
 from api.domains.file.service import FileService
 from api.domains.print_job.service import PrintJobService
+from api.domains.printer.service import PrinterService
+from api.domains.printer_queue.service import PrinterQueueService
 from api.routers.file import upload_path
 from api.services.domain_errors import domain_errors_as_connect, request_id
 from api.services.request_url import absolute_url
@@ -37,17 +39,24 @@ logger = structlog.stdlib.get_logger(__name__)
 
 class PrintJobServiceImplementation:
     """The Connect handler for server.v1.PrintJobService. It translates between the wire and the
-    print_job and file domains, and composes the two where an RPC involves a job's file: rules
-    live on the entities, use cases on the domain services."""
+    print_job domain, and composes it with the file, printer and printer_queue domains where an
+    RPC involves them: rules live on the entities, use cases on the domain services."""
 
     _mapper = PrintJobMapper()
     _file_mapper = FileMapper()
 
     def __init__(
-        self, print_jobs: PrintJobService, files: FileService, caller: Callable[[], UserId]
+        self,
+        print_jobs: PrintJobService,
+        files: FileService,
+        printers: PrinterService,
+        printer_queues: PrinterQueueService,
+        caller: Callable[[], UserId],
     ) -> None:
         self._print_jobs = print_jobs
         self._files = files
+        self._printers = printers
+        self._printer_queues = printer_queues
         self._caller = caller
 
     async def _file_of(self, print_job: PrintJob) -> File | None:
@@ -96,7 +105,22 @@ class PrintJobServiceImplementation:
                     print_job = await self._print_jobs.reject(print_job_id, request.reject.reason)
                 case "assign":
                     printer_id = request_id(PrinterId, request.assign.printer_id)
-                    print_job = await self._print_jobs.assign(print_job_id, printer_id)
+
+                    async def dispatch() -> bool:
+                        printer = await self._printers.dispatch(printer_id, print_job_id)
+                        return printer.print_job_id == print_job_id
+
+                    print_job = await self._print_jobs.assign(print_job_id, printer_id, dispatch)
+                case "move_to_queue":
+                    printer_queue_id = request_id(
+                        PrinterQueueId, request.move_to_queue.printer_queue_id
+                    )
+                    await self._printer_queues.get(printer_queue_id)
+                    print_job = await self._print_jobs.move_to_queue(print_job_id, printer_queue_id)
+                case "complete":
+                    print_job = await self._print_jobs.complete(print_job_id)
+                case "fail":
+                    print_job = await self._print_jobs.fail(print_job_id, request.fail.reason)
                 case _:
                     raise ConnectError(Code.INVALID_ARGUMENT, "action must be set")
         return TransitionPrintJobResponse(print_job=self._mapper.to_proto(print_job))
@@ -150,7 +174,10 @@ class PrintJobServiceImplementation:
     ) -> SubmitPrintJobResponse:
         print_job_id = request_id(PrintJobId, request.print_job_id)
         with domain_errors_as_connect():
-            print_job = await self._print_jobs.submit(print_job_id, self._files.is_uploaded)
+            printer_queue_id = await self._printer_queues.open_queue()
+            print_job = await self._print_jobs.submit(
+                print_job_id, self._files.is_uploaded, printer_queue_id
+            )
             file = await self._file_of(print_job)
         return SubmitPrintJobResponse(
             print_job=self._mapper.to_proto(print_job),

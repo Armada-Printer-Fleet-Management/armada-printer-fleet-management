@@ -4,5 +4,7 @@ caller-specific view is shaped by the caller."""
 
 from proto_utils.mappers.file import FileMapper
 from proto_utils.mappers.print_job import PrintJobMapper
+from proto_utils.mappers.printer import PrinterMapper
+from proto_utils.mappers.printer_queue import PrinterQueueMapper
 
-__all__ = ["FileMapper", "PrintJobMapper"]
+__all__ = ["FileMapper", "PrintJobMapper", "PrinterMapper", "PrinterQueueMapper"]

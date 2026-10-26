@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package server.v1;
+
+import "file/v1/file.proto";
+import "id/v1/file_id.proto";
+
+// File records, served by the remote server. The bytes are never sent through this service.
+service FileService {
+  // Gets several files by ID.
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
+  // Gets one file.
+  rpc GetFile(GetFileRequest) returns (GetFileResponse);
+}
+
+// Gets one file.
+message GetFileRequest {
+  // The file to get.
+  id.v1.FileId file_id = 1;
+}
+
+// One file.
+message GetFileResponse {
+  // The file.
+  file.v1.File file = 1;
+}
+
+// Gets several files.
+message ListFilesRequest {
+  // The files to get.
+  repeated id.v1.FileId file_ids = 1;
+}
+
+// The files that were found.
+message ListFilesResponse {
+  // The files. An unknown ID is left out.
+  repeated file.v1.File files = 1;
+}
