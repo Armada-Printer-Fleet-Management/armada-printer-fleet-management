@@ -101,9 +101,9 @@ Python code every app imports.
 The script stops with a pointer to `/onboarding` if `uv` is missing or the Python code has not
 been generated. Both ways use port 8000, so run one at a time.
 
-The server will not start without its file store settings. The Docker stacks set them; natively,
-set them in your shell first. Against the dev stack's Garage, which is published on this machine,
-they are:
+The server will not start without its file store and database settings. The Docker stacks set
+them; natively, set them in your shell first: the `DB_*` variables from "Database" below, and,
+against the dev stack's Garage, which is published on this machine:
 
 | Variable | Value |
 |---|---|
@@ -128,8 +128,9 @@ it refers to.
 
 After adding a migration or data, apply it to the running stack from the repo root with
 `docker compose -f infra/dev/compose.yaml --env-file config/compose.dev.env run --rm --build migrate`,
-or restart the stack. To run either natively against the dev stack's Postgres, set the connection
-in your shell and run from `apps/server`:
+or restart the stack. The server reads the same connection, and its health check reports it as
+`database`. To run the server, a migration or the seed natively against the dev stack's Postgres,
+set the connection in your shell; run the last two from `apps/server`:
 
 | Variable | Value |
 |---|---|

@@ -36,7 +36,7 @@ def test_lifespan_configures_logging_and_logs_start_and_stop(
     calls: list[None] = []
     monkeypatch.setattr(lifespan, "configure_logging", lambda: calls.append(None))
 
-    app = FastAPI(lifespan=lifespan.lifespan(RecordingInfrastructure()))
+    app = FastAPI(lifespan=lifespan.lifespan([RecordingInfrastructure()]))
 
     with capture_logs() as logs, TestClient(app):
         pass
@@ -53,7 +53,7 @@ def test_lifespan_keeps_the_infrastructure_open_while_serving(
     monkeypatch.setattr(lifespan, "configure_logging", lambda: None)
     infrastructure = RecordingInfrastructure()
 
-    with TestClient(FastAPI(lifespan=lifespan.lifespan(infrastructure))):
+    with TestClient(FastAPI(lifespan=lifespan.lifespan([infrastructure]))):
         assert infrastructure.events == ["opened"]
 
     assert infrastructure.events == ["opened", "closed"]

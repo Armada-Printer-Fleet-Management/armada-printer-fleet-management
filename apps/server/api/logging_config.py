@@ -30,9 +30,16 @@ def log_format() -> LogFormat:
 
 
 def _renderers(log_format: LogFormat) -> list[Processor]:
+    # Tracebacks leave out local variables, because those can hold secrets such as passwords.
     if log_format == "console":
-        return [structlog.dev.ConsoleRenderer()]
-    return [structlog.processors.dict_tracebacks, structlog.processors.JSONRenderer()]
+        traceback = structlog.dev.RichTracebackFormatter(show_locals=False)
+        return [structlog.dev.ConsoleRenderer(exception_formatter=traceback)]
+    return [
+        structlog.processors.ExceptionRenderer(
+            structlog.tracebacks.ExceptionDictTransformer(show_locals=False)
+        ),
+        structlog.processors.JSONRenderer(),
+    ]
 
 
 def logging_config(log_format: LogFormat) -> dict[str, object]:

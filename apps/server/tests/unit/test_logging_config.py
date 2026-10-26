@@ -40,6 +40,29 @@ def test_json_lines_carry_bound_context(
 
 
 @pytest.mark.usefixtures("restore_logging")
+@pytest.mark.parametrize("format", ["json", "console"])
+def test_tracebacks_leave_out_local_variables(
+    format: str, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("LOG_FORMAT", format)
+    configure_logging()
+
+    # Joined at runtime, because console tracebacks print the surrounding source lines.
+    def connect() -> None:
+        password = "-".join(["hunter2", "secret"])
+        raise ConnectionError(f"refused for {len(password)}-character password")
+
+    try:
+        connect()
+    except ConnectionError:
+        structlog.stdlib.get_logger("test").exception("connect failed")
+
+    output = capsys.readouterr().err
+    assert "connect failed" in output
+    assert "hunter2-secret" not in output
+
+
+@pytest.mark.usefixtures("restore_logging")
 def test_uvicorn_records_render_through_the_same_formatter(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

@@ -34,6 +34,9 @@ def main() -> None:
     cmd = [resolve("uv"), "run", "uvicorn", "api.main:app"]
     if args.dev:
         cmd += ["--reload", "--reload-dir", "api"]
+    # Async psycopg cannot run on uvicorn's default Windows loop, ProactorEventLoop.
+    if sys.platform == "win32":
+        cmd += ["--loop", "asyncio:SelectorEventLoop"]
 
     os.environ.setdefault("LOG_FORMAT", "console")
 
