@@ -45,9 +45,9 @@ apps/server/
 # Running it
 
 The server runs in Docker by default, as part of the development stack in `infra/dev/` alongside
-the web app, Postgres and Garage. The dev image uses the code already generated on the host, so
-generate it first (and again after changing a `.proto` file). From the repo root, with Docker
-running:
+the web app, Postgres, Garage and Keycloak. The dev image uses the code already generated on the
+host, so generate it first (and again after changing a `.proto` file). From the repo root, with
+Docker running:
 
 ```
 uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml

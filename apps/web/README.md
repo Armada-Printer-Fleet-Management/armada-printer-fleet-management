@@ -15,9 +15,9 @@ are separate applications and share code only through `packages/`.
 
 ## Run in Docker
 
-The web app runs in the development stack in `infra/dev/`, alongside the server, Postgres and
-Garage. The dev image uses the API client's generated code already generated on the host, so
-generate it first (step 1 below), then from the repo root:
+The web app runs in the development stack in `infra/dev/`, alongside the server, Postgres,
+Garage and Keycloak. The dev image uses the API client's generated code already generated on the
+host, so generate it first (step 1 below), then from the repo root:
 
 ```
 python scripts/compose_run.py dev
