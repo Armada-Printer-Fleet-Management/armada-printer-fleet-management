@@ -11,20 +11,25 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@armada/ui-kit": "workspace:*",
     "@armada/organization-info": "workspace:*",
+    "@armada/ui-kit": "workspace:*",
+    "@bufbuild/protobuf": "^2",
     "react": "^19",
     "react-dom": "^19",
-    "@bufbuild/protobuf": "^2"
+    "react-router": "8.5.0"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4",
     "@bufbuild/protoc-gen-es": "^2",
+    "@tailwindcss/vite": "^4",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^4",
-    "typescript": "^5",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
+    "typescript": "^5",
     "vite": "^6",
     "vitest": "^5"
   }

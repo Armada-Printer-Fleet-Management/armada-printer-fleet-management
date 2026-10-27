@@ -1,26 +1,17 @@
-// TODO TEMP DOCUMENT, PLEASE REPLACE BUT KEEP VERSION API CALL EXAMPLE
-// THAT IS INSIDE AN ABOUT PAGE
-
 import { read } from '@armada/organization-info';
+import { AboutBox } from '@armada/ui-kit';
 import { useEffect, useState } from 'react';
-import {
-  AboutBox,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@armada/ui-kit';
-import { OrganizationInfoSchema } from './gen/common/v1/organization_info_pb';
-import { version } from './ipc/application-info';
-import { TempVerticalSlice } from './temp/TempVerticalSlice';
+
+import { OrganizationInfoSchema } from '../gen/common/v1/organization_info_pb';
+import { version } from '../ipc/application-info';
+import { routePaths } from '../routes';
 
 type VersionState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'ready'; version: Awaited<ReturnType<typeof version>> };
 
-export function App() {
+export function AboutPage() {
   const [state, setState] = useState<VersionState>({ status: 'loading' });
 
   useEffect(() => {
@@ -43,22 +34,8 @@ export function App() {
   }, []);
 
   return (
-    <main className="min-h-full bg-background p-8 text-foreground">
-      <h1 className="mb-6 text-3xl font-bold">About</h1>
-      <Card className="max-w-xl">
-        <CardHeader>
-          <CardTitle>Printer fleet</CardTitle>
-          <CardDescription>
-            This card is rendered by the shared UI kit.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm">
-            The desktop application consumes the same component as the web
-            application.
-          </p>
-        </CardContent>
-      </Card>
+    <section className="grid gap-6">
+      <h1 className="text-3xl font-bold">{routePaths.about.label}</h1>
       <AboutBox
         organization={read(OrganizationInfoSchema)}
         version={state.status === 'ready' ? state.version : undefined}
@@ -67,7 +44,6 @@ export function App() {
       {state.status === 'error' && (
         <p>Failed to reach the backend: {state.message}</p>
       )}
-      <TempVerticalSlice />
-    </main>
+    </section>
   );
 }

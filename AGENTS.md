@@ -303,6 +303,34 @@ When one is needed:
 
 Explanations of decisions belong in the commit message and its ticket, not in code.
 
+### UI and UX
+
+**Ground every UI and UX decision in the Laws of UX and positive psychological principles**, so
+the application keeps people productive and minimises frustration. When proposing or building UI,
+name the principle behind each choice so the developer can weigh it [1], [2]. The ones that apply
+most here:
+
+- **Jakob's law:** follow conventions users already know from other desktop and web apps.
+- **Hick's law and Miller's law:** keep choices few and grouped. Prefer short navigation and
+  progressive disclosure over long menus.
+- **Fitts's law:** frequent and primary actions get large targets close to where the user works.
+- **Doherty threshold:** respond within about 400 ms. Show progress or an optimistic state for
+  anything slower.
+- **Feedback and error recovery:** every action visibly confirms success or explains failure in
+  plain language, with a way forward. Destructive actions are confirmed or undoable.
+- **Tesler's law:** some complexity cannot be removed, only moved. Absorb it in the system, with
+  sensible defaults and automation, rather than pushing it onto the operator.
+- **Von Restorff effect:** the item that differs is the one remembered. Save visual emphasis for
+  the one thing that matters on screen, such as the primary action or a fault.
+- **Aesthetic-usability and the Gestalt principles:** consistent spacing, alignment and grouping
+  make an interface feel easier and get it used more forgivingly.
+- **Peak-end rule and goal-gradient effect:** make task completion feel clear and rewarding, and
+  show progress toward it.
+- **Accessibility is not optional:** keyboard reachable, visible focus, WCAG AA contrast.
+
+Colours come from the theme's semantic tokens, never literal values: each deployment swaps the
+theme, so a hardcoded colour breaks someone else's brand.
+
 ---
 
 ## Toolchain
@@ -468,8 +496,22 @@ statement format is `.integrity/AI-USE-STATEMENT.md`. In summary:
   existing dependency cannot do it, a link to its repository, and its maintenance signals.
   `connectrpc` is pinned to `>=0.12.1,<0.13` deliberately. Do not upgrade it.
 - **Build exactly what was asked.** Adjacent ideas go in a follow-ups list, not into the code.
+- **The developer chooses the tests.** For each main feature change, ask through interactive
+  checklists before writing tests: first the areas to test, then the specific cases within each
+  area, then the additional automated tests the developer specifies themselves (not manual
+  checks). Write only what they chose.
+  See _The developer chooses the tests_ in `.integrity/POLICY.md`.
 - **Never guess file paths.** Search first, then read.
 - Update `HANDOFF.md` (gitignored, dev-local) before ending a working session: current phase,
   what is stubbed, next actions, open questions.
 - Stubs must carry a header comment naming what they are and what filling them in requires.
   A stub with no explanation is worse than no stub.
+
+---
+
+## References
+
+[1] J. Yablonski, _Laws of UX: Using Psychology to Design Better Products & Services_, 2nd ed.
+Sebastopol, CA: O'Reilly Media, 2024.
+
+[2] J. Yablonski, "Laws of UX." [Online]. Available: <https://lawsofux.com/>
