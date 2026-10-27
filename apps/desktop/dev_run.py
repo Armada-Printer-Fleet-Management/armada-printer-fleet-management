@@ -5,6 +5,7 @@ backend against the built output -- the closest thing to the installed app.
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import subprocess
 import sys
@@ -20,6 +21,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dev", action="store_true")
     args = parser.parse_args()
+
+    # Shows development-only UI in both run modes; build_run.py never sets it.
+    os.environ["VITE_ARMADA_DEV_TOOLS"] = "1"
 
     if args.dev:
         dev_server = subprocess.Popen([resolve("pnpm"), "dev"], cwd=FRONTEND)

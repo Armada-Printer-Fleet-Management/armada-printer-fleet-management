@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "@armada/ui-kit/styles.css";
+@import 'tailwindcss';
+@import '@armada/ui-kit/styles.css';
 
 @source "../../../../packages/ui-kit/src";
 

@@ -100,6 +100,28 @@ changes do not need this — a typo fix is not an architecture decision.
 Decisions reached this way are recorded in the ticket the work is committed under, which is what
 makes them reviewable later by someone who was not in the conversation.
 
+### The developer chooses the tests
+
+**For every main feature change, the agent asks the developer which tests to write, before
+writing them.** Tests are the developer's evidence that the work does what they claim. An agent
+that picks its own tests decides what "working" means, and can encode its own misunderstanding
+twice (rule 2). Additionally, agents generate testing bloat that ends up increasing the developer's cognitive load and creating unnecessary validation work. The developer should specifically suggest edge cases and testing areas as well to ensure adequate coverage. The agent may suggest tests, but the developer must choose which to write and provide its own list of test cases as well.
+
+Ask as interactive checklists, in three rounds:
+
+1. **Areas.** List the behaviours the change introduces, one checkbox each. The developer ticks
+   the ones worth testing and may add areas of their own.
+2. **Cases.** For each ticked area, list specific test cases as checkboxes: the happy path,
+   rejections and edge cases, each phrased as the assertion it would make. The developer ticks
+   the cases to write.
+3. **The developer's own tests.** Ask the developer for the additional automated tests they want:
+   unit tests for edge cases the checklists missed, or new automated validation such as a
+   structure test or contract check. This round is about automated tests the developer specifies,
+   not manual checks or regression walk-throughs. The developer will always do manual checks and regression walk-throughs themselves (this is part of the validation confirmation sequence). Do not skip this step, and do not answer it for them.
+
+Write the ticked cases and the developer's own tests. Prefer assertions on lasting behaviour over
+temporary content, such as placeholder text that a later ticket will replace.
+
 ## 5. Confidential material
 
 - **Never paste sponsor or personal data into a prompt.** Describe the shape of data, not its
