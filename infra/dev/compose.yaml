@@ -93,6 +93,9 @@ services:
         - action: sync
           path: ../../apps/web/index.html
           target: /repo/apps/web/index.html
+        - action: sync
+          path: ../../apps/web/public
+          target: /repo/apps/web/public
         # pnpm links workspace packages to their source, so syncing the source reaches the app.
         # Their package.json is left to the rebuild rules below.
         - action: sync
