@@ -6,6 +6,8 @@
   --color-border: var(--border);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-dev-highlight: var(--dev-highlight);
   --color-dev-highlight-foreground: var(--dev-highlight-foreground);
   --radius-lg: var(--radius);
@@ -19,6 +21,8 @@
   --border: #cbd5e1;
   --primary: #2563eb;
   --primary-foreground: #ffffff;
+  --accent: #ffa300;
+  --accent-foreground: #26211e;
   --radius: 0.75rem;
 
   /* Marks development-only UI. Use sparingly so it stays a reminder, not decoration. */
