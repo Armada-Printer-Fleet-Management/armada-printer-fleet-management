@@ -6,3 +6,9 @@
 *.sh text eol=lf
 infra/deploy/armada text eol=lf
 infra/deploy/systemd/* text eol=lf
+
+# Keep Prettier-managed files LF in every working tree.
+*.ts  text eol=lf
+*.tsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
