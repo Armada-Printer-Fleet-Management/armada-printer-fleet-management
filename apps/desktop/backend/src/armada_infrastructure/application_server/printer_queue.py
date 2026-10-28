@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from core_domain.ddd import Page
 from core_domain.ids import PrinterQueueId
 from core_domain.printer_queue import PrinterQueue
@@ -25,7 +27,14 @@ class ApplicationServerPrinterQueues(
     _mapper = PrinterQueueMapper()
 
     def __init__(self, server: ApplicationServerConnection) -> None:
-        self._client = PrinterQueueServiceClientSync(server.address, http_client=server.http_client)
+        self._server = server
+
+    @cached_property
+    def _client(self) -> PrinterQueueServiceClientSync:
+        # Built on first use, so a missing server address fails the call rather than startup.
+        return PrinterQueueServiceClientSync(
+            self._server.address(), http_client=self._server.http_client
+        )
 
     def get(self, entity_id: PrinterQueueId) -> PrinterQueue:
         request = GetPrinterQueueRequest(printer_queue_id=self._id(entity_id))

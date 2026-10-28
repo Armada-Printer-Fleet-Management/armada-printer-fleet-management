@@ -11,10 +11,16 @@ from armada_infrastructure.application_server.print_job import ApplicationServer
 from armada_infrastructure.application_server.printer import ApplicationServerPrinters
 from armada_infrastructure.application_server.printer_queue import ApplicationServerPrinterQueues
 from armada_ipc import Ipc
+from armada_runtime.environment import Environment
+from armada_runtime.settings import DEV_SERVER_URL, load_settings
 
 
 def build_ipc() -> Ipc:
-    server = ApplicationServerConnection()
+    settings_path = Environment.settings_path()
+    settings = load_settings(
+        settings_path, default_server_url=DEV_SERVER_URL if Environment.is_dev else ""
+    )
+    server = ApplicationServerConnection(settings.server_url, settings_path)
     return Ipc(
         print_jobs=PrintJobService(ApplicationServerPrintJobs(server)),
         printers=PrinterService(ApplicationServerPrinters(server)),

@@ -257,19 +257,19 @@ If `infra/dev/compose.yaml` exists, start it with the Docker daemon running:
 python scripts/compose_run.py dev
 ```
 
-This builds and starts the server and web app with live reload, plus Postgres and Garage, and
-stays in the foreground following the logs, so run it in the background. It copies in the
-generated code from step 5. Wait until `docker compose -p armada-dev ps` shows `db`,
-`garage-s3-storage`, `server` and `web` healthy.
+This builds and starts the server and web app with live reload, plus Postgres, Garage and
+Keycloak, and stays in the foreground following the logs, so run it in the background. It copies
+in the generated code from step 5. Wait until `docker compose -p armada-dev ps` shows `db`,
+`garage-s3-storage`, `keycloak-db`, `keycloak`, `server` and `web` healthy. Keycloak is the
+slowest to start, so allow it a minute or two.
+
+The stack migrates the database itself: its one-shot `migrate` service applies
+`apps/server/migrations/` and seeds the development data (`apps/server/dev_seed.py`) before the
+server starts. Confirm it with `docker compose -p armada-dev ps -a`, which shows `migrate`
+exited with code 0, and read `docker compose -p armada-dev logs migrate` if it did not.
 
 If it fails with "Ports are not available" on 5432, a Postgres installed natively on the machine
 holds that port. Set `DB_PORT` to a free port in `config/compose.dev.env` and run it again.
-
-If `alembic.ini` exists, apply migrations:
-
-```
-uv run alembic upgrade head
-```
 
 ## 8. Run the tests
 
@@ -296,11 +296,17 @@ Skip this step if `--skip-app` was passed.
 |---|---|---|
 | Server | `infra/dev/compose.yaml` exists | Already running from step 7: `http://127.0.0.1:8000`; check `/api/health_check`. If Docker can't run, `python apps/server/dev_run.py` is the native fallback; set the `FILE_STORE_*` variables from `apps/server/README.md` ("Running natively") first. Without the dev stack's Garage the server still starts, but its dependency check reports `file_storage` as `fail` |
 | Web | `infra/dev/compose.yaml` exists | Already running from step 7: `http://127.0.0.1:5174` |
+| Keycloak | `infra/dev/compose.yaml` exists | Already running from step 7: the admin console is `http://localhost:5174/auth/admin`, signing in with `KEYCLOAK_ADMIN_USERNAME` and `KEYCLOAK_ADMIN_PASSWORD` from `config/compose.dev.env`. Always use it through 5174, not its debug port 8080; see `infra/dev/README.md` |
 | Desktop | `apps/desktop/backend/pyproject.toml` exists | `python apps/desktop/dev_run.py` |
 
 `python apps/desktop/dev_run.py --dev` is the desktop's hot-reload alternative, not needed for
 this verification run; the dev stack from step 7 already reloads the server and web app. Report the
 server and web URLs; the desktop app opens its own native window. Leave everything running.
+
+The desktop's first launch creates `%APPDATA%\<exe name>\settings.dev.yaml`, pointing at the dev
+stack's server. To use another server, edit `server_url` there and restart the app. An installed
+build reads `settings.yaml` in the same folder, which starts empty and must be set before the app
+can reach a server.
 
 ## 10. Open the documentation
 

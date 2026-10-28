@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from core_domain.ddd import Page
 from core_domain.ids import PrinterId, PrinterQueueId, PrintJobId
 from core_domain.print_job import PrintJob
@@ -25,7 +27,14 @@ class ApplicationServerPrintJobs(
     _mapper = PrintJobMapper()
 
     def __init__(self, server: ApplicationServerConnection) -> None:
-        self._client = PrintJobServiceClientSync(server.address, http_client=server.http_client)
+        self._server = server
+
+    @cached_property
+    def _client(self) -> PrintJobServiceClientSync:
+        # Built on first use, so a missing server address fails the call rather than startup.
+        return PrintJobServiceClientSync(
+            self._server.address(), http_client=self._server.http_client
+        )
 
     def get(self, entity_id: PrintJobId) -> PrintJob:
         request = GetPrintJobRequest(print_job_id=self._id(entity_id))

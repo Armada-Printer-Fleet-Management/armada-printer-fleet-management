@@ -1,5 +1,8 @@
+import os
 import sys
 from pathlib import Path
+
+from armada_runtime.packaging import executable_name
 
 
 class Environment:
@@ -26,3 +29,13 @@ class Environment:
     @staticmethod
     def default_frontend_target() -> str:
         return Environment.resource_path("frontend", "dist", "index.html").as_uri()
+
+    @staticmethod
+    def settings_path() -> Path:
+        """The per-user settings file. Dev uses its own name so running from source never edits an
+        installed app's settings."""
+        app_data = os.environ.get("APPDATA")
+        if not app_data:
+            raise RuntimeError("APPDATA is not set, so there is nowhere to keep the settings file")
+        name = "settings.dev.yaml" if Environment.is_dev else "settings.yaml"
+        return Path(app_data) / executable_name() / name

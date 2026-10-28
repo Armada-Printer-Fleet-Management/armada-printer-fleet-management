@@ -10,6 +10,20 @@
 		reverse_proxy server:8000
 	}
 
+	# Keycloak, path unchanged: only what users need to sign in. Each path is its own block, not one
+	# named matcher, because Caddy puts single-path blocks first and /auth/* would then win.
+	handle /auth/realms/armada/* {  # login pages, tokens, signing keys, account console
+		reverse_proxy keycloak:8080
+	}
+
+	handle /auth/resources/* {  # the login pages' styles and scripts
+		reverse_proxy keycloak:8080
+	}
+
+	handle /auth/* {  # the admin console and master realm: reached through an SSH tunnel instead
+		respond 404
+	}
+
 	request_body {
 		max_size 500MB  # larger bodies get a 413
 	}

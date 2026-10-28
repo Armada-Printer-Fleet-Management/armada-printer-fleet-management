@@ -22,12 +22,7 @@ from api.domains.file.service import FileService
 from api.domains.print_job.service import PrintJobService
 from api.domains.printer.service import PrinterService
 from api.domains.printer_queue.service import PrinterQueueService
-from api.infrastructure.file_memory import InMemoryFileRepository
-from api.infrastructure.file_store_files import FileStoreFiles
-from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
-from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
-from api.infrastructure.printer_server_mock import MockPrinterServer
-from api.infrastructure.stub_data import (
+from api.infrastructure.dev_data import (
     STUB_FAULTY_PRINTER_ID,
     STUB_STUDENT_ID,
     stub_files,
@@ -35,6 +30,11 @@ from api.infrastructure.stub_data import (
     stub_printer_queues,
     stub_printers,
 )
+from api.infrastructure.file_memory import InMemoryFileRepository
+from api.infrastructure.file_store_files import FileStoreFiles
+from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
+from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
+from api.infrastructure.printer_server_mock import MockPrinterServer
 from api.lifespan import lifespan
 from api.middleware.request_context import RequestContextMiddleware
 from api.plugins import build_file_store

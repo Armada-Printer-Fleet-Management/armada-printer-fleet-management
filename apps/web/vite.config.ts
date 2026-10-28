@@ -33,8 +33,14 @@ export default defineConfig({
   server: {
     port: 5174,
     fs: { allow: [searchForWorkspaceRoot(process.cwd())] },
-    // Same-origin /api in development, as Caddy provides in deployment. The dev compose stack
-    // points this at its server container.
-    proxy: { '/api': process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000' },
+    // Same-origin /api and /auth in development, as Caddy provides in deployment. The dev
+    // compose stack points these at its containers.
+    proxy: {
+      '/api': process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000',
+      '/auth': {
+        target: process.env.KEYCLOAK_PROXY_TARGET ?? 'http://127.0.0.1:8080',
+        xfwd: true,
+      },
+    },
   },
 });

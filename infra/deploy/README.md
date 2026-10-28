@@ -5,20 +5,23 @@ differ only in their environment file.
 
 | File | What it is |
 |---|---|
-| `compose.yaml` | The four services: `web` (Caddy plus the built frontend), `server`, `db` (Postgres) and `garage-s3-storage` (S3 file storage). Images are pulled, never built here |
-| `Caddyfile` | Baked into the web image. Serves the frontend, forwards `/api` to the server, and obtains HTTPS certificates for `DOMAIN` |
+| `compose.yaml` | The six services: `web` (Caddy plus the built frontend), `server`, `db` (Postgres), `garage-s3-storage` (S3 file storage), `keycloak` (identity provider) and `keycloak-db` (Keycloak's own Postgres). Images are pulled, never built here |
+| `Caddyfile` | Baked into the web image. Serves the frontend, forwards `/api` to the server and Keycloak's sign-in paths under `/auth` to Keycloak, and obtains HTTPS certificates for `DOMAIN` |
 | `garage.toml` | Garage's configuration, mounted into its container. Single node, sqlite metadata, no replication |
+| `armada-realm.json` | Keycloak's `armada` realm: the web client and the roles, with no users. Imported on Keycloak's first start only |
 | `install.sh` | Sets up a machine once, then hands over to `armada` |
 | `armada` | The command an operator uses for everything after installing: updates, rollback, status, settings |
 | `systemd/` | The timer that runs `armada check-for-updates --scheduled` |
 | `release.sh` | Assembles a release's files, `VERSION` and `SHA256SUMS`, for either channel; used by the workflows and the tests |
 | `release.Dockerfile` | Packs a preview build's release files into its private release image |
 
-Only ports 80 and 443 are published. Postgres and Garage are reachable from the other containers
-and nowhere else.
+Only ports 80 and 443 are published to the network. Both Postgres databases and Garage are
+reachable from the other containers and nowhere else. Through Caddy, Keycloak serves only what
+users need to sign in, `/auth/realms/armada/` and `/auth/resources/`; its admin console is on
+`127.0.0.1:8080`, reachable from the machine itself only.
 
 **Never run `docker compose down -v`** on a deployed machine. It deletes the database, the stored
-files and Caddy's certificates; re-requesting certificates repeatedly can hit Let's Encrypt's rate
+files, every Keycloak account and Caddy's certificates; re-requesting certificates repeatedly can hit Let's Encrypt's rate
 limits.
 
 ## How images are published
@@ -41,7 +44,8 @@ Only staging to production writes to the public packages. **Making a package pub
 undone**, and everything ever pushed to it becomes pullable, so nothing unstable may be pushed or
 tagged there, even briefly.
 
-A preview build's release files (installer, `armada`, `compose.yaml`, `garage.toml`, the timer)
+A preview build's release files (installer, `armada`, `compose.yaml`, `garage.toml`,
+`armada-realm.json`, the timer)
 travel in its `armada-release-preview` image, because a GitHub release cannot be private.
 Production's are attached to its GitHub release.
 
@@ -225,8 +229,13 @@ The image has no shell; `none` is a placeholder command, since it is only create
 from, never started. If the login has expired or lacks access, the installer and the update
 check both say so.
 
-The installer generates every password; nobody types or sees one. Running it again on an
-installed machine keeps them, and keeps its track unless `--track` says otherwise.
+The installer generates every password; nobody types or sees one. It writes them only when
+`/opt/armada/.env` is new, so running it again on an installed machine keeps them, and keeps its
+track unless `--track` says otherwise.
+
+A machine installed before Keycloak was added has no Keycloak passwords, and updating it fails.
+Remove it with `armada uninstall --delete-data`, which deletes its data and `.env`, then install
+again.
 
 ## Running a machine: the `armada` command
 
@@ -261,6 +270,24 @@ only), each installed version's files are in `/opt/armada/releases/`, and the ti
 registry, runs a whole install, update, rollback, failed update, uninstall and reinstall through
 the preview channel, then a production install and update through the release channel, on every
 pull request that changes them.
+
+### Keycloak's admin console
+
+The site refuses Keycloak's admin console and `master` realm, so reach them from your own
+computer through an SSH tunnel to the machine:
+
+```
+ssh -L 8080:localhost:8080 <user>@<machine>
+```
+
+Then browse to `http://localhost:8080/auth/admin` and sign in with `KEYCLOAK_ADMIN_USERNAME` and
+`KEYCLOAK_ADMIN_PASSWORD` from `/opt/armada/.env`. Keycloak reads that password only on its first
+start, so change it in the console after that, not in `.env`. On the machine itself, Keycloak's
+command-line admin tool needs no tunnel:
+`docker exec -it armada-keycloak-1 /opt/keycloak/bin/kcadm.sh`.
+
+The realm file is also read only on first start, so a later change to it does not reach a
+machine that already has the realm.
 
 ## Running it locally
 
