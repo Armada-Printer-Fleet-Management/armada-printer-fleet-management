@@ -10,7 +10,6 @@ from api.common.settings import database_url
 from api.infrastructure.dev_data import (
     STUB_FLEET_SECTION_ID,
     STUB_STAFF_ID,
-    STUB_STUDENT_ID,
     stub_files,
     stub_fleet_sections,
     stub_print_jobs,
@@ -125,7 +124,7 @@ def _file_rows() -> Rows:
     return [
         {
             "id": file.id.value,
-            "user_id": STUB_STUDENT_ID.value,
+            "user_id": file.user_id.value,
             "filename": file.filename,
             "file_type": FILE_TYPE_IDS[file.file_type],
             "size_bytes": file.size_bytes,

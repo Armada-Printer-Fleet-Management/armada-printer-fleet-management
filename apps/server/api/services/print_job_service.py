@@ -153,7 +153,11 @@ class PrintJobServiceImplementation:
         async def new_file() -> FileId:
             created.append(
                 await self._files.create_upload(
-                    metadata.filename, file_type, metadata.size_bytes, metadata.sha256
+                    self._caller(),
+                    metadata.filename,
+                    file_type,
+                    metadata.size_bytes,
+                    metadata.sha256,
                 )
             )
             return created[0].id
