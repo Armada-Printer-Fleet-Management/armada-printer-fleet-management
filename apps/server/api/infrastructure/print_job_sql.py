@@ -1,17 +1,16 @@
-from uuid import UUID
-
 import sqlalchemy as sa
-from core_domain.ddd import EntityNotFound, Page, TypedId
+from core_domain.ddd import EntityNotFound, Page
 from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserId
 from core_domain.print_job import PrintJob
 from sqlalchemy.dialects.postgresql import insert
 
 from api.domains.print_job.repository import PrintJobRepository
-from api.infrastructure.enum_ids import PRINT_JOB_STATUS_IDS
+from api.infrastructure.enum_ids import PRINT_JOB_STATUS_IDS, by_stored_id
 from api.infrastructure.page import decode_token, encode_token, sort_key
+from api.infrastructure.sql_columns import optional_typed_id, optional_uuid
 from api.infrastructure.sql_repository import SqlRepository
 
-_PRINT_JOB_STATUS = {uuid: status for status, uuid in PRINT_JOB_STATUS_IDS.items()}
+_PRINT_JOB_STATUS = by_stored_id(PRINT_JOB_STATUS_IDS)
 
 
 _print_jobs = sa.Table(
@@ -30,26 +29,18 @@ _print_jobs = sa.Table(
 )
 
 
-def _uuid(typed_id: TypedId | None) -> UUID | None:
-    return None if typed_id is None else typed_id.value
-
-
-def _typed_id[IdT: TypedId](id_type: type[IdT], value: UUID | None) -> IdT | None:
-    return None if value is None else id_type(value)
-
-
 def _row(print_job: PrintJob) -> dict[str, object]:
     return {
         "id": print_job.id.value,
         "user_id": print_job.user_id.value,
-        "printer_queue_id": _uuid(print_job.printer_queue_id),
-        "file_id": _uuid(print_job.file_id),
+        "printer_queue_id": optional_uuid(print_job.printer_queue_id),
+        "file_id": optional_uuid(print_job.file_id),
         "status": PRINT_JOB_STATUS_IDS[print_job.status],
         "status_reason": print_job.status_reason,
         "created_at": print_job.created_at,
         "updated_at": print_job.updated_at,
         "user_notes": print_job.user_notes,
-        "assigned_printer_id": _uuid(print_job.printer_id),
+        "assigned_printer_id": optional_uuid(print_job.printer_id),
     }
 
 
@@ -57,14 +48,14 @@ def _print_job(row: sa.RowMapping) -> PrintJob:
     return PrintJob(
         id=PrintJobId(row["id"]),
         user_id=UserId(row["user_id"]),
-        printer_queue_id=_typed_id(PrinterQueueId, row["printer_queue_id"]),
-        file_id=_typed_id(FileId, row["file_id"]),
+        printer_queue_id=optional_typed_id(PrinterQueueId, row["printer_queue_id"]),
+        file_id=optional_typed_id(FileId, row["file_id"]),
         status=_PRINT_JOB_STATUS[row["status"]],
         status_reason=row["status_reason"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
         user_notes=row["user_notes"],
-        printer_id=_typed_id(PrinterId, row["assigned_printer_id"]),
+        printer_id=optional_typed_id(PrinterId, row["assigned_printer_id"]),
     )
 
 

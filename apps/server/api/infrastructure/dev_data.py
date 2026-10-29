@@ -124,7 +124,16 @@ def stub_print_jobs() -> list[PrintJob]:
 
 def stub_files() -> list[File]:
     def stub(file_id: FileId, filename: str) -> File:
-        return File(file_id, filename, FileType.GCODE, 1024, "0" * 64, _STUB_TIME, _STUB_TIME)
+        return File(
+            file_id,
+            STUB_STUDENT_ID,
+            filename,
+            FileType.GCODE,
+            1024,
+            "0" * 64,
+            _STUB_TIME,
+            _STUB_TIME,
+        )
 
     return [
         stub(STUB_SUBMITTED_FILE_ID, "stub-submitted.gcode"),

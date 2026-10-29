@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 from core_domain.file import FileType
+from core_domain.ids import UserId
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -41,7 +42,11 @@ def client(service: FileService) -> TestClient:
 def new_upload(service: FileService, filename: str = "part.gcode") -> str:
     file = asyncio.run(
         service.create_upload(
-            filename, FileType.GCODE, len(CONTENT), hashlib.sha256(CONTENT).hexdigest()
+            UserId.new(),
+            filename,
+            FileType.GCODE,
+            len(CONTENT),
+            hashlib.sha256(CONTENT).hexdigest(),
         )
     )
     return upload_path(file.id)

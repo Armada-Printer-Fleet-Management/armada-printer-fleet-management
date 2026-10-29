@@ -5,7 +5,7 @@ from enum import Enum, auto
 from typing import Self
 
 from core_domain.ddd import Entity, InvalidValue
-from core_domain.ids import FileId
+from core_domain.ids import FileId, UserId
 
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 
@@ -23,6 +23,7 @@ class File(Entity[FileId]):
     under that key is infrastructure's concern."""
 
     id: FileId
+    user_id: UserId
     filename: str
     file_type: FileType
     size_bytes: int
@@ -32,7 +33,13 @@ class File(Entity[FileId]):
 
     @classmethod
     def create(
-        cls, filename: str, file_type: FileType, size_bytes: int, sha256: str, now: datetime
+        cls,
+        user_id: UserId,
+        filename: str,
+        file_type: FileType,
+        size_bytes: int,
+        sha256: str,
+        now: datetime,
     ) -> Self:
         if not filename.strip():
             raise InvalidValue("A file must have a filename")
@@ -40,7 +47,7 @@ class File(Entity[FileId]):
             raise InvalidValue("A file must not be empty")
         if not _SHA256.fullmatch(sha256):
             raise InvalidValue("sha256 must be 64 lower-case hex characters")
-        return cls(FileId.new(), filename, file_type, size_bytes, sha256, now, now)
+        return cls(FileId.new(), user_id, filename, file_type, size_bytes, sha256, now, now)
 
     def storage_key(self) -> str:
         """Files with the same content share one stored copy under this key, so deleting a file

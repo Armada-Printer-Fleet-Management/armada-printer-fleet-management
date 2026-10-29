@@ -26,11 +26,10 @@ from api.domains.printer_queue.service import PrinterQueueService
 from api.infrastructure.dev_data import (
     STUB_FAULTY_PRINTER_ID,
     STUB_STUDENT_ID,
-    stub_files,
     stub_printer_queues,
     stub_printers,
 )
-from api.infrastructure.file_memory import InMemoryFileRepository
+from api.infrastructure.file_sql import SqlFileRepository
 from api.infrastructure.file_store_files import FileStoreFiles
 from api.infrastructure.postgres_database import PostgresDatabase
 from api.infrastructure.print_job_sql import SqlPrintJobRepository
@@ -58,7 +57,7 @@ database = PostgresDatabase(lambda: create_async_engine(database_url()))  # Buil
 # Domains without a SQL repository keep their state in memory, starting from the dev data.
 # Moving one to the database means constructing its SQL adapter here; nothing else changes.
 print_job_service = PrintJobService(SqlPrintJobRepository(database), clock)
-file_service = FileService(InMemoryFileRepository(stub_files()), files, clock)
+file_service = FileService(SqlFileRepository(database), files, clock)
 printer_service = PrinterService(
     MockPrinterServer(stub_printers(), clock, faulty_printer_ids=[STUB_FAULTY_PRINTER_ID])
 )

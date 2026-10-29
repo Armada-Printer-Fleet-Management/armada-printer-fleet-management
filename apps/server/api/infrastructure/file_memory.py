@@ -1,6 +1,5 @@
-# Stub: keeps file records in process memory, so the other apps can integrate before the server
-# has a database. Everything is lost on restart. Replacing it means writing a SqlFileRepository
-# that passes tests/contract/test_file_repository.py and constructing that in api/main.py.
+# Keeps file records in process memory, for tests that need a FileRepository without Postgres.
+# The server uses SqlFileRepository; both pass tests/contract/test_file_repository.py.
 from collections.abc import Iterable
 from dataclasses import replace
 

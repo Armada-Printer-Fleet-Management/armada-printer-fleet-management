@@ -286,6 +286,15 @@
             ],
             "description": "When the file was created and last changed.",
             "title": "time_status"
+          },
+          "userId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.UserId"
+              }
+            ],
+            "description": "The user who uploaded it.",
+            "title": "user_id"
           }
         },
         "title": "File",

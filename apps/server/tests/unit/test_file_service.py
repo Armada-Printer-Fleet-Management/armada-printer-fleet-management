@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 import pytest
 from core_domain.ddd import EntityNotFound, InvalidValue
 from core_domain.file import File, FileType
-from core_domain.ids import FileId
+from core_domain.ids import FileId, UserId
 
 from api.domains.file.service import FileService
 from api.infrastructure.file_memory import InMemoryFileRepository
@@ -36,7 +36,9 @@ async def stream(*chunks: bytes) -> AsyncIterator[bytes]:
 
 
 def create(service: FileService, sha256: str = SHA256) -> File:
-    return asyncio.run(service.create_upload("part.gcode", FileType.GCODE, len(CONTENT), sha256))
+    return asyncio.run(
+        service.create_upload(UserId.new(), "part.gcode", FileType.GCODE, len(CONTENT), sha256)
+    )
 
 
 def download(service: FileService, file_id: FileId) -> bytes:
@@ -48,7 +50,9 @@ def download(service: FileService, file_id: FileId) -> bytes:
 
 
 def test_create_upload_saves_the_file(service: FileService) -> None:
-    file = asyncio.run(service.create_upload("part.gcode", FileType.GCODE, 1024, SHA256))
+    file = asyncio.run(
+        service.create_upload(UserId.new(), "part.gcode", FileType.GCODE, 1024, SHA256)
+    )
 
     stored = asyncio.run(service.file(file.id))
     assert (stored.filename, stored.size_bytes, stored.created_at) == ("part.gcode", 1024, NOW)
@@ -56,7 +60,7 @@ def test_create_upload_saves_the_file(service: FileService) -> None:
 
 def test_create_upload_refused_by_the_rule_saves_nothing(service: FileService) -> None:
     with pytest.raises(InvalidValue):
-        asyncio.run(service.create_upload("part.gcode", FileType.GCODE, 0, SHA256))
+        asyncio.run(service.create_upload(UserId.new(), "part.gcode", FileType.GCODE, 0, SHA256))
 
 
 def test_an_uploaded_file_downloads_unchanged(service: FileService) -> None:
