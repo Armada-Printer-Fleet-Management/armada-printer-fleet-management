@@ -1,42 +1,14 @@
-# Stub: keeps print jobs in process memory, so the other apps can integrate before the server has
-# a database. Everything is lost on restart. Replacing it means writing a SqlPrintJobRepository
-# that passes tests/contract/test_print_job_repository.py and constructing that in api/main.py.
-import base64
-import binascii
+# Keeps print jobs in process memory, for tests that need a PrintJobRepository without Postgres.
+# The server uses SqlPrintJobRepository; both pass tests/contract/test_print_job_repository.py.
 from collections.abc import Iterable
 from dataclasses import replace
-from datetime import datetime
-from uuid import UUID
 
-from core_domain.ddd import EntityNotFound, InvalidPageToken, Page
+from core_domain.ddd import EntityNotFound, Page
 from core_domain.ids import PrintJobId
 from core_domain.print_job import PrintJob
 
 from api.domains.print_job.repository import PrintJobRepository
-
-type _SortKey = tuple[datetime, UUID]
-
-
-def _sort_key(print_job: PrintJob) -> _SortKey:
-    return print_job.created_at, print_job.id.value
-
-
-# The token is the last item's sort key, the same keyset a SQL adapter would page by.
-def _encode_token(key: _SortKey) -> str:
-    created_at, id_value = key
-    return base64.urlsafe_b64encode(f"{created_at.isoformat()}|{id_value}".encode()).decode()
-
-
-def _decode_token(token: str) -> _SortKey:
-    try:
-        created_at, id_value = base64.urlsafe_b64decode(token).decode().split("|")
-        key = datetime.fromisoformat(created_at), UUID(id_value)
-    except (binascii.Error, UnicodeDecodeError, ValueError) as error:
-        raise InvalidPageToken() from error
-    # A naive timestamp cannot be compared with the stored aware ones.
-    if key[0].tzinfo is None:
-        raise InvalidPageToken()
-    return key
+from api.infrastructure.page import newest_first_page
 
 
 class InMemoryPrintJobRepository(PrintJobRepository):
@@ -53,10 +25,5 @@ class InMemoryPrintJobRepository(PrintJobRepository):
         self._print_jobs[entity.id] = replace(entity)
 
     async def page(self, page_size: int, page_token: str) -> Page[PrintJob]:
-        newest_first = sorted(self._print_jobs.values(), key=_sort_key, reverse=True)
-        if page_token:
-            after = _decode_token(page_token)
-            newest_first = [job for job in newest_first if _sort_key(job) < after]
-        items = [replace(job) for job in newest_first[:page_size]]
-        more = len(newest_first) > page_size
-        return Page(items, _encode_token(_sort_key(items[-1])) if more else "")
+        page = newest_first_page(self._print_jobs.values(), page_size, page_token)
+        return Page([replace(job) for job in page.items], page.next_page_token)

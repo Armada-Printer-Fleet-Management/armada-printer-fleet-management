@@ -131,7 +131,8 @@ class PrintJobServiceImplementation:
         ctx: RequestContext[CreatePrintJobRequest, CreatePrintJobResponse],
         /,
     ) -> CreatePrintJobResponse:
-        print_job = await self._print_jobs.create(self._caller(), request.user_notes)
+        with domain_errors_as_connect():
+            print_job = await self._print_jobs.create(self._caller(), request.user_notes)
         return CreatePrintJobResponse(print_job=self._mapper.to_proto(print_job))
 
     async def create_print_job_upload(

@@ -12,7 +12,7 @@ The server is authoritative: it owns every entity's state, and its domains follo
 | ---------------------- | ------------------------------------------------------------------------- |
 | `api/main.py`          | Composition root: builds infrastructure, hands it to domain services, mounts RPC handlers |
 | `api/domains/`         | Domains: a repository port and a service per domain. Every port extends a `core_domain.ddd` `Abstract*Repository` base, and its adapter inherits it; a port over state another service owns, such as printers, requests changes rather than saving |
-| `api/infrastructure/`  | The server's own persistence behind those ports, in memory until the SQL repositories exist, and the adapters over plugins |
+| `api/infrastructure/`  | The server's own persistence behind those ports, and the adapters over plugins. A domain's SQL repository (`<domain>_sql.py`, on `SqlRepository`) is what the server runs; its in-memory one (`<domain>_memory.py`) serves tests, or the server until that domain has a SQL repository |
 | `api/infrastructure/postgres_database.py` | The connection pool to Postgres, opened by the lifespan and probed by the health check |
 | `api/infrastructure/sql_repository.py` | Base for a domain's SQL repository adapter: a transaction, with database failures as `Unavailable` |
 | `api/infrastructure/enum_ids.py` | The UUID the database stores for each enum member. Never change or reuse one |
