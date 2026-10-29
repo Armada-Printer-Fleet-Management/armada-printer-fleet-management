@@ -27,14 +27,13 @@ from api.infrastructure.dev_data import (
     STUB_FAULTY_PRINTER_ID,
     STUB_STUDENT_ID,
     stub_files,
-    stub_print_jobs,
     stub_printer_queues,
     stub_printers,
 )
 from api.infrastructure.file_memory import InMemoryFileRepository
 from api.infrastructure.file_store_files import FileStoreFiles
 from api.infrastructure.postgres_database import PostgresDatabase
-from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
+from api.infrastructure.print_job_sql import SqlPrintJobRepository
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
 from api.infrastructure.printer_server_mock import MockPrinterServer
 from api.lifespan import lifespan
@@ -56,9 +55,9 @@ database = PostgresDatabase(lambda: create_async_engine(database_url()))  # Buil
 
 # Services (note difference from an RPC service, this is the domain service)
 
-# The in-memory repositories stand in until the server has a database. Switching means
-# constructing the real adapters here; nothing else changes.
-print_job_service = PrintJobService(InMemoryPrintJobRepository(stub_print_jobs()), clock)
+# Domains without a SQL repository keep their state in memory, starting from the dev data.
+# Moving one to the database means constructing its SQL adapter here; nothing else changes.
+print_job_service = PrintJobService(SqlPrintJobRepository(database), clock)
 file_service = FileService(InMemoryFileRepository(stub_files()), files, clock)
 printer_service = PrinterService(
     MockPrinterServer(stub_printers(), clock, faulty_printer_ids=[STUB_FAULTY_PRINTER_ID])
