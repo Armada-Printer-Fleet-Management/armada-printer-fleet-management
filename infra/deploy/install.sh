@@ -27,14 +27,19 @@ ARMADA_HOME=/opt/armada
 ENV_FILE="$ARMADA_HOME/.env"
 BIN=/usr/local/bin/armada
 
+# Colour only for a person at a terminal, as in armada.
+colour() { [ -t "$1" ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != dumb ]; }
+if colour 1; then BOLD=$'\e[1m' RESET=$'\e[0m'; else BOLD="" RESET=""; fi
+if colour 2; then ERR_RED=$'\e[31m' ERR_RESET=$'\e[0m'; else ERR_RED="" ERR_RESET=""; fi
+
 die() {
-  printf 'install: %s\n' "$*" >&2
+  printf '%sinstall: %s%s\n' "$ERR_RED" "$*" "$ERR_RESET" >&2
   exit 1
 }
 
 # Tracks are shown only on the preview channel; production installs have exactly one.
 usage() {
-  cat <<'EOF'
+  cat <<EOF
 Installs Armada on a Linux machine that already has Docker. Run it once, as root:
 
   sudo bash install.sh [--domain <name>] [--admin-email <address>]
@@ -45,6 +50,9 @@ Installs Armada on a Linux machine that already has Docker. Run it once, as root
 Each option answers one question in advance; anything not given is asked, unless
 --non-interactive is set, which makes a missing answer an error. Running it again on an
 installed machine keeps its generated passwords, so a reinstall finds its data.
+
+  --version <version>|latest  The version to install: this installer's own, $RELEASE_VERSION,
+                              unless another is given. latest is the newest available.
 EOF
   if [ "$CHANNEL" = preview ]; then
     cat <<'EOF'
@@ -57,7 +65,7 @@ EOF
 
 # ── options ──────────────────────────────────────────────────────────────────────────────────────
 
-version=latest
+version=$RELEASE_VERSION
 track=""
 settings=()
 while [ $# -gt 0 ]; do
@@ -211,6 +219,12 @@ set_kv IMAGE_SUFFIX "$image_suffix"
 "$BIN" reconfigure --install ${settings[@]+"${settings[@]}"}
 echo
 "$BIN" update "$version" || die "Armada did not start. See: armada logs"
+# An older version than the newest is replaced by automatic updates at the next check; this says
+# so, and records what is available for armada status.
+if [ "$("$BIN" config update-policy)" != off ]; then
+  echo
+  "$BIN" check-for-updates || true
+fi
 
 domain=$("$BIN" config domain)
 case "$domain" in
@@ -229,7 +243,7 @@ case "$policy" in
 esac
 cat <<EOF
 
-Armada $("$BIN" version) is running at $address
+${BOLD}Armada $("$BIN" version) is running at $address${RESET}
 
   Updates   $policy_text
             change with: armada config update-policy <notify|auto|off>

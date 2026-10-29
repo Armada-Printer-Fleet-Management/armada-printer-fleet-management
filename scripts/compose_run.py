@@ -22,6 +22,7 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import json
 import pathlib
 import secrets
 import shutil
@@ -39,6 +40,8 @@ DEPLOY_IMAGES = {
     "armada-server": REPO / "apps" / "server" / "deploy.Dockerfile",
     "armada-web": REPO / "apps" / "web" / "deploy.Dockerfile",
 }
+ORGANIZATION = REPO / "packages" / "organization-info" / "organization.json"
+IMAGE_DESCRIPTIONS = REPO / "infra" / "deploy" / "image-descriptions.json"
 DEV_GENERATED = [
     REPO / "apps" / "server" / "api" / "gen",
     REPO / "apps" / "web" / "src" / "gen",
@@ -127,11 +130,30 @@ def prepare_env(
 
 def build_deploy_images(env: dict[str, str]) -> None:
     docker = resolve("docker")
+    organization = json.loads(ORGANIZATION.read_text(encoding="utf-8"))
+    descriptions = json.loads(IMAGE_DESCRIPTIONS.read_text(encoding="utf-8"))
     # The release workflow reads this label to find the commit an image on a pointer came from.
-    labels: list[str] = []
-    if revision := env.get("REVISION"):
-        labels = ["--label", f"org.opencontainers.image.revision={revision}"]
+    revision: list[str] = []
+    if commit := env.get("REVISION"):
+        revision = ["--label", f"org.opencontainers.image.revision={commit}"]
     for name, dockerfile in DEPLOY_IMAGES.items():
+        # An image inherits its base image's labels, so web would otherwise carry Caddy's name,
+        # license and links, and GHCR shows the description and license on the package page. A
+        # label cannot be removed, only overridden, so the ones we have no value for are emptied.
+        # version stays empty because images are promoted without a rebuild: the tag says it.
+        oci = {
+            "title": name,
+            "description": descriptions[name],
+            "source": organization["repositoryUrl"],
+            "url": organization["repositoryUrl"],
+            "licenses": "",
+            "vendor": "",
+            "documentation": "",
+            "version": "",
+        }
+        labels = [*revision]
+        for key, value in oci.items():
+            labels += ["--label", f"org.opencontainers.image.{key}={value}"]
         registry = env.get("REGISTRY") or "ghcr.io"
         suffix = env.get("IMAGE_SUFFIX", "")
         tag = f"{registry}/{env['GHCR_OWNER']}/{name}{suffix}:{env['VERSION']}"

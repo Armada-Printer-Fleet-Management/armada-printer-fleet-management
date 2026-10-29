@@ -14,6 +14,7 @@ differ only in their environment file.
 | `systemd/` | The timer that runs `armada check-for-updates --scheduled` |
 | `release.sh` | Assembles a release's files, `VERSION` and `SHA256SUMS`, for either channel; used by the workflows and the tests |
 | `release.Dockerfile` | Packs a preview build's release files into its private release image |
+| `image-descriptions.json` | Each published image's description, set as its `org.opencontainers.image.description` label, which GHCR shows on the package page. `scripts/compose_run.py` labels the server and web images, and `deploy.yml` the release image |
 
 Only ports 80 and 443 are published to the network. Both Postgres databases and Garage are
 reachable from the other containers and nowhere else. Through Caddy, Keycloak serves only what
@@ -193,8 +194,10 @@ less install.sh
 sudo bash install.sh
 ```
 
-`latest` is the newest version promoted to production. Use `releases/download/v<X.Y.Z>/` for a
-particular version.
+`latest` is the newest version promoted to production. Each release's installer installs that
+release's version, so to install a particular version, download the installer from
+`releases/download/v<X.Y.Z>/` instead. To install the newest version with any installer, pass
+`--version latest`.
 
 Every question can be answered with a flag instead, and `--non-interactive` turns a missing answer
 into an error, for automated setups.
@@ -239,34 +242,36 @@ again.
 
 ## Running a machine: the `armada` command
 
+`armada help` (or `-h`, `--help`) lists every command. The ones used most:
+
 | Command | What it does |
 |---|---|
-| `armada status` | The version, whether every service is healthy, update settings, disk use, certificate expiry |
-| `armada update <version\|latest>` | Moves to a version. If it does not become healthy within three minutes, the previous version is put back |
-| `armada rollback [version] [--yes]` | Asks, then returns to the version before the last update, with the same health check. Running it again undoes the rollback; to go further back, name a version. `--yes` skips the question |
-| `armada check-for-updates` | Says whether a newer version is available on this machine's track |
-| `armada logs [service] [lines]` | Follows the logs |
-| `armada restart`, `stop`, `start` | Restarts, stops or starts every service; data is kept |
-| `armada reconfigure` | Asks the installation questions again |
+| `armada status` | The version, health of every service, update settings, disk use and certificate |
+| `armada update <version\|latest>` | Moves to a version, and puts the previous one back if it does not become healthy |
+| `armada rollback [version]` | Returns to the version before the last update; run it again to undo |
+| `armada logs [service]` | Follows the logs |
 | `armada config <key> [value]` | Shows or changes one setting (below) |
-| `armada uninstall [--delete-data]` | Removes Armada. Without `--delete-data`, the data and `/opt/armada/.env` stay, so installing again finds them |
 
 | Setting | Values |
 |---|---|
 | `domain`, `admin-email` | As asked by the installer; changing the domain gets a new certificate |
-| `track` | Which pointer the machine follows: `production` for every real installation; `staging` and `testing` for ours. A machine moves between testing and staging freely, but to or from production only by reinstalling from the other channel |
+| `track` | Testing and staging machines only: `testing` or `staging`. Moving to or from production is a reinstall from the other channel |
 | `update-policy` | `notify` (the default) records that a version is available, `auto` installs it, `off` never checks |
 | `update-window` | For `auto`: only install between these times, e.g. `02:00-05:00`. Empty means any time |
 | `update-interval` | How often the timer checks, e.g. `6h` (the default) or `5min` |
 
 A machine follows its pointer down as well as up: if a pointer is moved back, automatic updates
-move back with it.
+move back with it. A rollback pauses automatic updates for the version rolled back from, until the
+track names another version or someone runs `armada update`.
+
+The update window is in the machine's own time zone, and `armada status` shows times in it too.
+Ubuntu servers default to UTC; set the zone once with `sudo timedatectl set-timezone <zone>`.
 
 On the machine: settings and generated passwords are in `/opt/armada/.env` (readable by root
 only), each installed version's files are in `/opt/armada/releases/`, and the timer is
 `armada-update.timer`.
 
-`.github/workflows/deploy.ci.yml` lints these scripts with shellcheck and, against a local
+`.github/workflows/test-deploy.ci.yml` lints these scripts with shellcheck and, against a local
 registry, runs a whole install, update, rollback, failed update, uninstall and reinstall through
 the preview channel, then a production install and update through the release channel, on every
 pull request that changes them.

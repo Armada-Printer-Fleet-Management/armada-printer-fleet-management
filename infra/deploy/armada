@@ -24,15 +24,30 @@ unset VERSION REGISTRY GHCR_OWNER IMAGE_SUFFIX DOMAIN ADMIN_EMAIL
 
 # ── output ───────────────────────────────────────────────────────────────────────────────────────
 
+# Colour only for a person at a terminal, so the timer's journal and captured output stay plain.
+colour() { [ -t "$1" ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != dumb ]; }
+if colour 1; then
+  BOLD=$'\e[1m' RED=$'\e[31m' GREEN=$'\e[32m' YELLOW=$'\e[33m' RESET=$'\e[0m'
+else
+  BOLD="" RED="" GREEN="" YELLOW="" RESET=""
+fi
+if colour 2; then ERR_YELLOW=$'\e[33m' ERR_RED=$'\e[31m' ERR_RESET=$'\e[0m'; else ERR_YELLOW="" ERR_RED="" ERR_RESET=""; fi
+
 say() { printf '%s\n' "$*"; }
-warn() { printf 'armada: %s\n' "$*" >&2; }
+warn() { printf '%sarmada: %s%s\n' "$ERR_YELLOW" "$*" "$ERR_RESET" >&2; }
 die() {
-  warn "$*"
+  printf '%sarmada: %s%s\n' "$ERR_RED" "$*" "$ERR_RESET" >&2
   exit 1
 }
 
+# Tracks are internal on production, so they are listed only on preview machines. help runs
+# without root, and .env is readable by root only, so an unreadable one hides them.
+track_key() { [ -r "$ENV_FILE" ] && preview_track && printf ' track,'; }
+
 usage() {
-  cat <<'EOF'
+  local track
+  track=$(track_key || true)
+  cat <<EOF
 Usage: armada <command> [arguments]
 
 Versions
@@ -53,10 +68,11 @@ Running
 Settings
   reconfigure                 Answer the installation questions again
   config <key> [value]        Show one setting, or change it when a value is given:
-                                domain, admin-email, update-policy,
+                                domain, admin-email,${track} update-policy,
                                 update-window, update-interval
   uninstall [--delete-data] [--yes]
                               Remove Armada. Data is kept unless --delete-data is given.
+  help                        Show this list
 EOF
 }
 
@@ -324,6 +340,8 @@ cmd_update() {
   fi
 
   say "Updating ${previous:-a new installation} to $target"
+  # status reads this only while the lock is held, so one left behind by a crash is never shown.
+  set_state UPDATING_TO "$target"
   fetch_release "$target"
   VERSION=$target compose_at "$target" pull --quiet
   set_setting VERSION "$target"
@@ -334,12 +352,14 @@ cmd_update() {
     [ -n "$previous" ] && [ "$previous" != "$target" ] && set_state PREVIOUS_VERSION "$previous"
     set_state INSTALLED_AT "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     set_state AVAILABLE_VERSION ""
+    set_state UPDATING_TO ""
     install_tooling "$target"
     prune_releases
     say "Now running $target."
     return 0
   fi
 
+  set_state UPDATING_TO ""
   warn "$target did not become healthy."
   compose ps --all --format '  {{.Service}}: {{.State}} {{.Health}}' >&2 || true
   if [ -z "$previous" ]; then
@@ -355,7 +375,7 @@ cmd_update() {
 }
 
 cmd_rollback() {
-  local target="" confirmed=false
+  local target="" confirmed=false from
   while [ $# -gt 0 ]; do
     case "$1" in
       --yes) confirmed=true ;;
@@ -366,17 +386,28 @@ cmd_rollback() {
   done
   [ -n "$target" ] || target=$(state PREVIOUS_VERSION)
   [ -n "$target" ] || die "No previous version is recorded. Name one: armada rollback <version>"
+  from=$(setting VERSION)
   if ! $confirmed; then
-    [[ $(ask "Roll back from $(setting VERSION) to $target? (y/n)" n) =~ ^[Yy] ]] ||
+    [[ $(ask "Roll back from $from to $target? (y/n)" n) =~ ^[Yy] ]] ||
       die "Nothing was changed."
   fi
   say "Rolling back to $target"
-  cmd_update "$target"
+  cmd_update "$target" || return 1
+  # Automatic updates would otherwise reinstall the version just rolled back from at the next
+  # check. Undoing a rollback returns to that version, so it lifts the pause instead.
+  if [ "$target" = "$(state ROLLED_BACK_FROM)" ]; then
+    set_state ROLLED_BACK_FROM ""
+  elif [ -n "$from" ] && [ "$from" != "$target" ]; then
+    set_state ROLLED_BACK_FROM "$from"
+    [ "$(setting UPDATE_POLICY notify)" = auto ] &&
+      say "Automatic updates skip $from until the track names another version, or until: armada update latest"
+  fi
+  return 0
 }
 
 # The timer runs this with --scheduled, which obeys the update policy and window.
 cmd_check_for_updates() {
-  local scheduled=false policy latest current window
+  local scheduled=false policy latest current window rolled_back_from
   [ "${1:-}" = --scheduled ] && scheduled=true
   policy=$(setting UPDATE_POLICY notify)
   if $scheduled && [ "$policy" = off ]; then
@@ -398,8 +429,16 @@ cmd_check_for_updates() {
   set_state AVAILABLE_VERSION "$latest"
   say "$latest is available; running ${current:-nothing}."
   window=$(setting UPDATE_WINDOW)
+  rolled_back_from=$(state ROLLED_BACK_FROM)
+  # Once the track names another version, the rollback has been answered and the pause ends.
+  if [ -n "$rolled_back_from" ] && [ "$latest" != "$rolled_back_from" ]; then
+    set_state ROLLED_BACK_FROM ""
+    rolled_back_from=""
+  fi
+  if [ "$policy" = auto ] && [ -n "$rolled_back_from" ]; then
+    say "Not installing it automatically: this machine was rolled back from $latest. Automatic updates resume when the track names another version. To install it now: armada update $latest"
   # An update restarts Armada, so automatic ones wait for the window the operator chose.
-  if $scheduled && [ "$policy" = auto ]; then
+  elif $scheduled && [ "$policy" = auto ]; then
     if in_window "$window"; then
       cmd_update "$latest"
     else
@@ -407,7 +446,7 @@ cmd_check_for_updates() {
     fi
   elif ! $scheduled; then
     if [ "$policy" = auto ]; then
-      say "It installs itself at the next scheduled check${window:+ inside the update window, $window}. To install it now: armada update $latest"
+      say "It installs itself at the next scheduled check${window:+ inside the update window, $window $(date +%Z)}. To install it now: armada update $latest"
     else
       say "Install it with: armada update $latest"
     fi
@@ -422,29 +461,74 @@ certificate_expiry() {
     openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2 || true
 }
 
+# Times are stored in UTC and shown in the machine's own zone, the one the update window uses.
+local_time() { date -d "$1" '+%Y-%m-%d %H:%M %Z' 2>/dev/null || printf '%s' "$1"; }
+
+# Whether an update is running now. Another armada command holds the lock while it works; the
+# subshell takes and drops it at once, so status never holds it.
+updating() {
+  [ -n "$(state UPDATING_TO)" ] && [ -e "$LOCK_FILE" ] && ! (flock --nonblock 9) 9<"$LOCK_FILE"
+}
+
+# The timer's next run, from both its interval and its window, in the machine's zone. list-timers
+# prints "-" or "n/a" in the NEXT column when nothing is scheduled.
+next_check() {
+  systemctl list-timers "$TIMER" --all --no-legend 2>/dev/null |
+    awk '$1 == "-" || $1 == "n/a" { exit } { print $2, substr($3, 1, 5), $4; exit }'
+}
+
+status_updates() {
+  local policy window next last_check rolled_back_from
+  policy=$(setting UPDATE_POLICY notify)
+  if [ "$policy" = off ]; then
+    printf '  %-12s off\n' Updates
+    return 0
+  fi
+  window=$(setting UPDATE_WINDOW)
+  next=$(next_check)
+  last_check=$(state LAST_CHECK)
+  rolled_back_from=$(state ROLLED_BACK_FROM)
+  printf '  %-12s %s, checked every %s, %s\n' Updates "$policy" "$(setting UPDATE_INTERVAL 6h)" \
+    "$([ -n "$window" ] && printf 'window %s %s' "$window" "$(date +%Z)" || printf 'window any time')"
+  printf '  %-12s last checked %s, next %s\n' '' \
+    "$([ -n "$last_check" ] && local_time "$last_check" || printf never)" "${next:-not scheduled}"
+  if [ "$policy" = auto ] && [ -n "$rolled_back_from" ]; then
+    printf '  %-12s %spaused for %s, which this machine was rolled back from%s\n' '' \
+      "$YELLOW" "$rolled_back_from" "$RESET"
+  fi
+}
+
 cmd_status() {
-  local version available last_check health expiry disk root
+  local version available health expiry disk root
   version=$(setting VERSION)
   available=$(state AVAILABLE_VERSION)
-  last_check=$(state LAST_CHECK never)
-  printf 'Armada  %s\n' "$(setting DOMAIN)"
-  printf '  %-12s %s   (installed %s)\n' Version "${version:-none}" "$(state INSTALLED_AT unknown)"
+  printf '%sArmada  %s%s\n' "$BOLD" "$(setting DOMAIN)" "$RESET"
+  if updating; then
+    printf '  %-12s %s%s -> updating to %s%s\n' Version "$YELLOW" "${version:-none}" "$(state UPDATING_TO)" "$RESET"
+    preview_track && printf '  %-12s %s\n' Track "$(setting TRACK)"
+    say "Run armada status again once the update finishes."
+    return 0
+  fi
+  printf '  %-12s %s   (installed %s)\n' Version "${version:-none}" \
+    "$(local_time "$(state INSTALLED_AT unknown)")"
   preview_track && printf '  %-12s %s\n' Track "$(setting TRACK)"
-  printf '  %-12s %s, checked every %s%s   last checked %s\n' Updates \
-    "$(setting UPDATE_POLICY notify)" "$(setting UPDATE_INTERVAL 6h)" \
-    "$([ -n "$(setting UPDATE_WINDOW)" ] && printf ', applied %s' "$(setting UPDATE_WINDOW)")" \
-    "$last_check"
-  [ -n "$available" ] && printf '  %-12s -> %s is available. To install it: armada update %s\n' '' "$available" "$available"
+  status_updates
+  [ -n "$available" ] && printf '  %-12s %s-> %s is available. To install it: armada update %s%s\n' '' \
+    "$YELLOW" "$available" "$available" "$RESET"
   [ -n "$version" ] || return 0
 
-  if all_healthy; then health=OK; else health="NOT HEALTHY  (see: armada logs)"; fi
+  if all_healthy; then
+    health="${GREEN}OK${RESET}"
+  else
+    health="${RED}NOT HEALTHY${RESET}  (see: armada logs)"
+  fi
   printf '  %-12s %s\n' Health "$health"
   compose ps --all --format '{{.Service}} {{.State}} {{.Health}}' |
     while read -r service status condition; do
       printf '  %-12s %-20s %-10s %s\n' '' "$service" "$status" "${condition:--}"
     done
   expiry=$(certificate_expiry "$(setting DOMAIN)")
-  [ -n "$expiry" ] && printf '  %-12s renewed automatically; this one is valid until %s\n' Certificate "$expiry"
+  [ -n "$expiry" ] && printf '  %-12s renewed automatically; this one is valid until %s\n' Certificate "$(local_time "$expiry")"
   root=$(docker info --format '{{.DockerRootDir}}')
   disk=$(df -h --output=used,size "$root" | tail -n 1 | awk '{print $1 " used of " $2}')
   printf '  %-12s %s\n' Disk "$disk"
@@ -526,8 +610,10 @@ write_timer() {
   seconds=$(($(systemd-analyze timespan "$interval" | awk '/μs:/ {print $2}') / 1000000))
   spread=$((seconds / 4 < 900 ? seconds / 4 : 900))
   mkdir -p "$dir"
-  printf '[Timer]\nOnUnitActiveSec=\nOnUnitActiveSec=%s\nRandomizedDelaySec=%ss\n' "$interval" "$spread" \
-    >"$dir/interval.conf"
+  # An empty assignment clears every trigger in the unit, not just that one, so the first check
+  # after the timer starts is restated with the interval.
+  printf '[Timer]\nOnUnitActiveSec=\nOnActiveSec=5min\nOnUnitActiveSec=%s\nRandomizedDelaySec=%ss\n' \
+    "$interval" "$spread" >"$dir/interval.conf"
   if [ "$(setting UPDATE_POLICY notify)" = auto ] && [ -n "$window" ]; then
     printf '[Timer]\nOnCalendar=*-*-* %s:00\n' "${window%-*}" >"$dir/window.conf"
   else
@@ -575,7 +661,7 @@ cmd_reconfigure() {
       if [ "$policy" = auto ] && ! $set_window; then
         say ""
         say "Automatic updates restart Armada, so they can be kept to a daily window. Times are"
-        say "24-hour, on this machine's clock (now $(date +%H:%M)), and a window may cross midnight,"
+        say "24-hour, on this machine's clock (now $(date '+%H:%M %Z')), and a window may cross midnight,"
         say "such as 23:00-02:00."
         window=$(ask_valid update-window "Install updates only between, e.g. 02:00-05:00 (empty for any time)" "$(setting UPDATE_WINDOW)")
         set_window=true
@@ -598,7 +684,7 @@ cmd_reconfigure() {
     say ""
     say "  Domain         $domain"
     say "  Admin email    $email"
-    say "  Updates        $policy${window:+, between $window}"
+    say "  Updates        $policy${window:+, between $window $(date +%Z)}"
     [[ $(ask "Is this right? (y/n)" y) =~ ^[Yy] ]] && break
     domain="" email="" policy="" window="" set_window=false
   done
@@ -616,12 +702,13 @@ cmd_reconfigure() {
 }
 
 cmd_config() {
-  local name=${1:-} key
+  local name=${1:-} key track
   if [ -z "$name" ]; then
-    cat >&2 <<'EOF'
+    track=$(track_key || true)
+    cat >&2 <<EOF
 Usage: armada config <key>            shows the key's current value
        armada config <key> <value>    changes it
-Keys:  domain, admin-email, update-policy, update-window, update-interval
+Keys:  domain, admin-email,${track} update-policy, update-window, update-interval
 EOF
     exit 1
   fi
@@ -631,6 +718,11 @@ EOF
     return 0
   fi
   check_value "$name" "$2"
+  # Rewriting an unchanged value would still restart the stack or the timer, for nothing.
+  if [ "$(setting "$key")" = "$2" ]; then
+    say "$name is already ${2:-empty}."
+    return 0
+  fi
   # Testing and staging share the private packages; production's are different packages with a
   # different installer, so crossing between them is a reinstall.
   if [ "$name" = track ] && [ "$(preview_track "$2" && echo y)" != "$(preview_track && echo y)" ]; then
@@ -642,6 +734,11 @@ EOF
     update-policy | update-window | update-interval) write_timer ;;
   esac
   say "$name is now ${2:-empty}."
+  # Says whether a newer version will now install itself, so that is no surprise. A failed check
+  # leaves the policy changed, since the timer checks again anyway.
+  if [ "$name" = update-policy ] && [ "$2" = auto ] && [ -n "$(setting VERSION)" ]; then
+    (cmd_check_for_updates) || warn "Could not check for a newer version just now."
+  fi
 }
 
 cmd_uninstall() {
@@ -720,7 +817,8 @@ main() {
   esac
 
   case "$command" in
-    update) cmd_update "$@" ;;
+    # Choosing a version by hand answers a rollback, so automatic updates resume.
+    update) cmd_update "$@" && set_state ROLLED_BACK_FROM "" ;;
     rollback) cmd_rollback "$@" ;;
     check-for-updates) cmd_check_for_updates "$@" ;;
     version) say "$(setting VERSION)" ;;
