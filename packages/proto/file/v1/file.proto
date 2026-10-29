@@ -4,6 +4,7 @@ package file.v1;
 
 import "common/v1/time_status.proto";
 import "id/v1/file_id.proto";
+import "id/v1/user_id.proto";
 
 // The format of a stored file. Names stay vendor-neutral so any printer brand fits.
 enum FileType {
@@ -29,4 +30,6 @@ message File {
   string sha256 = 5;
   // When the file was created and last changed.
   common.v1.TimeStatus time_status = 6;
+  // The user who uploaded it.
+  id.v1.UserId user_id = 7;
 }

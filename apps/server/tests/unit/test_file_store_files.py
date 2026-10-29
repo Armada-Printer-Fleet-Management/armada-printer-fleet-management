@@ -7,6 +7,7 @@ from typing import Self
 import pytest
 from core_domain.ddd import EntityNotFound, Unavailable
 from core_domain.file import File, FileType
+from core_domain.ids import UserId
 from plugin_api.file_store import FileStoreError
 
 from api.infrastructure.file_store_files import FileStoreFiles
@@ -106,7 +107,7 @@ def opened_over(store: MemoryFileStore) -> FileStoreFiles:
 
 
 def test_bytes_missing_from_the_store_are_not_found_for_the_file() -> None:
-    file = File.create("part.gcode", FileType.GCODE, 1, "a" * 64, datetime.now(UTC))
+    file = File.create(UserId.new(), "part.gcode", FileType.GCODE, 1, "a" * 64, datetime.now(UTC))
 
     with pytest.raises(EntityNotFound) as raised:
         asyncio.run(opened_over(MemoryFileStore()).read(file))
@@ -116,7 +117,7 @@ def test_bytes_missing_from_the_store_are_not_found_for_the_file() -> None:
 
 @pytest.mark.parametrize("name", ["has_upload", "read", "delete"])
 def test_a_store_outage_is_unavailable_for_every_operation(name: str) -> None:
-    file = File.create("part.gcode", FileType.GCODE, 1, "a" * 64, datetime.now(UTC))
+    file = File.create(UserId.new(), "part.gcode", FileType.GCODE, 1, "a" * 64, datetime.now(UTC))
     store = MemoryFileStore()
     files = opened_over(store)
     store.healthy = False

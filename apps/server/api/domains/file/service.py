@@ -4,7 +4,7 @@ from datetime import datetime
 
 from core_domain.ddd import InvalidValue, Service
 from core_domain.file import File, FileType
-from core_domain.ids import FileId
+from core_domain.ids import FileId, UserId
 
 from api.domains.file.repository import FileRepository
 from api.domains.file.storage import FileStorage
@@ -42,10 +42,10 @@ class FileService(Service[FileRepository]):
         return await self._repository.get_many(file_ids)
 
     async def create_upload(
-        self, filename: str, file_type: FileType, size_bytes: int, sha256: str
+        self, user_id: UserId, filename: str, file_type: FileType, size_bytes: int, sha256: str
     ) -> File:
         """Records a file about to be uploaded, before its bytes arrive."""
-        file = File.create(filename, file_type, size_bytes, sha256, self._clock())
+        file = File.create(user_id, filename, file_type, size_bytes, sha256, self._clock())
         await self._repository.save(file)
         return file
 

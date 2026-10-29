@@ -2,6 +2,7 @@
 # when it was written, so a UUID is never changed or given to another member, even after the
 # member is removed. Numbers and names are never stored: proto numbering or a rename would change
 # the meaning of existing rows.
+from collections.abc import Mapping
 from uuid import UUID
 
 from core_domain.file import FileType
@@ -34,9 +35,16 @@ USER_ROLE_IDS: dict[user_pb2.UserRole, UUID] = {
     user_pb2.USER_ROLE_ADMIN: UUID("47cd9afe-e69d-4e20-9839-e19cf2c71f84"),
 }
 
-# Members the dev seed needs whose enums are not in packages/proto yet. Each moves into a map
-# above, keeping its UUID, when the feature that uses it adds the proto enum.
+# Members the dev seed and the SQL repositories need whose enums are not in packages/proto yet.
+# Each moves into a map above, keeping its UUID, when the feature that uses it adds the proto enum.
 USER_STATUS_ACTIVE_ID = UUID("fcbfe76e-3ec2-468e-b0b4-4c61a3045622")
 FLEET_ACCESS_POLICY_STAFF_ONLY_ID = UUID("0893e1a6-e0b8-4035-b001-d08f352398a4")
+FILE_UPLOAD_STATUS_PENDING_ID = UUID("56bb6b8a-71c2-430c-b976-20f430cd556f")
 FILE_UPLOAD_STATUS_UPLOADED_ID = UUID("5595dd8f-0bf9-4943-8e45-47a796dda538")
+FILE_SCAN_STATUS_NOT_SCANNED_ID = UUID("bbbdd29f-b7b5-4d49-bbee-2ffd06111512")
 FILE_SCAN_STATUS_CLEAN_ID = UUID("cf2ae902-1b0d-4a06-a1d8-56d7552203d7")
+
+
+def by_stored_id[MemberT](ids: Mapping[MemberT, UUID]) -> dict[UUID, MemberT]:
+    """Reverses one of the maps above, for reading a stored enum column back."""
+    return {uuid: member for member, uuid in ids.items()}

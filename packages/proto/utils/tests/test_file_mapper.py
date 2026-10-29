@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 from core_domain.file import File, FileType
-from core_domain.ids import FileId
+from core_domain.ids import FileId, UserId
 
 from proto_utils.gen.file.v1 import file_pb2
 from proto_utils.mappers import FileMapper
@@ -11,7 +11,9 @@ TIME = datetime(2026, 10, 1, 9, 0, tzinfo=UTC)
 
 
 def every_field_set() -> File:
-    return File(FileId.new(), "part.gcode", FileType.CGCODE, 2048, "b" * 64, TIME, TIME)
+    return File(
+        FileId.new(), UserId.new(), "part.gcode", FileType.CGCODE, 2048, "b" * 64, TIME, TIME
+    )
 
 
 def test_to_proto_maps_every_field_of_the_message() -> None:
