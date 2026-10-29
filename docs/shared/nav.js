@@ -14,7 +14,10 @@ const SECTIONS = [
   },
   {
     title: "Applications",
-    links: [{ href: "desktop.html", text: "Desktop application" }],
+    links: [
+      { href: "desktop.html", text: "Desktop application" },
+      { href: "web.html", text: "Web application" },
+    ],
   },
   {
     title: "Design",

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Web application</title>
+    <link rel="stylesheet" href="shared/docs.css" />
+  </head>
+  <body data-depth="0">
+    <div class="layout">
+      <nav></nav>
+      <main>
+        <h1>Web application</h1>
+        <p class="lede">
+          How the layout and routes in <code>apps/web/</code> fit together, and
+          where to add a page.
+        </p>
+
+        <h2>Layout</h2>
+        <p>
+          One layout route, <code>AppLayout</code>, wraps every page: a sidebar
+          on the left and a <code>&lt;main&gt;</code> that scrolls on its own, so
+          the window never scrolls. It follows the desktop app's layout, minus
+          the collapsible rail.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>src/routes.ts</code></td>
+                <td>
+                  Every route's path, label and icon. The sidebar is built from
+                  it.
+                </td>
+              </tr>
+              <tr>
+                <td><code>src/WebRouter.tsx</code></td>
+                <td>Maps each path to its page. Unknown paths show not-found.</td>
+              </tr>
+              <tr>
+                <td><code>src/components/AppLayout.tsx</code></td>
+                <td>Sidebar plus scrolling content area.</td>
+              </tr>
+              <tr>
+                <td><code>src/components/Sidebar.tsx</code></td>
+                <td>Wordmark, New print button, navigation, Sign out.</td>
+              </tr>
+              <tr>
+                <td><code>src/pages/</code></td>
+                <td>One file per page.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>Add a page</h2>
+        <ol>
+          <li>
+            Add an entry to <code>routePaths</code> in
+            <code>src/routes.ts</code>. Use <code>nav: 'main'</code> to show it
+            in the sidebar.
+          </li>
+          <li>Create the page in <code>src/pages/</code>.</li>
+          <li>Add a <code>&lt;Route&gt;</code> for it in <code>WebRouter.tsx</code>.</li>
+        </ol>
+
+        <h2>Stubs to fill in</h2>
+        <ul>
+          <li>
+            <strong>My prints, Training, Help:</strong> title only, waiting for
+            their epics.
+          </li>
+          <li>
+            <strong>Home:</strong> the cards from the design are empty frames
+            with a title.
+          </li>
+          <li>
+            <strong>Sign out:</strong> shown but disabled until authentication
+            exists.
+          </li>
+        </ul>
+
+        <h2>Dev tools link</h2>
+        <p>
+          In <code>pnpm dev</code> the sidebar shows a highlighted
+          <strong>Dev tools</strong> link to <code>/temp</code>, the integration
+          check against the server. The route is behind
+          <code>import.meta.env.DEV</code> and loaded lazily, so
+          <code>pnpm build</code> leaves its code out of the bundle.
+        </p>
+
+        <h2>Colours</h2>
+        <p>
+          The web app uses the shared tokens in
+          <code>packages/ui-kit/src/styles.css</code>, with one override:
+          <code>--primary</code> is the design's red in
+          <code>src/index.css</code>. The desktop app keeps the shared blue.
+          Anything that should follow the brand colour must use
+          <code>bg-primary</code> or <code>text-primary</code>, never a literal
+          colour.
+        </p>
+
+        <section class="ai-statement">
+          <h2>AI Use Statement</h2>
+          <dl>
+            <dt>Tool</dt>
+            <dd>GitHub Copilot (Claude Sonnet 5.5)</dd>
+            <dt>Mode</dt>
+            <dd>Local</dd>
+            <dt>Output</dt>
+            <dd>drafted this page from the implemented layout and routes</dd>
+            <dt>Data</dt>
+            <dd>none</dd>
+            <dt>Verified</dt>
+            <dd><em>Not yet written. The developer completes this field.</em></dd>
+          </dl>
+          <p>
+            Required by the project's
+            <a href="../.integrity/POLICY.md">AI use policy</a>. The
+            verification field is written by a developer, never by an agent.
+          </p>
+        </section>
+      </main>
+    </div>
+    <script src="shared/nav.js"></script>
+  </body>
+</html>

@@ -1,32 +1,42 @@
-@import "tailwindcss";
-@import "@armada/ui-kit/styles.css";
+@import 'tailwindcss';
+@import '@armada/ui-kit/styles.css';
 
 @source "../../../packages/ui-kit/src";
 
+/* The web app's brand red, from the design. Overrides the shared blue for this app only. */
 :root {
-  --bg: #0f172a;
-  --fg: #e6eef8;
-  --accent: #3b82f6;
+  --primary: #cf0722;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
 }
 
+/* Thin, rounded scrollbars that stay quiet until hovered. Uses the standard properties, which
+   current Chrome, Edge, Firefox and Safari support, so no vendor-prefixed rules are needed. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 25%, transparent)
+    transparent;
+}
+
+*:hover {
+  scrollbar-color: color-mix(in srgb, var(--foreground) 45%, transparent)
+    transparent;
+}
+
 body {
-  background: var(--bg);
-  color: var(--fg);
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-.app {
-  padding: 2rem;
-}
-
-h1 {
-  color: var(--accent);
-  margin: 0 0 1rem 0;
 }
