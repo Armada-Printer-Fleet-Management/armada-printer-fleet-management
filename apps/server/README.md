@@ -54,6 +54,17 @@ settings in your shell first. Against the dev stack:
 | `FILE_STORE_ACCESS_KEY` | `GARAGE_DEFAULT_ACCESS_KEY` from `config/compose.dev.env` |
 | `FILE_STORE_SECRET_KEY` | `GARAGE_DEFAULT_SECRET_KEY` from `config/compose.dev.env` |
 
+It also needs where to check access tokens, against the dev stack's Keycloak:
+
+| Variable | Value |
+|---|---|
+| `AUTH_ISSUER` | `http://localhost:5174/auth/realms/armada`, the address tokens are issued for |
+| `AUTH_JWKS_URL` | `http://localhost:8080/auth/realms/armada/protocol/openid-connect/certs`, where the signing keys are fetched |
+| `AUTH_BACKEND` | Optional; `oidc` is the default and the only plugin today |
+| `AUTH_AUDIENCE` | Optional; defaults to `armada-server` |
+| `AUTH_ROLES_CLAIM` | Optional; defaults to `realm_access.roles`, where Keycloak puts realm roles |
+| `AUTH_ENFORCE` | Optional; `false` by default. See "Access tokens" in [`AGENTS.md`](AGENTS.md) |
+
 ## Database
 
 The dev stack migrates and seeds itself on start. After adding a migration or seed data, apply it

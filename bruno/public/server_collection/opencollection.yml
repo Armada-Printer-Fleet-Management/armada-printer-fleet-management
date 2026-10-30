@@ -2,6 +2,38 @@ opencollection: 1.0.0
 
 info:
   name: server_collection
+config:
+  proxy:
+    inherit: true
+    config:
+      protocol: http
+      hostname: ""
+      port: ""
+      auth:
+        username: ""
+        password: ""
+      bypassProxy: ""
+
+request:
+  auth:
+    type: oauth2
+    flow: authorization_code
+    authorizationUrl: "{{webAppUrl}}/auth/realms/armada/protocol/openid-connect/auth"
+    accessTokenUrl: "{{webAppUrl}}/auth/realms/armada/protocol/openid-connect/token"
+    callbackUrl: "{{webAppUrl}}/bruno/callback"
+    credentials:
+      clientId: armada-web
+      placement: body
+    scope: openid
+    pkce: {}
+    tokenConfig:
+      id: credentials
+      placement:
+        header: Bearer
+      source: access_token
+    settings:
+      autoFetchToken: true
+      autoRefreshToken: false
 bundled: false
 extensions:
   bruno:
