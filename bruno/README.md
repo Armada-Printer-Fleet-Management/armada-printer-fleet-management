@@ -51,6 +51,23 @@ collection after `public/` changes, or if you're setting this up by hand.
 3. If `public/` gets new requests or environments, re-run the script to pick them up (see the
    overwrite note above).
 
+## Getting a token
+
+The server collection signs in with OAuth 2.0 (authorization code with PKCE) as the web app's
+client, `armada-web`, through Keycloak at `{{webAppUrl}}/auth`. Every request inherits the
+collection's auth, so it carries `Authorization: Bearer <token>`.
+
+1. Create a user once: open `http://localhost:5174/auth/admin`, sign in with
+   `KEYCLOAK_ADMIN_USERNAME` and `KEYCLOAK_ADMIN_PASSWORD` from `config/compose.dev.env`, switch to
+   the **armada** realm, add a user, set a password with **Temporary** off, and assign a realm
+   role: `student`, `staff` or `admin`.
+2. In the collection's **Auth** tab, choose **Get new access token** and sign in as that user.
+   The callback URL never loads; Bruno reads the code from it.
+
+Sign in as another user to compare roles. The server logs `access would be denied` for a
+request your role is not allowed; see `apps/server/README.md`, "Access tokens". To send a request
+without a token, set its own auth to **No Auth**.
+
 ## Uploading your own G-code
 
 The server rejects an upload whose size or sha256 differs from what Create Print Job Upload

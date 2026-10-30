@@ -21,6 +21,10 @@ The server is authoritative: it owns every entity's state, and its domains follo
 | `dev_seed.py`          | Writes `dev_data.py` into the development database, run by the dev stack's `migrate` service. Never run by a deployment |
 | `tests/contract/`      | What every repository adapter must do. A new adapter joins by adding its factory to `ADAPTERS` |
 | `api/plugins.py`       | Builds the plugins each deployment chose in config, such as `FILE_STORE_BACKEND` |
+| `api/common/authentication.py` | `Role`, `Caller` and the current caller, which only `authenticated_as` sets. A caller's `subject` is the identity provider's ID, not a `UserId` |
+| `api/common/access_policy.py` | `ACCESS`, the roles allowed on each endpoint. Every endpoint must be listed: an unlisted one allows no role. The most specific row wins, so one procedure can override its service |
+| `api/middleware/authentication.py` | Verifies the bearer token (bad token: 401, no token: no caller), then checks `ACCESS`. A refusal is logged, and rejected with 401 or 403 only when `AUTH_ENFORCE` is set |
+| `api/infrastructure/oidc_access_tokens.py` | Wraps the `TokenVerifier` plugin: its result becomes a `Caller`, a rejected token `InvalidAccessToken`, an outage `Unavailable` |
 | `api/services/`        | Connect handlers: translate between the wire and domain services, composing several where an RPC spans domains. No rules. `PrinterPoller` is the same kind of composer, run by the lifespan instead of a request |
 | `api/routers/`         | REST routes that do not fit Connect, such as the health check and file bytes. Built from services handed in by `api/main.py`; domain errors go through `domain_errors_as_http()` |
 | `api/gen/openapi/`     | Generated API documentation data. Gitignored                              |

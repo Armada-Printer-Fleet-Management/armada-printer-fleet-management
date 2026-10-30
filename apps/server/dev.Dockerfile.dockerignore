@@ -10,6 +10,7 @@
 !packages/core-domain/
 !packages/plugin-api/
 !plugins/s3-file-store/
+!plugins/auth-oidc/
 
 # Re-excluded inside the allowed paths: host-built or host-specific state.
 **/.venv
