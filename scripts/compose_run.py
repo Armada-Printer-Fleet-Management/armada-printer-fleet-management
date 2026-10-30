@@ -41,7 +41,7 @@ DEPLOY_IMAGES = {
 }
 DEV_GENERATED = [
     REPO / "apps" / "server" / "api" / "gen",
-    REPO / "apps" / "web" / "src" / "gen",
+    REPO / "packages" / "api-client" / "src" / "gen",
 ]
 PLACEHOLDER = "REPLACE_ME"
 
