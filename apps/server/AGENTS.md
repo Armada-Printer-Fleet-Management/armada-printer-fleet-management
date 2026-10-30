@@ -24,6 +24,10 @@ implementations in `plugins/`, never here.
 | `tests/contract/`      | What every repository adapter must do. A new adapter joins by adding its factory to `ADAPTERS` |
 | `tests/unit/`, `tests/integration/`, `e2e/` | Unit, integration and end-to-end tests; `e2e/README.md` has its setup |
 | `api/plugins.py`       | Builds the plugins each deployment chose in config, such as `FILE_STORE_BACKEND` |
+| `api/common/authentication.py` | `Role`, `Caller` and the current caller, which only `authenticated_as` sets. A caller's `subject` is the identity provider's ID, not a `UserId` |
+| `api/common/access_policy.py` | `ACCESS`, the roles allowed on each endpoint. Every endpoint must be listed: an unlisted one allows no role. The most specific row wins, so one procedure can override its service |
+| `api/middleware/authentication.py` | Verifies the bearer token (bad token: 401, no token: no caller), then checks `ACCESS`. A refusal is logged, and rejected with 401 or 403 only when `AUTH_ENFORCE` is set |
+| `api/infrastructure/oidc_access_tokens.py` | Wraps the `TokenVerifier` plugin: its result becomes a `Caller`, a rejected token `InvalidAccessToken`, an outage `Unavailable` |
 | `api/services/`        | Connect handlers: translate between the wire and domain services, composing several where an RPC spans domains. No rules. `PrinterPoller` is the same kind of composer, run by the lifespan instead of a request |
 | `api/routers/`         | REST routes that do not fit Connect, such as the health check and file bytes. Built from services handed in by `api/main.py`; domain errors go through `domain_errors_as_http()`. Prefer Connect; REST only where Connect cannot work |
 | `api/common/`          | Shared code internal to the server, such as constants, `health.py` and `openapi.py` |
@@ -82,10 +86,26 @@ plugin or its port, and import-linter enforces it.
   `POST /api/server.v1.HealthCheckService/HealthCheck` (same options in the request,
   `STATUS_PASS`/`STATUS_DEGRADED`/`STATUS_FAIL` in the response). A failing dependency fails the
   service unless its `DependencyCheck` is `critical=False`, which degrades it instead.
+  `identity_provider` is one: requests without a token still work while it is down.
 - **Never put shared objects on `app.state`.** It is untyped, so pyright cannot check reads, and
   tests cannot replace it through `app.dependency_overrides`. Give a REST route what it needs
   through `Depends` or its router factory, and a Connect handler or domain service through its
   constructor in `api/main.py`.
+
+## Access tokens
+
+- A request may carry `Authorization: Bearer <access token>` from the identity provider. The
+  server checks the token's signature, issuer (`AUTH_ISSUER`), audience (`AUTH_AUDIENCE`) and
+  expiry, and reads the caller's roles. A bad token is a 401; a request without one runs with no
+  caller.
+- It then checks the caller against `ACCESS` in `api/common/access_policy.py`, which lists the
+  roles allowed on every endpoint. A refusal is logged as `access would be denied`. With
+  `AUTH_ENFORCE=true` it is rejected instead: 401 without a token, 403 for a role not allowed.
+- Every error body is Connect-shaped, `{"code": ..., "message": ...}`, for REST routes too.
+- The issuer and the key address differ in the stacks on purpose: tokens name the public address,
+  while the server fetches keys over the internal one. In the deploy stack the issuer defaults to
+  `https://<DOMAIN>/auth/realms/armada`; set `AUTH_ISSUER` in `config/compose.deploy.env` when
+  `DOMAIN` is `:80`.
 
 ## Database
 

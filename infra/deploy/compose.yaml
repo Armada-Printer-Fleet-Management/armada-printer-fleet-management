@@ -41,6 +41,8 @@ services:
       DB_NAME: armada
       DB_USER: armada
       DB_PASSWORD: ${DB_PASSWORD:?}
+      AUTH_ISSUER: ${AUTH_ISSUER:-https://${DOMAIN:?}/auth/realms/armada}
+      AUTH_JWKS_URL: http://keycloak:8080/auth/realms/armada/protocol/openid-connect/certs
 
   db:
     image: postgres:17-alpine
