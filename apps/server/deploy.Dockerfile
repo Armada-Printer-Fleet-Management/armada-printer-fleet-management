@@ -30,6 +30,7 @@ COPY packages/organization-info packages/organization-info
 COPY packages/core-domain packages/core-domain
 COPY packages/plugin-api packages/plugin-api
 COPY plugins/s3-file-store plugins/s3-file-store
+COPY plugins/auth-oidc plugins/auth-oidc
 COPY apps/server/pyproject.toml apps/server/uv.lock apps/server/
 # Runtime packages only (--no-dev). The image that ships inherits this virtualenv.
 RUN --mount=type=cache,target=/root/.cache/uv \

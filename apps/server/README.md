@@ -114,6 +114,17 @@ against the dev stack's Garage, which is published on this machine:
 | `FILE_STORE_ACCESS_KEY` | `GARAGE_DEFAULT_ACCESS_KEY` from `config/compose.dev.env` |
 | `FILE_STORE_SECRET_KEY` | `GARAGE_DEFAULT_SECRET_KEY` from `config/compose.dev.env` |
 
+It also needs where to check access tokens, against the dev stack's Keycloak:
+
+| Variable | Value |
+|---|---|
+| `AUTH_ISSUER` | `http://localhost:5174/auth/realms/armada`, the address tokens are issued for |
+| `AUTH_JWKS_URL` | `http://localhost:8080/auth/realms/armada/protocol/openid-connect/certs`, where the signing keys are fetched |
+| `AUTH_BACKEND` | Optional; `oidc` is the default and the only plugin today |
+| `AUTH_AUDIENCE` | Optional; defaults to `armada-server` |
+| `AUTH_ROLES_CLAIM` | Optional; defaults to `realm_access.roles`, where Keycloak puts realm roles |
+| `AUTH_ENFORCE` | Optional; `false` by default. See "Access tokens" |
+
 ## Database
 
 The schema lives in `migrations/`, applied by Alembic. The dev stack's `migrate` service runs
@@ -171,7 +182,24 @@ Health is exposed twice, from the same logic in `api/common/health.py`:
   request message and reports `STATUS_PASS`/`STATUS_DEGRADED`/`STATUS_FAIL` in the response.
 
 A failing dependency fails the service unless its `DependencyCheck` is marked `critical=False`,
-in which case the service is reported as degraded instead.
+in which case the service is reported as degraded instead. `identity_provider` is one: requests
+without a token still work while it is down.
+
+## Access tokens
+
+A request may carry `Authorization: Bearer <access token>` from the identity provider. The server
+checks the token's signature, issuer (`AUTH_ISSUER`), audience (`AUTH_AUDIENCE`) and expiry, and
+reads the caller's roles. A bad token is a 401; a request without one runs with no caller.
+
+It then checks the caller against `ACCESS` in `api/common/access_policy.py`, which lists the
+roles allowed on every endpoint. A refusal is logged as `access would be denied`. With
+`AUTH_ENFORCE=true` it is rejected instead: 401 without a token, 403 for a role not allowed.
+Every error body is Connect-shaped, `{"code": ..., "message": ...}`, for REST routes too.
+
+The issuer and the key address differ in the stacks on purpose: tokens name the public address,
+while the server fetches keys over the internal one. In the deploy stack the issuer defaults to
+`https://<DOMAIN>/auth/realms/armada`; set `AUTH_ISSUER` in `config/compose.deploy.env` when
+`DOMAIN` is `:80`.
 
 **Don't put shared objects on `app.state`.** FastAPI's reference says of it: "You normally wouldn't
 use this in FastAPI, for most of the cases you would instead use FastAPI dependencies"

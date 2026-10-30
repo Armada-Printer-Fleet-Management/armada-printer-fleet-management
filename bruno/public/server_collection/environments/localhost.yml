@@ -2,17 +2,19 @@ name: localhost
 variables:
   - name: baseUrl
     value: localhost:8000
-  # The seeded draft job, so the print_job requests run in order without editing. To follow a
-  # job you created instead, set this to the ID that Create Print Job returns.
+    description: ""
   - name: printJobId
     value: 00000000-0000-4000-8000-000000000001
-  # The seeded submitted job's file record. For the byte requests, set this to the slot's fileId
-  # that Create Print Job Upload returns.
+    description: "The seeded draft job, so the print_job requests run in order without editing. To follow a job you created instead, set this to the ID that Create Print Job returns."
   - name: fileId
     value: 00000000-0000-4000-8000-000000000201
-  # A seeded idle printer, for dispatching a job and then marking the printer ready.
+    description: "The seeded submitted job's file record. For the byte requests, set this to the slot's fileId that Create Print Job Upload returns."
   - name: printerId
     value: 00000000-0000-4000-8000-000000000301
-  # The seeded open queue.
+    description: "A seeded idle printer, for dispatching a job and then marking the printer ready."
   - name: printerQueueId
     value: 00000000-0000-4000-8000-000000000401
+    description: "The seeded open queue."
+  - name: webAppUrl
+    value: http://localhost:5174
+    description: "Where the web app serves Keycloak under /auth. The collection's OAuth 2.0 auth signs in through it."

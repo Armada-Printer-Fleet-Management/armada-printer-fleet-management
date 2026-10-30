@@ -51,6 +51,8 @@ services:
       DB_NAME: armada
       DB_USER: armada
       DB_PASSWORD: ${DB_PASSWORD:?}
+      AUTH_ISSUER: http://localhost:5174/auth/realms/armada
+      AUTH_JWKS_URL: http://keycloak:8080/auth/realms/armada/protocol/openid-connect/certs
     ports:
       - 127.0.0.1:8000:8000
     develop:
@@ -74,6 +76,8 @@ services:
           path: ../../packages/plugin-api
         - action: rebuild
           path: ../../plugins/s3-file-store
+        - action: rebuild
+          path: ../../plugins/auth-oidc
 
   web:
     build:

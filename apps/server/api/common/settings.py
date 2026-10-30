@@ -3,7 +3,7 @@ from urllib.parse import quote
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from api.common.consts import S3_FILE_STORE_BACKEND
+from api.common.consts import OIDC_AUTH_BACKEND, S3_FILE_STORE_BACKEND
 
 
 class FileStoreSettings(BaseSettings):
@@ -45,3 +45,21 @@ class DatabaseSettings(BaseSettings):
 def database_url() -> str:
     # Fields are filled from DB_* environment variables, which pyright cannot see.
     return DatabaseSettings().url()  # pyright: ignore[reportCallIssue]
+
+
+class AuthSettings(BaseSettings):
+    """Which token verifier plugin the application uses.  Each plugin reads its own settings."""
+
+    model_config = SettingsConfigDict(env_prefix="AUTH_")
+
+    backend: str = OIDC_AUTH_BACKEND
+    enforce: bool = False
+
+
+class AuthOidcSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="AUTH_")
+
+    issuer: str
+    audience: str = "armada-server"
+    jwks_url: str
+    roles_claim: str = "realm_access.roles"

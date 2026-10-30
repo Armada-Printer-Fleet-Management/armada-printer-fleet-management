@@ -12,13 +12,14 @@ from proto_utils.gen.server.v1.printer_queue_service_connect import (
 from proto_utils.gen.server.v1.printer_service_connect import PrinterServiceASGIApplication
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from api.common.access_policy import ACCESS, AccessPolicy
 from api.common.clock import clock
 from api.common.consts import API_PREFIX
 from api.common.dependencies import application_info
 from api.common.health import raising_probe
 from api.common.models import DependencyCheck
 from api.common.openapi import openapi_schema
-from api.common.settings import FileStoreSettings, database_url
+from api.common.settings import AuthSettings, FileStoreSettings, database_url
 from api.domains.file.service import FileService
 from api.domains.print_job.service import PrintJobService
 from api.domains.printer.service import PrinterService
@@ -33,13 +34,15 @@ from api.infrastructure.dev_data import (
 )
 from api.infrastructure.file_memory import InMemoryFileRepository
 from api.infrastructure.file_store_files import FileStoreFiles
+from api.infrastructure.oidc_access_tokens import OidcAccessTokens
 from api.infrastructure.postgres_database import PostgresDatabase
 from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
 from api.infrastructure.printer_server_mock import MockPrinterServer
 from api.lifespan import lifespan
+from api.middleware.authentication import AuthenticationMiddleware
 from api.middleware.request_context import RequestContextMiddleware
-from api.plugins import build_file_store
+from api.plugins import build_file_store, build_token_verifier
 from api.routers.file import file_router
 from api.routers.health import health_router
 from api.services.file_service import FileServiceImplementation
@@ -53,6 +56,7 @@ from api.services.printer_service import PrinterServiceImplementation
 # Infrastructure
 files = FileStoreFiles(lambda: build_file_store(FileStoreSettings()))  # Built at lifespan
 database = PostgresDatabase(lambda: create_async_engine(database_url()))  # Built at lifespan
+access_tokens = OidcAccessTokens(lambda: build_token_verifier(AuthSettings()))  # Built at lifespan
 
 # Services (note difference from an RPC service, this is the domain service)
 
@@ -71,7 +75,7 @@ printer_poller = PrinterPoller(printer_service, print_job_service, timedelta(sec
 app = FastAPI(
     title=read(organization_info_pb2.OrganizationInfo()).title,
     version=application_info().version_string(),
-    lifespan=lifespan([files, database], background=[printer_poller.run]),
+    lifespan=lifespan([files, database, access_tokens], background=[printer_poller.run]),
     docs_url=f"{API_PREFIX}/docs",
     redoc_url=f"{API_PREFIX}/redoc",
     openapi_url=f"{API_PREFIX}/openapi.json",
@@ -80,10 +84,19 @@ app.openapi = lambda: openapi_schema(app)
 dependency_checks = {
     "file_storage": DependencyCheck(raising_probe(files.health_check)),
     "database": DependencyCheck(raising_probe(database.health_check)),
+    # Requests without a token still work while the identity provider is down.
+    "identity_provider": DependencyCheck(raising_probe(access_tokens.health_check), critical=False),
 }
 
 # Middlewares
 
+# Added first so it runs inside RequestContextMiddleware, which then logs the requests it rejects.
+app.add_middleware(
+    AuthenticationMiddleware,
+    verify=access_tokens.verify,
+    policy=AccessPolicy(ACCESS),
+    enforce=AuthSettings().enforce,
+)
 app.add_middleware(RequestContextMiddleware)
 
 # Routers

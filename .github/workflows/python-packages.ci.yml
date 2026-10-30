@@ -17,6 +17,7 @@ jobs:
           - packages/proto/utils
           - packages/plugin-api
           - plugins/s3-file-store
+          - plugins/auth-oidc
     runs-on: ubuntu-latest
     defaults:
       run:

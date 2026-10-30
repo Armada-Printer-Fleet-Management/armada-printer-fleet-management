@@ -27,6 +27,7 @@ COPY packages/organization-info packages/organization-info
 COPY packages/core-domain packages/core-domain
 COPY packages/plugin-api packages/plugin-api
 COPY plugins/s3-file-store plugins/s3-file-store
+COPY plugins/auth-oidc plugins/auth-oidc
 COPY apps/server/pyproject.toml apps/server/uv.lock apps/server/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --project apps/server

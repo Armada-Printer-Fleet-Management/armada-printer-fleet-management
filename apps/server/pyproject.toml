@@ -1,7 +1,7 @@
 [project]
 name = "backend-server"
 # major.minor.maintenance, optionally -postfix (e.g. "0.1.0-rc1") for special releases
-version = "0.1.5"
+version = "0.1.6"
 description = "Hosted server for handling requests from the frontend webapp"
 readme = "README.md"
 requires-python = "==3.13.*"
@@ -21,6 +21,7 @@ dependencies = [
   "alembic>=1.20,<2",       # https://github.com/sqlalchemy/alembic, MIT -- versioned database migrations in migrations/
   "sqlalchemy[asyncio]>=2.1,<2.2", # https://github.com/sqlalchemy/sqlalchemy, MIT -- required by Alembic; Core builds the tables and the dev seed, and is the server's async connection (asyncio adds greenlet)
   "psycopg[binary]>=3.3,<4", # https://github.com/psycopg/psycopg, LGPL-3.0 -- the Postgres driver, sync and async
+  "auth-oidc",          # plugins/auth-oidc -- the TokenVerifier plugin for OpenID Connect providers
 ]
 
 [tool.uv.sources]
@@ -31,6 +32,7 @@ organization-info = { path = "../../packages/organization-info" }
 core-domain = { path = "../../packages/core-domain", editable = true }
 plugin-api = { path = "../../packages/plugin-api", editable = true }
 s3-file-store = { path = "../../plugins/s3-file-store", editable = true }
+auth-oidc = { path = "../../plugins/auth-oidc", editable = true }
 
 [dependency-groups]
 dev = [
@@ -60,7 +62,7 @@ testpaths = ["tests"]
 
 [tool.importlinter]
 # The plugin packages are listed so the contracts below can check their imports too.
-root_packages = ["api", "plugin_api", "s3_file_store"]
+root_packages = ["api", "plugin_api", "s3_file_store", "auth_oidc"]
 include_external_packages = true
 
 # A domain is pure: it sees only core_domain and the standard library. Plugins reach it through
@@ -90,6 +92,9 @@ forbidden_modules = [
   "sqlalchemy",
   "alembic",
   "psycopg",
+  "auth_oidc",
+  "jwt",
+  "httpx2",
 ]
 
 # Only api/infrastructure and the composition root (api.main, api.plugins) touch a plugin
@@ -105,18 +110,18 @@ source_modules = [
   "api.routers",
   "api.services",
 ]
-forbidden_modules = ["plugin_api", "s3_file_store"]
+forbidden_modules = ["plugin_api", "s3_file_store", "auth_oidc"]
 
 [[tool.importlinter.contracts]]
 name = "Ports depend on no plugin or app"
 type = "forbidden"
 source_modules = ["plugin_api"]
-forbidden_modules = ["api", "s3_file_store"]
+forbidden_modules = ["api", "s3_file_store", "auth_oidc"]
 
 [[tool.importlinter.contracts]]
 name = "Plugins import no app"
 type = "forbidden"
-source_modules = ["s3_file_store"]
+source_modules = ["s3_file_store", "auth_oidc"]
 forbidden_modules = ["api"]
 
 [[tool.importlinter.contracts]]
