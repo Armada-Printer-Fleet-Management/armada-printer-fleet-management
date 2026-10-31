@@ -53,6 +53,7 @@ Check each before installing — never reinstall something already present.
 | `act` | Run GitHub Actions workflows locally, without pushing | `winget install nektos.act` (or `choco install act-cli`) | `brew install act` |
 | `shellcheck` | Lints the deployment scripts in `infra/deploy/`; the pre-push hook requires it | `winget install koalaman.shellcheck` | apt: `sudo apt-get install shellcheck`, brew: `brew install shellcheck` |
 | NSIS | Builds the desktop app's Windows installer | `python scripts/install_nsis.py` | not needed |
+| `gh` | GitHub CLI: `/pr-precheck` pushes and opens pull requests with it, and attaches diagrams | `winget install GitHub.cli` | `brew install gh`, or the packages at <https://github.com/cli/cli#installation> |
 
 **Before running `scripts/install_nsis.py`, tell the developer that Windows is about to show an
 administrator (UAC) prompt, and wait for them to confirm.** The script downloads NSIS's setup
@@ -68,6 +69,24 @@ versions and SHA-256s there together.
 ([CVE-2026-34041](https://github.com/nektos/act/security/advisories/GHSA-j5j2-9v57-2vfw)). Check
 with `act --version`; `winget upgrade nektos.act` / `choco upgrade act-cli` (elevated) fixes an old
 one.
+
+**`gh` must be 2.99 or newer**, the first version whose `--attach` flag adds images to pull
+requests. Check with `gh --version`; `winget upgrade GitHub.cli` fixes an old one. Then sign in once
+with `gh auth login`, which opens a browser, so ask the developer to run it themselves.
+
+**Stacked pull requests** need GitHub's official extension: `gh extension install github/gh-stack`
+(check with `gh stack --help`). `/pr-precheck` uses it to link a multi-PR change into one stack.
+
+**PR Lens** draws a diagram of every pull request. It has two halves, and neither needs an account
+or a model key:
+
+- **The GitHub App** is installed once on the organization by an admin, so a developer installs
+  nothing. Tell the developer that its comment on their first pull request is the check that it works.
+- **The local CLI** is `/pr-precheck`'s fallback when the App is unavailable. It runs through `npx`,
+  so there is nothing to install, but fetch it once now so the first real use is not a surprise.
+  Take the pinned package from the _Diagram_ step of `.claude/skills/pr-precheck/SKILL.md` and run
+  `npx --yes <that package> --version`; it prints the pinned version. Never run its `analyze`
+  (needs a paid model key) or `canvas` (uploads to prlens.dev) commands.
 
 `pnpm` is installed with `npx get-pnpm`, the npm-based installer from <https://pnpm.io/installation>.
 On Windows, run it from PowerShell rather than Git Bash. It needs Node 22.22 or newer.
