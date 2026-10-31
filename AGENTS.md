@@ -22,7 +22,8 @@ reference example.
    that Claude Code needs. Never write or edit that stub by hand.
 3. Commit both. CI runs the script with `--check` and fails if a stub is missing or stale.
 
-If the directory also has human-facing documentation under `docs/`, update both in the same change.
+If the directory also has a page under `docs/`, follow _Documentation_ below: the page holds the
+picture, and this file holds the rules.
 
 > **Finding why code is the way it is.** Decisions are not recorded in this repository. Every
 > commit carries the ticket it was made under, so the history is the index: `git log` or
@@ -53,6 +54,42 @@ The three that change what you do most often:
 
 ---
 
+## Documentation
+
+Three kinds of document, each with one job. **Every fact lives in exactly one of them.**
+
+| Kind | Reader | Holds | Never holds |
+| --- | --- | --- | --- |
+| `docs/*.html` | Humans | Why it is built this way, and a picture of how it works: diagrams, short plain-language prose. Changes only when a design changes | Versions, command tables, field-level rules, step lists |
+| `AGENTS.md` (root and per directory) | Agents | Every rule, path, command and step. Ends a section with `Picture: docs/<page>.html#<anchor>` where a diagram helps | Diagrams, or the reasoning already on a page |
+| `ARCHITECTURE.md`, `data-management-choices.md` | Agents, and humans who want text | The system, layers and folder structure; data ownership and flows. Read before planning | Rules (those are `AGENTS.md`) |
+| `README.md` | Humans on GitHub | The directory's front door: what it is in a line or two, the commands a person types, links to the page and to `AGENTS.md` | Rules |
+
+- **Versions live only in manifests** (`pyproject.toml`, `package.json`, lockfiles, pinned
+  scripts). No document restates one.
+- **Before writing a fact, find where it already lives** and link to it instead.
+- **A new page:** copy an existing page's shell (`shared/docs.css`, the `<nav>`, `shared/nav.js`),
+  add it to `SECTIONS` in `docs/shared/nav.js` and as a card in `docs/index.html`, add a row to the
+  Docs map below, and end it with an AI Use Statement whose `Verified` is left for the developer.
+- Diagrams are inline SVG themed by the classes in `docs/shared/docs.css`. Pages open from disk,
+  so nothing is fetched from a CDN.
+
+### Docs map
+
+Pages carry large inline SVG, so read one only when the task needs its picture.
+
+| Page | Read it when |
+| --- | --- |
+| `docs/index.html` | Orienting in the repository for the first time |
+| `docs/domain-architecture.html` | Adding or changing a domain, entity, service or repository |
+| `docs/desktop.html` | Working on `apps/desktop/`: IPC, codegen, packaging or the installer |
+| `docs/web.html` | Working on `apps/web/`: the layout, routes, sidebar or adding a page |
+| `docs/git-hygiene.html` | Explaining the branch, rebase, release or PR-stack flow to a developer |
+| `docs/data-management-choices.html` | Planning across services; the text version is `data-management-choices.md` |
+| `docs/api.html` | Looking up a server endpoint. Generated; never edit it or `docs/api/` |
+
+---
+
 ## What this project is
 
 Fleet management software for 3D printers, built as a university capstone project.
@@ -68,6 +105,10 @@ A monorepo delivering three applications, deployed to on-premise Linux machines:
 The web and desktop apps are **different applications**. They talk to each other only through the
 server. They share code through `packages/ui-kit` and `packages/api-client`, never by importing
 each other.
+
+**Read [`ARCHITECTURE.md`](ARCHITECTURE.md) before planning any change.** It holds the system
+diagram (the application server, the printer servers, clients, printers), why each layer exists, and the folder
+structure with what every directory is for.
 
 ---
 
@@ -146,6 +187,8 @@ and the desktop's `armada_domains/print_job/`. import-linter contracts and struc
 each project enforce this shape. The wire contract's rules are in `packages/proto/AGENTS.md`;
 read it before changing anything under `packages/proto/`.
 
+Picture: `docs/domain-architecture.html`.
+
 ---
 
 ## Open core: all logic here is generic
@@ -214,7 +257,7 @@ Use `/commit-message` to generate a compliant message.
 
 ## Branching
 
-Full rules in `docs/git-hygiene.html`. You can be asked to carry out this plumbing directly.
+These are the rules. You can be asked to carry out this plumbing directly.
 
 | Kind           | Pattern                                                          |
 | -------------- | ---------------------------------------------------------------- |
@@ -240,11 +283,31 @@ created by `release.yml` when a version is promoted to production, and only the 
 production is hot fixed. A hot fix is a new branch, `release/x.y.(z+1)`, cut from production's
 release branch; pushing it builds the next candidate, `x.y.(z+1)-rc.N`, moves `:staging` to it, and
 it reaches production through `release.yml` like any other version. Merging the fix to `main`
-first also moves `:testing` to a new build, and means every later version already carries it. The
-steps are in `docs/git-hygiene.html`.
+first also moves `:testing` to a new build, and means every later version already carries it.
+Only the last five release branches are kept.
+
+Hot fix steps:
+
+1. Fix the bug on `main` with an ordinary pull request.
+2. Define a clone ticket.
+3. Cut the next patch version from production's branch and cherry-pick the fix:
+
+   ```bash
+   git fetch
+   git switch -c release/1.0.1 origin/release/1.0.0
+   git cherry-pick -x <commit-hash>
+   git commit --amend          # rewrite as the clone commit message below
+   git push -u origin release/1.0.1
+   ```
+
+4. Test `1.0.1-rc.1` on staging, then promote it with `release.yml`. Another change means fixing
+   `main` and cherry-picking again onto the same branch (`rc.2`). An abandoned hot fix deletes the
+   branch.
+5. Whatever was on staging before was built without the fix: promote a new version from testing
+   and test it on staging again.
 
 A hot fix gets a **clone ticket**, which cherry-picks the original commit and records anything
-that went wrong during the pick, such as conflicts:
+that went wrong during the pick, such as conflicts. Keep the original subject and bullets intact:
 
 ```
 <Original Commit Message>
@@ -258,6 +321,8 @@ Never `git push --force` a shared branch. Use `--force-with-lease`, and only on 
 
 This guide describes what to do most of the time. Departing from it is sometimes correct — say why
 in the pull request when you do.
+
+Picture: `docs/git-hygiene.html`.
 
 ---
 
@@ -461,7 +526,7 @@ enabled it, enable it rather than starting to implement. Judge by the work, not 
 the request: "add OAuth" is a design decision, "fix this typo" is not. When genuinely unsure,
 plan mode costs one round trip and implementing the wrong design costs a session.
 
-When planning, `./data-management-choices.md` can be referenced for a high-level understanding of our system
+When planning, read `ARCHITECTURE.md` for the system and folder structure. `./data-management-choices.md` can be referenced for a high-level understanding of our system
 design and how data is transferred throughout it. This file is subject to change and must be
 checked for updates if reference is made to the system architecture.  
 

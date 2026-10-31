@@ -13,195 +13,132 @@
 
 <h1>Git hygiene guide</h1>
 <p class="lede">
-  Development throws up situations that break this guide. It describes what to do most of the time;
-  it is not a rigid requirement. When you depart from it, say why in the pull request.
+  How a change travels from your branch to production, and why the history is kept the way it is.
+  It describes what to do most of the time, not a rigid requirement: when you depart from it, say
+  why in the pull request. The exact rules, branch names and commands are under
+  <em>Branching</em> in <a href="../AGENTS.md">AGENTS.md</a>, and agents can do this plumbing for you.
 </p>
 
-<h2>Summary</h2>
+<h2 id="summary">In short</h2>
 
 <ul>
-  <li>Rebase only, both for syncing a branch and for merging a pull request into <code>main</code>.</li>
-  <li>Commit messages are title, bullet body, ticket line.</li>
-  <li>Squash your commits into one coherent commit per ticket.</li>
-  <li>Cherry-pick to release branches.</li>
+  <li><strong>Rebase, never merge <code>main</code> in.</strong> History stays one straight line,
+    and your branch is always tested on top of the newest code, so nothing changes underneath you
+    after review.</li>
+  <li><strong>One ticket, one commit.</strong> Every line of history leads to one ticket, which is
+    where the decision behind it is recorded.</li>
+  <li><strong>The commit message is checked.</strong> A hook rejects a message in the wrong shape;
+    <code>/commit-message</code> writes one for you.</li>
+  <li><strong>Production only gets small, proven fixes.</strong> Anything else waits for the next
+    version.</li>
 </ul>
 
-<hr>
+<h2 id="path">A change's path to production</h2>
 
-<h2>Developer workflow</h2>
+<figure class="diagram">
+  <svg viewBox="0 0 760 240" width="100%" role="img"
+       aria-label="Your branch becomes a rebased pull request, which lands on main. Main is built for testing, promoted as a release candidate to staging, then to production. A hot fix is cut from production's release branch and receives the fix cherry-picked from main.">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" class="arrowhead" />
+      </marker>
+      <marker id="arrow-muted" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" class="arrowhead-muted" />
+      </marker>
+    </defs>
 
-<p>Assumes you are working from the most up-to-date unreleased stable branch.</p>
+    <rect x="10" y="30" width="125" height="60" rx="8" class="box" />
+    <text x="72" y="56" text-anchor="middle" class="label-title" font-size="12">your branch</text>
+    <text x="72" y="74" text-anchor="middle" class="label-muted">rebased on main</text>
 
-<h3>Rebase against main, do not merge main into your branch</h3>
+    <rect x="160" y="30" width="125" height="60" rx="8" class="box" />
+    <text x="222" y="56" text-anchor="middle" class="label-title" font-size="12">pull request</text>
+    <text x="222" y="74" text-anchor="middle" class="label-muted">one commit</text>
 
-<p>
-  Rebasing keeps commit history linear, which is significantly more organised and easier to read.
-</p>
+    <rect x="310" y="30" width="110" height="60" rx="8" class="box-accent" />
+    <text x="365" y="56" text-anchor="middle" class="label-title" font-size="12">main</text>
+    <text x="365" y="74" text-anchor="middle" class="label-muted">rebase merge</text>
 
-<p>
-  Rebasing onto the most recent <code>main</code> also keeps your work on top of the newest changes.
-  When you then test, there is no chance your branch is stale. A stale branch — one with newer
-  commits on <code>main</code> — risks introducing bugs, because the behaviour of the code you built
-  against may have changed underneath you.
-</p>
+    <rect x="450" y="30" width="90" height="60" rx="8" class="box" />
+    <text x="495" y="56" text-anchor="middle" class="label-title" font-size="12">testing</text>
+    <text x="495" y="74" text-anchor="middle" class="label-muted">every merge</text>
 
-<p>
-  Merge commits add clutter. Reserve them for large feature branches whose history has become too
-  difficult to manage otherwise.
-</p>
+    <rect x="560" y="30" width="90" height="60" rx="8" class="box" />
+    <text x="605" y="56" text-anchor="middle" class="label-title" font-size="12">staging</text>
+    <text x="605" y="74" text-anchor="middle" class="label-muted">candidate</text>
 
-<h3>Merge pull requests with the rebase strategy</h3>
+    <rect x="670" y="30" width="80" height="60" rx="8" class="external" />
+    <text x="710" y="56" text-anchor="middle" class="label-title" font-size="12">production</text>
+    <text x="710" y="74" text-anchor="middle" class="label-muted">a version</text>
 
-<p>
-  Rebase is the default on the remote. Merge remains available, because special cases need it.
-</p>
+    <line x1="135" y1="60" x2="157" y2="60" class="flow" />
+    <line x1="285" y1="60" x2="307" y2="60" class="flow" />
+    <line x1="420" y1="60" x2="447" y2="60" class="flow" />
+    <line x1="540" y1="60" x2="557" y2="60" class="flow" />
+    <line x1="650" y1="60" x2="667" y2="60" class="flow" />
+    <text x="598" y="112" text-anchor="end" class="label-muted">promoted by hand, never rebuilt</text>
 
-<h3>Squash your commits into one</h3>
+    <rect x="470" y="160" width="200" height="60" rx="8" class="box-future" />
+    <text x="570" y="186" text-anchor="middle" class="label-title" font-size="12">hot fix branch</text>
+    <text x="570" y="204" text-anchor="middle" class="label-muted">cut from production's version</text>
 
-<p>
-  One PR, one ticket, one commit. That is what makes the linear history readable and traceable.
-</p>
+    <path d="M365,90 L365,190 L467,190" class="flow-return" />
+    <text x="357" y="150" text-anchor="end" class="label-muted">fix lands on main first,</text>
+    <text x="357" y="165" text-anchor="end" class="label-muted">then is cherry-picked</text>
+    <line x1="630" y1="160" x2="615" y2="93" class="flow-return" />
+  </svg>
+  <figcaption>
+    A build is made once, on <code>main</code>, and then promoted: testing, staging and production
+    are pointers that move to a build that already exists, so what ships is exactly what was
+    tested. A hot fix always lands on <code>main</code> first, so the next version cannot bring the
+    bug back.
+  </figcaption>
+</figure>
 
-<p>
-  The exception is when you need to cherry-pick only part of the changes later — keep those parts as
-  separate commits.
-</p>
+<h2 id="stacks">Large changes: a stack of pull requests</h2>
 
-<h3>Commit message format</h3>
+<figure class="diagram">
+  <svg viewBox="0 0 760 170" width="100%" role="img"
+       aria-label="Three pull requests in a chain: the first is based on main, the second on the first, the third on the second. When the first merges, the second is rebased onto main.">
+    <rect x="10" y="40" width="110" height="56" rx="8" class="box-accent" />
+    <text x="65" y="73" text-anchor="middle" class="label-title" font-size="12">main</text>
 
-<p>
-  Conventional commit title, a bullet list summarising the work, and the ticket as the last line.
-</p>
+    <rect x="170" y="40" width="160" height="56" rx="8" class="box" />
+    <text x="250" y="64" text-anchor="middle" class="label-title" font-size="12">PR 1</text>
+    <text x="250" y="82" text-anchor="middle" class="label-muted">one idea, reviewed alone</text>
 
-<pre><code>&lt;type&gt;(&lt;scope&gt;): &lt;title&gt;
+    <rect x="380" y="40" width="160" height="56" rx="8" class="box" />
+    <text x="460" y="64" text-anchor="middle" class="label-title" font-size="12">PR 2</text>
+    <text x="460" y="82" text-anchor="middle" class="label-muted">builds on PR 1</text>
 
-- each point summarises one change
+    <rect x="590" y="40" width="160" height="56" rx="8" class="box" />
+    <text x="670" y="64" text-anchor="middle" class="label-title" font-size="12">PR 3</text>
+    <text x="670" y="82" text-anchor="middle" class="label-muted">builds on PR 2</text>
 
-&lt;Ticket ID&gt; &lt;Ticket Title&gt;</code></pre>
+    <line x1="170" y1="68" x2="123" y2="68" class="flow" />
+    <line x1="380" y1="68" x2="333" y2="68" class="flow" />
+    <line x1="590" y1="68" x2="543" y2="68" class="flow" />
+    <text x="146" y="30" text-anchor="middle" class="label-muted">based on</text>
 
-<p>
-  <code>/commit-message</code> generates this for you. The <code>commit-msg</code> hook rejects
-  anything that does not match, so this is enforced rather than encouraged.
-</p>
-
-<h3>Branch naming</h3>
-
-<div class="table-wrap">
-<table>
-  <thead>
-    <tr><th>Kind</th><th>Pattern</th></tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Regular ticket</td>
-      <td><code>developer/firstname.lastname/&lt;ticket-id&gt;-&lt;ticket-title&gt;</code></td>
-    </tr>
-    <tr>
-      <td>Large feature</td>
-      <td><code>feature/&lt;feature-name&gt;</code></td>
-    </tr>
-    <tr>
-      <td>Release</td>
-      <td><code>release/x.y.z</code>, created automatically; see below</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-<p>
-  For a large feature, branch <code>feature/&lt;name&gt;</code> off <code>main</code>, and commit
-  developer branches into that feature branch rather than directly into <code>main</code>.
-</p>
-
-<hr>
-
-<h2>Release branches</h2>
-
-<div class="callout">
-  <p>
-    <strong>Release branches are live production.</strong> They are treated more carefully than
-    <code>main</code>, and changes reaching them carry more risk.
-  </p>
-</div>
-
-<p>
-  Only cherry-pick minimal, low-risk changes onto them. Moving a site to the next version is a large
-  maintenance event, not a cherry-pick.
-</p>
-
-<p>
-  A release branch is created by the release workflow when a version is promoted to production,
-  and is named for that version: <code>release/1.0.0</code>. Only versions that reached production
-  get one, and the last five are kept. Versions on staging are release candidates such as
-  <code>1.0.0-rc.1</code>, and never get a branch. Nobody creates a release branch by hand, except
-  for a hot fix.
-</p>
-
-<h3>Hot fixes</h3>
-
-<p>
-  Only the version in production is hot fixed. A hot fix is a new patch version on a new branch,
-  never a commit added to an existing release branch.
-</p>
-
-<ol>
-  <li>Fix the bug on <code>main</code> with an ordinary pull request. Merging it also moves the
-    testing environment to a new build, like any other change, so the fix is tested there alongside
-    everything else merged since the last release. Because it is on <code>main</code>, every future
-    version cut from <code>main</code> includes it, and the bug cannot come back with the next
-    release.</li>
-  <li>Define a <strong>clone ticket</strong> for the hot fix.</li>
-  <li>Cut the next patch version from production's release branch, and cherry-pick the fix:
-<pre><code>git fetch
-git switch -c release/1.0.1 origin/release/1.0.0
-git cherry-pick -x &lt;commit-hash&gt;
-git commit --amend          # rewrite as the clone commit message below
-git push -u origin release/1.0.1</code></pre>
-  </li>
-  <li>The push builds release candidate <code>1.0.1-rc.1</code> and moves the staging environment
-    to it. Test it there, then promote it to production with the release workflow, which names it
-    <code>1.0.1</code>. If it needs another change, fix <code>main</code> and cherry-pick again onto
-    the same branch; the next push builds <code>1.0.1-rc.2</code>. If the hot fix is abandoned,
-    delete the branch.</li>
-  <li>Whatever was on staging before the hot fix was built without the fix. Promote a new version
-    from testing, which has the fix, and test it on staging again.</li>
-</ol>
-
-<p>
-  The clone ticket documents anything that went wrong during the pick, such as merge conflicts.
-</p>
-
-<h3>Clone commit message</h3>
-
-<pre><code>&lt;Original Commit Message&gt;
-
-Cherry-picked from &lt;commit-hash&gt;
-
-&lt;Clone Ticket ID&gt; &lt;Clone Title&gt;</code></pre>
-
-<p>
-  Keep the original subject and bullets intact, so the two commits are recognisably the same change.
-  Fixes always land on <code>main</code> first and are cherry-picked from there — never the reverse.
-</p>
-
-<hr>
-
-<h2>Agents</h2>
-
-<p>
-  Agents are given this guide, so you can ask one to handle this git plumbing for you. The rules
-  they follow are in <a href="../AGENTS.md">AGENTS.md</a>; the reasoning behind them is in the
-  Jira ticket the commit was made under.
-</p>
+    <path d="M460,96 C460,150 65,150 65,99" class="flow-return" />
+    <text x="262" y="160" text-anchor="middle" class="label-muted">when PR 1 merges, PR 2 is rebased onto main, then PR 3 onto PR 2</text>
+  </svg>
+  <figcaption>
+    A big change is easier to review as a few pull requests that each make sense alone. It is not
+    about line count: a large lockfile update is easy to read, while the same number of lines of
+    core logic is not. The split is suggested only once the work is finished, by
+    <code>/pr-precheck</code>, because reshaping branches mid-work causes more trouble than it saves.
+  </figcaption>
+</figure>
 
 <section class="ai-statement">
   <h2>AI Use Statement</h2>
   <dl>
-    <dt>Tool</dt><dd>Claude Code (Opus 5)</dd>
+    <dt>Tool</dt><dd>Claude Code (Opus 5, Opus 5.5)</dd>
     <dt>Mode</dt><dd>Local</dd>
-    <dt>Output</dt><dd>formatted the team's agreed git hygiene guide as this page; the rules themselves were written by the team</dd>
+    <dt>Output</dt><dd>formatted the team's agreed git hygiene guide as this page, the rules themselves written by the team; later reduced it to reasons and diagrams, moving commands and formats to AGENTS.md, and added the PR stack diagram</dd>
     <dt>Data</dt><dd>none</dd>
-    <dt>Verified</dt><dd>opened the page in a VS Code browser window and read the rendered content, and read the HTML source</dd>
+    <dt>Verified</dt><dd>opened the page in a VS Code browser window and read the rendered content, and read the HTML source<br>Proof read and verified accuracy to current project's progress and standard. Applied reformatting to remove bloat documentation.</dd>
   </dl>
   <p>
     Required by the project's <a href="../.integrity/POLICY.md">AI use policy</a>. The

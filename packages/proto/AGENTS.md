@@ -1,8 +1,8 @@
 # Agent Instructions: `packages/proto/`
 
 The API contract every service and client is generated from. The root `AGENTS.md` still applies
-in full; this file adds the rules for shaping the contract. The human-facing overview, with a
-diagram, is `README.md` beside this file. Keep the two in step.
+in full; this file adds the rules for shaping the contract. `README.md` beside it is the human
+front door and never restates these rules.
 
 ## Domain-driven layout
 

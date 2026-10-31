@@ -35,89 +35,10 @@ root workspace links `apps/web`, `apps/desktop/frontend`, and shared packages su
 
 | Where                  | What                                                                  |
 | ---------------------- | --------------------------------------------------------------------- |
-| `docs/index.html`      | The documentation site. Open it in a browser; there is no build step. |
+| `docs/index.html`      | The documentation site: the system, its layers and its design, as pictures. Open it in a browser; there is no build step. |
+| `ARCHITECTURE.md`      | The system, how the code is layered, and what every folder is for.    |
 | `AGENTS.md`            | Conventions, enforced by hooks and CI. Read before contributing.      |
 | `.integrity/POLICY.md` | AI use policy. **Required reading before your first commit.**         |
-
-## System architecture
-
-Intended high-level architecture and data flow. `apps/server` runs twice: a remote instance that
-faces students over the internet, and an on-premise instance at each print site that drives the
-printers directly. The two talk to each other; nothing external talks to the on-premise instance
-directly.
-
-```mermaid
-flowchart LR
-    student(["Student"])
-    operator(["Operator"])
-
-    subgraph webtier["Student-facing"]
-        web["apps/web<br/>(browser)"]
-    end
-
-    subgraph remotetier["Remote / central"]
-        remote["apps/server<br/>(remote instance)"]
-    end
-
-    subgraph sitetier["On-premise site"]
-        local["apps/server<br/>(on-premise instance)"]
-        desktop["apps/desktop<br/>(operator UI)"]
-        printers["3D printers"]
-    end
-
-    student --> web
-    web -->|"submit print job<br/>(ConnectRPC)"| remote
-    remote -->|"validated job<br/>(ConnectRPC)"| local
-    local -->|"drive & monitor"| printers
-    local <-->|"status / control<br/>(ConnectRPC)"| desktop
-    desktop --> operator
-```
-
-The remote server handles and validates incoming requests before they ever reach a site; the
-on-premise server is the only thing that talks to printers, and it is what the desktop app
-connects to for operators managing that site.
-
-## Codebase Design
-
-| Layer | Path | Why it's a separate layer |
-|---|---|---|
-| L0 | `packages/proto/` | The wire contract. Server, web and desktop all agree on message shapes from one source, so they can't silently drift apart. Everything may depend on it; it depends on nothing. |
-| L1 | `packages/core-domain/` | Domain logic that is reusable across multiple applications. |
-| L2 | `packages/plugin-api/` | Contract interface that the core domain needs. Abstract interface that defines the behavior expected from the implementation. |
-| L3 | `plugins/*` | The vendor-specific half of the implementation. An adapter translates one external system into the interface expected by the core domain. Swapping the vendor means writing or reconfiguring an adapter, never touching the domain. |
-| L4 | `apps/*` | The only place allowed to construct a concrete adapter and wire it to a port. A deployment's specific integrations become a matter of _which adapters get constructed_, not a code change. |
-
-The diagram traces a concrete case through those layers: a new deployment switching its identity
-provider from the default email-and-password login to Microsoft Entra. Highlighted means it
-changes; the rest does not.
-
-```mermaid
-flowchart TD
-    L4["L4 — apps/*<br/>constructs whichever adapter<br/>is named in config/app.yaml"]
-    L3["L3 — plugins/*<br/>the vendor-specific adapter"]
-    OLD["default: email + password<br/>(existing plugin)"]
-    NEW["new: plugins/auth-oidc<br/>(Microsoft Entra)"]
-    L2["L2 — packages/plugin-api<br/>port: verify a credential,<br/>return an identity"]
-    L1["L1 — packages/core-domain<br/>sees only 'Operator X,<br/>these roles'"]
-    L0["L0 — packages/proto<br/>same login message shape"]
-
-    L4 --> L3
-    L3 -.->|"swapped out"| OLD
-    L3 -->|"swapped in"| NEW
-    L3 --> L2 --> L1 --> L0
-
-    classDef changed fill:#ffe4b0,stroke:#b35900,stroke-width:2px,color:#111;
-    classDef removed fill:#f5f5f5,stroke:#999,stroke-dasharray: 4 3,color:#777;
-    classDef unchanged fill:#eef,stroke:#556,color:#111;
-    class L3,NEW changed;
-    class OLD removed;
-    class L4,L2,L1,L0 unchanged;
-```
-
-`import-linter` enforces the design generally. Only L3 changes for the switch: `apps/*` (L4)
-already knows how to construct whichever adapter is named in `config/app.yaml`, so swapping
-providers means changing that one line, never touching the port, the domain, or the wire
-contract.
 
 ---
 

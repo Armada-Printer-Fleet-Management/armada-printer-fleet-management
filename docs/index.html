@@ -13,39 +13,43 @@
 
 <h1>Developer documentation</h1>
 <p class="lede">
-  What you need to work in this repository. Curated rather than exhaustive — the most important
-  things, kept current.
+  Why the system is built the way it is, and a picture of how it fits together. The exact rules,
+  commands and versions live in <a href="../AGENTS.md">AGENTS.md</a> and the manifests, so these
+  pages stay short and rarely change.
 </p>
 
 <div class="callout">
   <p>
-    <strong>Read first.</strong> The conventions here are enforced automatically. A commit with the
-    wrong message shape is rejected before it reaches history, and pushes run type checks and tests.
-    None of that is discretionary, so it is worth ten minutes now rather than a confusing failure
-    later.
+    <strong>Run <code>/onboarding</code> first.</strong> It sets up everything, including the git
+    hooks that check your commits and pushes. Hooks are per clone, so without it none of those
+    checks protect you.
   </p>
 </div>
 
 <div class="cards">
+  <a class="card" href="domain-architecture.html">
+    <strong>Domain architecture</strong>
+    <span>How business logic is shaped, and why: entities, services and repositories, following one request.</span>
+  </a>
   <a class="card" href="desktop.html">
     <strong>Desktop application</strong>
-    <span>How the pywebview backend and React frontend talk over a real IPC bridge, with diagrams.</span>
+    <span>Two processes talking over a real bridge, and how it becomes a Windows installer.</span>
   </a>
   <a class="card" href="web.html">
     <strong>Web application</strong>
     <span>The layout, routes and sidebar, and how to add a page.</span>
   </a>
-  <a class="card" href="git-hygiene.html">
-    <strong>Git hygiene</strong>
-    <span>Branch naming, rebasing, squashing, commit format, and how fixes reach release branches.</span>
-  </a>
   <a class="card" href="data-management-choices.html">
     <strong>Data management choices</strong>
-    <span>Service responsibilities, core entities, data flows, and endpoint groupings.</span>
+    <span>Which service owns which data, and how it flows between them.</span>
+  </a>
+  <a class="card" href="git-hygiene.html">
+    <strong>Git hygiene</strong>
+    <span>How a change travels from your branch to production, and why history stays linear.</span>
   </a>
   <a class="card" href="api.html">
     <strong>API reference</strong>
-    <span>Every server endpoint, ConnectRPC and REST, generated from the server and kept current on commit.</span>
+    <span>Every server endpoint, generated from the server and kept current on commit.</span>
   </a>
   <a class="card" href="../AGENTS.md">
     <strong>Agent instructions</strong>
@@ -57,81 +61,126 @@
   </a>
 </div>
 
-<h2>Getting set up</h2>
+<h2 id="system">The system at a glance</h2>
+
+<figure class="diagram">
+  <svg viewBox="0 0 760 240" width="100%" role="img"
+       aria-label="Students use the web app and operators use the desktop app; both talk only to the application server. The application server passes validated jobs to the printer server at each on-premise print site, which drives the printers.">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" class="arrowhead" />
+      </marker>
+      <marker id="arrow-muted" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" class="arrowhead-muted" />
+      </marker>
+    </defs>
+
+    <rect x="10" y="40" width="90" height="40" rx="20" class="external" />
+    <text x="55" y="65" text-anchor="middle" font-size="12">Student</text>
+    <rect x="130" y="30" width="130" height="60" rx="8" class="box" />
+    <text x="195" y="56" text-anchor="middle" class="label-title" font-size="12">apps/web</text>
+    <text x="195" y="74" text-anchor="middle" class="label-muted">in the browser</text>
+
+    <rect x="10" y="170" width="90" height="40" rx="20" class="external" />
+    <text x="55" y="195" text-anchor="middle" font-size="12">Operator</text>
+    <rect x="130" y="160" width="130" height="60" rx="8" class="box" />
+    <text x="195" y="186" text-anchor="middle" class="label-title" font-size="12">apps/desktop</text>
+    <text x="195" y="204" text-anchor="middle" class="label-muted">operator UI</text>
+
+    <text x="375" y="78" text-anchor="middle" class="label-muted">remote</text>
+    <rect x="300" y="88" width="150" height="70" rx="8" class="box-accent" />
+    <text x="375" y="112" text-anchor="middle" class="label-title" font-size="12">apps/server</text>
+    <text x="375" y="129" text-anchor="middle" class="label-muted">application server</text>
+    <text x="375" y="145" text-anchor="middle" class="label-muted">validates every request</text>
+
+    <rect x="480" y="40" width="270" height="150" rx="10" class="box-future" />
+    <text x="492" y="60" class="label-muted">on-premise print site</text>
+    <rect x="492" y="93" width="156" height="60" rx="8" class="box" />
+    <text x="570" y="119" text-anchor="middle" class="label-title" font-size="12">apps/printer_server</text>
+    <text x="570" y="137" text-anchor="middle" class="label-muted">drives the printers</text>
+    <rect x="665" y="93" width="75" height="60" rx="8" class="external" />
+    <text x="702" y="128" text-anchor="middle" font-size="12">printers</text>
+
+    <line x1="100" y1="60" x2="127" y2="60" class="flow" />
+    <line x1="100" y1="190" x2="127" y2="190" class="flow" />
+    <line x1="260" y1="66" x2="297" y2="104" class="flow" />
+    <line x1="260" y1="184" x2="297" y2="144" class="flow" />
+    <line x1="450" y1="123" x2="489" y2="123" class="flow" />
+    <line x1="648" y1="123" x2="662" y2="123" class="flow" />
+  </svg>
+  <figcaption>
+    Both apps talk only to the application server, which checks every request. It passes validated
+    jobs to the printer server at each print site, the only thing that talks to printers. Every
+    arrow between applications is ConnectRPC.
+  </figcaption>
+</figure>
+
+<h2 id="layers">How the code is layered</h2>
+
+<figure class="diagram">
+  <svg viewBox="0 0 760 300" width="100%" role="img"
+       aria-label="Five layers stacked: apps, plugins, plugin-api, core-domain and proto. Each depends only on the layers below it. An example shows switching the login provider changes only the plugins layer.">
+    <rect x="20" y="16" width="480" height="44" rx="8" class="box" />
+    <text x="36" y="36" class="label-title" font-size="12">L4 · apps/*</text>
+    <text x="36" y="52" class="label-muted">composition roots: choose adapters and wire them to ports</text>
+
+    <rect x="20" y="72" width="480" height="44" rx="8" class="box" />
+    <text x="36" y="92" class="label-title" font-size="12">L3 · plugins/*</text>
+    <text x="36" y="108" class="label-muted">adapters: one external system each, swappable per deployment</text>
+
+    <rect x="20" y="128" width="480" height="44" rx="8" class="box" />
+    <text x="36" y="148" class="label-title" font-size="12">L2 · packages/plugin-api</text>
+    <text x="36" y="164" class="label-muted">ports: what the domain needs, with no implementation</text>
+
+    <rect x="20" y="184" width="480" height="44" rx="8" class="box-accent" />
+    <text x="36" y="204" class="label-title" font-size="12">L1 · packages/core-domain</text>
+    <text x="36" y="220" class="label-muted">business rules: no I/O, no framework, shared by server and desktop</text>
+
+    <rect x="20" y="240" width="480" height="44" rx="8" class="box" />
+    <text x="36" y="260" class="label-title" font-size="12">L0 · packages/proto</text>
+    <text x="36" y="276" class="label-muted">the wire contract: depends on nothing</text>
+
+    <line x1="470" y1="60" x2="470" y2="69" class="flow-muted" />
+    <line x1="470" y1="116" x2="470" y2="125" class="flow-muted" />
+    <line x1="470" y1="172" x2="470" y2="181" class="flow-muted" />
+    <line x1="470" y1="228" x2="470" y2="237" class="flow-muted" />
+
+    <rect x="530" y="16" width="210" height="268" rx="10" class="box-future" />
+    <text x="545" y="38" class="label-title" font-size="12">Example: a new login</text>
+    <text x="545" y="58" class="label-muted">a deployment switches from</text>
+    <text x="545" y="73" class="label-muted">email and password to OIDC</text>
+    <rect x="545" y="88" width="180" height="34" rx="6" class="box-future" />
+    <text x="635" y="110" text-anchor="middle" class="label-muted">old adapter, swapped out</text>
+    <rect x="545" y="132" width="180" height="34" rx="6" class="box-accent" />
+    <text x="635" y="154" text-anchor="middle" font-size="11">plugins/auth-oidc, swapped in</text>
+    <text x="545" y="192" font-size="11">One line of config changes.</text>
+    <text x="545" y="210" font-size="11">The port, the domain and the</text>
+    <text x="545" y="228" font-size="11">contract do not.</text>
+    <line x1="543" y1="149" x2="504" y2="100" class="flow-muted" />
+  </svg>
+  <figcaption>
+    Dependencies point down only, and a build that breaks this fails CI. That is what lets the same
+    domain rules run in both the server and the desktop app, and what keeps every
+    deployment-specific integration a matter of which adapter is chosen, not a code change.
+  </figcaption>
+</figure>
+
+<h2 id="why">Why things are the way they are</h2>
 
 <p>
-  Run <code>/onboarding</code> in Claude Code or Copilot. It installs the toolchain, wires the git
-  hooks, installs dependencies, prepares configuration, runs the tests, starts the applications,
-  and opens this page.
-</p>
-
-<p>
-  If you would rather do it by hand, the skill at
-  <code>.claude/skills/onboarding/SKILL.md</code> is a readable checklist. One step is easy to miss
-  and breaks everything quietly:
-</p>
-
-<pre><code>git config core.hooksPath .githooks</code></pre>
-
-<p>
-  Hooks are per-clone and are not inherited. Without that line, none of the enforcement below
-  applies to you.
-</p>
-
-<h2>What is in the repository</h2>
-
-<div class="table-wrap">
-<table>
-  <thead>
-    <tr><th>Path</th><th>What it holds</th></tr>
-  </thead>
-  <tbody>
-    <tr><td><code>apps/</code></td><td>The server, the web app, and the desktop app</td></tr>
-    <tr><td><code>packages/</code></td><td>Shared code: the API contract, domain logic, ports, UI kit</td></tr>
-    <tr><td><code>plugins/</code></td><td>Adapters implementing the ports</td></tr>
-    <tr><td><code>config/</code></td><td>Deployment settings. Ignored by default; commit only <code>.example</code> files</td></tr>
-    <tr><td><code>docs/</code></td><td>This site, and the decision records</td></tr>
-    <tr><td><code>.githooks/</code></td><td>Commit, pre-commit and pre-push enforcement</td></tr>
-    <tr><td><code>.claude/skills/</code></td><td>Skills, which also generate the Copilot equivalents</td></tr>
-  </tbody>
-</table>
-</div>
-
-<h2>How the code is layered</h2>
-
-<p>
-  Dependencies point inward only, and CI fails a build that breaks this. The rule exists because
-  domain logic has to run in both the server and the desktop app, which is only possible if it
-  depends on nothing.
-</p>
-
-<pre><code>packages/proto/         the API contract, no dependencies
-packages/core-domain/   pure domain logic, no I/O and no framework
-packages/plugin-api/    ports
-plugins/                adapters
-apps/                   composition roots</code></pre>
-
-<p>
-  If domain logic looks like it needs a database or the network, it needs a port instead.
-</p>
-
-<h2>Why things are the way they are</h2>
-
-<p>
-  Decisions are tracked in Jira, not in this repository. Every commit ends with the ticket it was
-  made under, so the history is the index: run <code>git blame</code> on the code, read the commit
-  message, and look up the ticket. Agents reach it through the Atlassian MCP server, which
-  <code>/onboarding</code> sets up.
+  Decisions live in Jira, not in this repository. Every commit ends with the ticket it was made
+  under, so <code>git blame</code> on any line leads to the commit, and the commit leads to the
+  ticket and its discussion.
 </p>
 
 <section class="ai-statement">
   <h2>AI Use Statement</h2>
   <dl>
-    <dt>Tool</dt><dd>Claude Code (Opus 5)</dd>
+    <dt>Tool</dt><dd>Claude Code (Opus 5, Opus 5.5)</dd>
     <dt>Mode</dt><dd>Local</dd>
-    <dt>Output</dt><dd>drafted this page from the repository's structure and decision records</dd>
+    <dt>Output</dt><dd>drafted this page from the repository's structure and decision records; later reduced it to pictures and reasons, with the system and layer diagrams moved here from the README</dd>
     <dt>Data</dt><dd>none</dd>
-    <dt>Verified</dt><dd>opened the page in a VS Code browser window and read the rendered content, and read the HTML source</dd>
+    <dt>Verified</dt><dd>opened the page in a VS Code browser window and read the rendered content, and read the HTML source<br>Proof read and verified accuracy to current project's progress and standard. Applied reformatting to remove bloat documentation.</dd>
   </dl>
   <p>
     Required by the project's <a href="../.integrity/POLICY.md">AI use policy</a>. The
