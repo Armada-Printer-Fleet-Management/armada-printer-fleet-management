@@ -273,6 +273,12 @@ branch whose history has become unmanageable. Never merge `main` into a branch â
 **Squash to one commit per ticket.** One PR, one ticket, one commit. The exception is when parts of
 the change will need cherry-picking separately; keep those as their own commits.
 
+**The pre-push hook blocks code changes without a passing `/pr-ddd` verdict.** The verdict is
+keyed to the commit's tree and stored under the git common directory by `scripts/ddd_verdict.py`,
+so the hook spends no tokens. When the review is wrong, push once with
+`ARMADA_DDD_OVERRIDE="<reason>" git push` and put the reason in the PR description. Never set the
+override on the developer's behalf.
+
 **Release branches are live production.** Only minimal, low-risk changes are cherry-picked onto
 them. Moving a site to a new version is a maintenance event, not a cherry-pick. Fixes land on
 `main` first and are cherry-picked from there â€” never the reverse.
@@ -414,6 +420,8 @@ theme, so a hardcoded colour breaks someone else's brand.
 | Layer contracts               | `lint-imports`                                                        |
 | Sync agent config             | `python scripts/sync_agent_config.py`                                 |
 | Export AI audit log           | `python scripts/export_ai_audit.py`                                   |
+| DDD verdict for this commit   | `python scripts/ddd_verdict.py check` (also `scope`, `diff`, `show`)  |
+| Repository script tests       | `python -m unittest discover -s scripts/tests` (standard library only) |
 | Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
 | Desktop Python deps           | `uv sync --project apps/desktop/backend`                              |
 | Desktop JS deps                | `pnpm install` (in `root`)                          |
