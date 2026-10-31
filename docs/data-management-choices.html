@@ -12,257 +12,155 @@
       <main>
         <h1>Data management choices</h1>
         <p class="lede">
-          A conceptual data-flow design for the print farm management system,
-          including service responsibilities, core entities, and endpoint
-          groupings.
+          Which part of the system owns which data, and how a print moves
+          between them. This is the conceptual design; the full text, including
+          the endpoint groupings, is
+          <a href="../data-management-choices.md">data-management-choices.md</a>.
         </p>
 
-        <h2>1. Purpose</h2>
-        <p>
-          This document outlines how data will flow between the services that
-          make up the new print farm management system. It identifies the
-          services involved, the core data entities each owns, the major data
-          flows between them, and a high-level grouping of the endpoints each
-          flow will need.
-        </p>
+        <h2 id="owners">Who owns what</h2>
 
-        <h2>2. System overview</h2>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Service</th>
-                <th>Responsibility</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Client App</td>
-                <td>
-                  Single web application with role-gated views (Student, Staff,
-                  Admin, Guest). Students upload/slice/submit jobs and view their own job status.
-                </td>
-              </tr>
-              <tr>
-                <td>Desktop App</td>
-                <td>
-                  Desktop application used by staff to manage printer fleets, view reports and send notifications.
-                </td>
-              </tr>
-              <tr>
-                <td>Backend API</td>
-                <td>
-                  Core business logic: auth, users, queues, fleet/printers/tags
-                  /sections, print jobs, filament tracking, notifications,
-                  reporting.
-                </td>
-              </tr>
-              <tr>
-                <td>Primary Database</td>
-                <td>
-                  Relational store backing the backend (users, jobs, queues,
-                  printers, tags, sections, filament ledger, etc.).
-                </td>
-              </tr>
-              <tr>
-                <td>File Storage</td>
-                <td>
-                  Separate store for GCODE and model files, kept apart from the
-                  relational DB since these are large binary objects, not rows.
-                </td>
-              </tr>
-              <tr>
-                <td>Prusa Connect Local (PCL)</td>
-                <td>
-                  Runs on university infrastructure. Dispatches jobs to
-                  printers and reports printer status back.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <figure class="diagram">
+          <svg
+            viewBox="0 0 760 280"
+            width="100%"
+            role="img"
+            aria-label="The web app and desktop app both talk to the backend API, which owns the database and file storage and sends work to the printer server. The printer server fetches print files from file storage itself."
+          >
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" class="arrowhead" />
+              </marker>
+              <marker id="arrow-muted" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" class="arrowhead-muted" />
+              </marker>
+            </defs>
 
-        <p><strong>Notes on decisions already made:</strong></p>
+            <rect x="10" y="30" width="160" height="60" rx="8" class="box" />
+            <text x="90" y="56" text-anchor="middle" class="label-title" font-size="12">web app</text>
+            <text x="90" y="74" text-anchor="middle" class="label-muted">students submit and track</text>
+
+            <rect x="10" y="130" width="160" height="60" rx="8" class="box" />
+            <text x="90" y="156" text-anchor="middle" class="label-title" font-size="12">desktop app</text>
+            <text x="90" y="174" text-anchor="middle" class="label-muted">staff run the fleet</text>
+
+            <rect x="260" y="70" width="190" height="90" rx="10" class="box-accent" />
+            <text x="355" y="104" text-anchor="middle" class="label-title" font-size="13">backend API</text>
+            <text x="355" y="124" text-anchor="middle" class="label-muted">all business logic</text>
+            <text x="355" y="140" text-anchor="middle" class="label-muted">and every record</text>
+
+            <path d="M560,30 a60,9 0 0,0 120,0 a60,9 0 0,0 -120,0 v46 a60,9 0 0,0 120,0 v-46" class="external" />
+            <text x="620" y="64" text-anchor="middle" font-size="12">database</text>
+            <text x="620" y="102" text-anchor="middle" class="label-muted">users, jobs, queues, printers</text>
+
+            <path d="M560,150 a60,9 0 0,0 120,0 a60,9 0 0,0 -120,0 v46 a60,9 0 0,0 120,0 v-46" class="external" />
+            <text x="620" y="184" text-anchor="middle" font-size="12">file storage</text>
+            <text x="640" y="226" text-anchor="middle" class="label-muted">print files, kept apart</text>
+            <text x="640" y="241" text-anchor="middle" class="label-muted">from the database</text>
+
+            <rect x="260" y="210" width="190" height="60" rx="8" class="external" />
+            <text x="355" y="236" text-anchor="middle" class="label-title" font-size="12">printer server</text>
+            <text x="355" y="254" text-anchor="middle" class="label-muted">on site, drives the printers</text>
+
+            <line x1="170" y1="60" x2="257" y2="100" class="flow" />
+            <line x1="170" y1="160" x2="257" y2="130" class="flow" />
+            <line x1="450" y1="100" x2="557" y2="60" class="flow" />
+            <line x1="450" y1="130" x2="557" y2="168" class="flow" />
+            <line x1="355" y1="160" x2="355" y2="207" class="flow" marker-start="url(#arrow)" />
+            <text x="363" y="190" class="label-muted">dispatch and status</text>
+            <path d="M450,240 H520 V180 H557" class="flow-return" />
+            <text x="455" y="264" class="label-muted">fetches the file itself</text>
+          </svg>
+          <figcaption>
+            The backend is the only thing that reads or writes the database and the
+            only thing either app talks to. Large print files live apart from the
+            database, and the printer server is handed a reference and fetches the
+            file directly, so the backend never streams big files through itself.
+          </figcaption>
+        </figure>
+
+        <h2 id="journey">A print's journey</h2>
+
+        <figure class="diagram">
+          <svg
+            viewBox="0 0 760 145"
+            width="100%"
+            role="img"
+            aria-label="Six steps: the student uploads a file, the backend records the job, staff queue it, staff dispatch it to a printer, the printer server fetches the file, and status flows back to staff live and to students by polling"
+          >
+            <line x1="65" y1="34" x2="695" y2="34" class="lifeline" />
+            <circle cx="65" cy="34" r="15" class="box-accent" />
+            <text x="65" y="39" text-anchor="middle" class="label-title" font-size="12">1</text>
+            <circle cx="191" cy="34" r="15" class="box-accent" />
+            <text x="191" y="39" text-anchor="middle" class="label-title" font-size="12">2</text>
+            <circle cx="317" cy="34" r="15" class="box-accent" />
+            <text x="317" y="39" text-anchor="middle" class="label-title" font-size="12">3</text>
+            <circle cx="443" cy="34" r="15" class="box-accent" />
+            <text x="443" y="39" text-anchor="middle" class="label-title" font-size="12">4</text>
+            <circle cx="569" cy="34" r="15" class="box-accent" />
+            <text x="569" y="39" text-anchor="middle" class="label-title" font-size="12">5</text>
+            <circle cx="695" cy="34" r="15" class="box-accent" />
+            <text x="695" y="39" text-anchor="middle" class="label-title" font-size="12">6</text>
+
+            <text x="65" y="76" text-anchor="middle" font-size="11">student uploads</text>
+            <text x="65" y="92" text-anchor="middle" font-size="11">a print file</text>
+            <text x="191" y="76" text-anchor="middle" font-size="11">backend records</text>
+            <text x="191" y="92" text-anchor="middle" font-size="11">the job</text>
+            <text x="317" y="76" text-anchor="middle" font-size="11">staff place it</text>
+            <text x="317" y="92" text-anchor="middle" font-size="11">in a queue</text>
+            <text x="443" y="76" text-anchor="middle" font-size="11">staff dispatch it</text>
+            <text x="443" y="92" text-anchor="middle" font-size="11">to a printer</text>
+            <text x="569" y="76" text-anchor="middle" font-size="11">printer server</text>
+            <text x="569" y="92" text-anchor="middle" font-size="11">fetches the file</text>
+            <text x="695" y="76" text-anchor="middle" font-size="11">status flows</text>
+            <text x="695" y="92" text-anchor="middle" font-size="11">back</text>
+            <text x="191" y="118" text-anchor="middle" class="label-muted">keeps a reference, not the file</text>
+            <text x="695" y="118" text-anchor="middle" class="label-muted">live to staff,</text>
+            <text x="695" y="133" text-anchor="middle" class="label-muted">polled by students</text>
+          </svg>
+          <figcaption>
+            A queue is a line for a kind of job, such as a course or an event, not a
+            particular printer; staff choose the printer when they dispatch.
+          </figcaption>
+        </figure>
+
+        <h2 id="why">Why these choices</h2>
         <ul>
           <li>
-            The system will not integrate with the existing Makerspace
-            database. Users create separate credentials, stored in this
-            system's own database, holding only what's needed for
-            user-print-management.
+            <strong>Our own accounts.</strong> Users sign up with credentials this
+            system stores, holding only what printing needs, rather than relying on
+            an outside user database.
           </li>
           <li>
-            Fleet partitioning uses Fleet Sections, and each printer belongs to
-            exactly one section (e.g. self-service, general use).
-          </li>
-        </ul>
-
-        <h2>3. Core data entities</h2>
-        <p>These are described at a conceptual level.</p>
-        <ul>
-          <li>
-            <strong>User:</strong> account with a role (Student, Staff,
-            Moderator, Admin, Guest) and, for students, a filament allocation
-            balance.
+            <strong>Fleet sections limit what each screen watches.</strong> Every
+            printer belongs to exactly one section, and staff subscribe to sections,
+            so a screen receives updates only for the printers it shows. Tags stay
+            available for searching across sections.
           </li>
           <li>
-            <strong>Printer:</strong> a physical printer: id, model/type,
-            capabilities, current status, and the Fleet Section it belongs to.
+            <strong>Staff get live updates; students poll.</strong> Prints take
+            hours and students are not watching continuously, so a cheap, cached
+            status check is enough for them.
           </li>
           <li>
-            <strong>Tag:</strong> a flexible label on printers (e.g. self-serve,
-            mk4s, room-204) used for search/filtering (dependent on PCL).
+            <strong>One notification per meaningful event.</strong> A job's status
+            changes are consolidated, so nobody is flooded with email.
           </li>
           <li>
-            <strong>Fleet Section:</strong> a named partition of the fleet.
-            Staff/admin users subscribe to a section to see and manage only
-            the printers within it.
+            <strong>Filament is a ledger.</strong> Each student's allocation and
+            use is recorded over time, which is what reports and low-balance
+            warnings are built from.
           </li>
-          <li>
-            <strong>Queue:</strong> a logical line for print jobs, organized
-            around courses, clubs, or events. Targets a type of job, not a
-            specific printer.
-          </li>
-          <li>
-            <strong>PrintJob:</strong> a submitted print including student,
-            file reference, queue, current status, assigned printer (structure
-            dependent on PCL).
-          </li>
-          <li>
-            <strong>Filament Ledger:</strong> tracks each student's allocation
-            and usage over time.
-          </li>
-          <li>
-            <strong>Notification:</strong> a triggered message (per-job status
-            update, or a staff-initiated mass email to a group/queue).
-          </li>
-        </ul>
-
-        <h2>4. Data flows</h2>
-
-        <h3>4.1 Account creation and auth</h3>
-        <p>
-          Web App → Backend → Database. Backend issues and validates credentials
-          against its own user store.
-        </p>
-
-        <h3>4.2 Print submission</h3>
-        <ul>
-          <li>
-            Student uploads a GCODE (or sliceable model) file through the Web App.
-          </li>
-          <li>
-            File is stored in File Storage; the Backend stores a reference to
-            it (not the file itself) on a new PrintJob record.
-          </li>
-          <li>
-            Staff places the PrintJob into the appropriate Queue.
-          </li>
-        </ul>
-        <p>
-          <strong>Endpoint cluster:</strong> GCODE/model upload (create/list/
-          delete uploaded files), job submission.
-        </p>
-
-        <h3>4.3 Job dispatch and file transfer to printer</h3>
-        <p>
-          First step: staff pull a job from a backend Queue represented in the Desktop App and
-          assign it to a printer within a Fleet Section they're operating.
-          This triggers a dispatch request from Desktop App → Backend.
-        </p>
-
-        <h4>PCL fetches directly from File Storage</h4>
-        <p>
-          The Backend only passes PCL a reference to the file (an ID or
-          pre-signed URL) via a lightweight REST call. PCL fetches the file
-          bytes from File Storage.
-        </p>
-        <p>
-          <strong>Endpoint cluster:</strong> Job dispatch (assign to printer,
-          cancel, restart).
-        </p>
-
-        <h3>4.4 Printer status reporting</h3>
-        <p>
-          PCL reports status via periodic webhook calls to a backend endpoint,
-          or the backend polls a PCL status endpoint on an interval. Less
-          real-time and more request/response overhead than a persistent stream.
-        </p>
-
-        <h3>4.5 Real-time status delivery to users</h3>
-        <ul>
-          <li>
-            <strong>Staff/Admin (section views):</strong> Server-Sent Events
-            (SSE) from backend to user. The backend sends updates to the Fleet
-            Section the user is subscribed to, so a user only receives
-            updates for printers they're actually watching.
-          </li>
-          <li>
-            <strong>Students:</strong> a polling endpoint returning the status
-            of all jobs belonging to the requesting student, backed by the
-            backend's cached current-state (not a direct DB hit per poll) to
-            keep this cheap at scale. Students don't need too many push
-            notifications; prints run over hours, and they aren't continuously
-            watching.
-          </li>
-        </ul>
-
-        <h3>4.6 Filament allocation and usage tracking</h3>
-        <p>
-          Backend deducts from a student's filament balance as jobs are
-          dispatched/completed and logs usage to the Filament Ledger for
-          reporting. Triggers an automatic low-balance notification.
-        </p>
-
-        <h3>4.7 Notifications</h3>
-        <p>
-          Backend triggers a single, consolidated status notification per
-          meaningful job event (addressing the email-spam issue in the current
-          system). This includes staff-initiated mass emails to a queue, course,
-          or group.
-        </p>
-
-        <h3>4.8 Reporting</h3>
-        <p>
-          Backend aggregates filament usage, print time, and user counts from
-          the Database to produce admin-facing reports, replacing the PrinterOS
-          statistics page.
-        </p>
-
-        <h2>5. Fleet partitioning recap</h2>
-        <p>
-          Printers are organized into Fleet Sections, with each printer
-          belonging to exactly one section. Tags remain available for flexible
-          search/filtering within and across sections, but sections are the
-          primary unit for both access partitioning and SSE subscription scope.
-          This is what lets a client (e.g. the self-serve kiosk) only receive
-          updates for the printers it cares about, addressing the performance
-          problems of the current system rendering and holding state for the
-          entire fleet regardless of view.
-        </p>
-
-        <h2>6. Endpoint cluster summary</h2>
-        <p>All core-domain logic should follow Domain-Driven Design (DDD) architecture and these are our suggested first domains. It may be subject to change</p>
-        <p>High-level groupings:</p>
-        <ul>
-          <li><strong>Auth / Account:</strong> credential creation, login, session management</li>
-          <li><strong>GCODE/Model Upload:</strong> CRUD for uploaded files</li>
-          <li><strong>Queue Management:</strong> create/list queues, manage student access</li>
-          <li><strong>Job Submission &amp; Dispatch:</strong> submit job, assign to printer, cancel, restart</li>
-          <li><strong>Fleet / Printer Management:</strong> CRUD for printers, tags, Fleet Sections</li>
-          <li><strong>Filament Allocation:</strong> balance queries, allocation adjustments, usage logs</li>
-          <li><strong>Notifications:</strong> per-job notification triggers, mass email</li>
-          <li><strong>Reporting:</strong> usage, print time, and user-count aggregation</li>
-          <li><strong>Real-Time Status:</strong> SSE subscription endpoint (staff), polling endpoint (students)</li>
         </ul>
 
         <section class="ai-statement">
           <h2>AI Use Statement</h2>
           <dl>
-            <dt>Tool</dt><dd>Copilot CLI (Auto mode)</dd>
+            <dt>Tool</dt><dd>Copilot CLI (Auto mode), Claude Code (Opus 5.5)</dd>
             <dt>Mode</dt><dd>Local</dd>
-            <dt>Output</dt><dd>converted the source DOCX into HTML and integrated it with the documentation navigation</dd>
+            <dt>Output</dt><dd>converted the source DOCX into HTML and integrated it with the documentation navigation; later reduced it to diagrams and reasons, leaving the full text in data-management-choices.md</dd>
             <dt>Data</dt><dd>none</dd>
-            <dt>Verified</dt><dd>Reviewed the rendered html version of the data management document.</dd>
+            <dt>Verified</dt><dd>Reviewed the rendered html version of the data management document.<br>Proof read and verified accuracy to current project's progress and standard. Applied reformatting to remove bloat documentation.</dd>
           </dl>
           <p>
             Required by the project's <a href="../.integrity/POLICY.md">AI use policy</a>. The

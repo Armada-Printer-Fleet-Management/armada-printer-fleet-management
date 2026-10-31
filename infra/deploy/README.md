@@ -162,7 +162,8 @@ takes the version from the candidate's own tag, so `1.3.0-rc.2` ships as `1.3.0`
 
 Release branches exist for versions that reached production, and the last five are kept. The
 one exception is a hot fix's branch, which is created by hand before its version ships; how a
-hot fix reaches production is in `docs/git-hygiene.html`.
+hot fix reaches production is under _Branching_ in the root `AGENTS.md`, and pictured in
+`docs/git-hygiene.html`.
 
 A machine learns which version its track names from the `VERSION` file in the release files: in
 the release image on its pointer for testing and staging, and in the latest GitHub release for

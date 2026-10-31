@@ -33,15 +33,15 @@
                 <td>A thing with an identity, its state, and the rules that change it.</td>
                 <td><code>PrintJob</code></td>
               </tr>
-              <td>Typed ID</td>
+              <tr>
+                <td>Typed ID</td>
                 <td>Each entity's own ID type, so a printer's ID cannot be passed as a job's.</td>
-              <td><code>PrintJobId</code></td>
+                <td><code>PrintJobId</code></td>
+              </tr>
               <tr>
                 <td>Rule</td>
                 <td>A method on the entity that allows or refuses a change.</td>
                 <td><code>start_review(now)</code></td>
-              </tr>
-              <tr>
               </tr>
               <tr>
                 <td>Service</td>
@@ -227,11 +227,7 @@
           print jobs and printer queues, so it saves them. The printer server owns printer state,
           so for printers the application server is the client: its <code>PrinterRepository</code>
           requests a dispatch or a release, and the printer returned is the confirmed result.
-          A print job rule that depends on a printer takes that confirmation as a value. A poller
-          on the application server moves a job to <code>PRINTING</code> and then
-          <code>FINISHED</code> as its printer reports them. Only staff move a job to
-          <code>COMPLETED</code> or <code>FAILED</code>: a printer reporting an error never fails
-          a job by itself. Only an operator marks a finished or faulted printer ready again.
+          A print job rule that depends on a printer takes that confirmation as a value.
         </p>
 
         <h2>Server and desktop domains differ</h2>
@@ -469,17 +465,10 @@
           </table>
         </div>
         <p>
-          All of them run in CI and in the pre-push hook. To add a use case, follow
-          print jobs: the rule on the entity, the use case on the service, and the
-          handler or IPC call translating at the edge.
-        </p>
-        <p>
-          Domains never import each other, so an RPC that needs two of them, such as
-          uploading a print job's file, is composed by its handler. The handler calls
-          each domain's service in turn and holds no rules of its own. Where a domain's
-          own use case needs an answer from another domain, such as whether a job's
-          file has finished uploading, the handler passes it in as a callback that deals
-          only in typed IDs.
+          All of them run in CI and in the pre-push hook, so the shape on this page
+          is checked by machine, not by memory. Domains never import each other, so
+          an RPC that needs two of them is composed by its handler, which holds no
+          rules of its own.
         </p>
 
         <section class="ai-statement">
@@ -491,11 +480,12 @@
             <dd>Local</dd>
             <dt>Output</dt>
             <dd>drafted this page and its diagrams from the implementation and the
-              design decisions made in session</dd>
+              design decisions made in session; later fixed the vocabulary table and
+              removed rule-level detail that AGENTS.md holds</dd>
             <dt>Data</dt>
             <dd>none</dd>
             <dt>Verified</dt>
-            <dd>Reviewed the rendered page in a browser, removed unneeded text, and confirmed the content is accurate.</dd>
+            <dd>Reviewed the rendered page in a browser, removed unneeded text, and confirmed the content is accurate.<br>Proof read and verified accuracy to current project's progress and standard. Applied reformatting to remove bloat documentation.</dd>
           </dl>
           <p>
             Required by the project's
