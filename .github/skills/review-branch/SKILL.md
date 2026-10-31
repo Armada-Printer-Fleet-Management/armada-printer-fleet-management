@@ -1,6 +1,6 @@
 ---
 name: review-branch
-description: "Check out a colleague's branch in a git worktree beside the repo, reusing the main checkout's installed dependencies when lockfiles match, then summarise the change for review. Use when reviewing someone else's branch or PR locally."
+description: "Check out a colleague's branch in a git worktree beside the repo, reusing the main checkout's installed dependencies when lockfiles match, then summarise the change for review and run the /pr-ddd architecture check on it. Use when reviewing someone else's branch or PR locally."
 ---
 <!-- GENERATED FILE - DO NOT EDIT
      Source:    .claude/skills/review-branch/SKILL.md
@@ -91,6 +91,12 @@ whatever `main` currently points at.
 
 Then give a short review: what the change does, anything that looks incorrect, and anything that
 contradicts the conventions in `CLAUDE.md`. Point at files by path and line.
+
+**8. Run the architecture review.** Run `/pr-ddd <worktree>` with the worktree's path, so the
+change gets a second, independent DDD check at review time even if the author's push was
+overridden. Verdicts are stored per clone, so this one is the reviewer's own, separate from the
+author's. Add its verdict, score and any findings to your review. A colleague's override reason, if
+they gave one, belongs in the pull request description: compare it with what `/pr-ddd` found.
 
 ## Caveats to tell the user
 
