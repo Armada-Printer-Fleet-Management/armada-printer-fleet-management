@@ -156,7 +156,7 @@ it is unclear.
 
 ### This text is published
 
-The commit lands in a repository that becomes public. Generalise every sponsor, vendor,
+The commit lands in a public repository. Generalise every sponsor, vendor,
 organisation and person: "a partner's identity provider", never the vendor's name; "the
 sponsor's parts database", never the organisation's. The audit log in OneDrive holds the
 unabridged record — the commit message does not need it.

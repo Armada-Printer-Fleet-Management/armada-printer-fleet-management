@@ -193,8 +193,8 @@ Picture: `docs/domain-architecture.html`.
 
 ## Open core: all logic here is generic
 
-This repository is private today and becomes public after formal sign-off. That flip is a
-visibility toggle, not a history-scrubbing exercise, because of one rule:
+This repository is public. Going public was a visibility toggle, not a history-scrubbing
+exercise, because of one rule, and every change must keep it true:
 
 > **Every line of logic in this repository is generic. Anything specific to a particular
 > deployment — an organisation, a vendor, an environment — is configuration, not code.**
@@ -273,11 +273,22 @@ branch whose history has become unmanageable. Never merge `main` into a branch �
 **Squash to one commit per ticket.** One PR, one ticket, one commit. The exception is when parts of
 the change will need cherry-picking separately; keep those as their own commits.
 
+**Finished work goes out through `/pr-precheck`.** It runs `/pr-ddd`, every pre-push check and
+`/pr-split`, then builds one squashed commit per PR, pushes, and opens the PRs. Suggest a PR stack
+only there, once the work is done; never reshape branches or suggest a split mid-work. A stack is a
+native GitHub stacked pull request, made with the `gh stack` extension: each PR is based on the one
+before, and GitHub's stack merge lands them together. Split for cohesion, not size: there is no
+line limit.
+
 **The pre-push hook blocks code changes without a passing `/pr-ddd` verdict.** The verdict is
 keyed to the commit's tree and stored under the git common directory by `scripts/ddd_verdict.py`,
 so the hook spends no tokens. When the review is wrong, push once with
 `ARMADA_DDD_OVERRIDE="<reason>" git push` and put the reason in the PR description. Never set the
 override on the developer's behalf.
+
+**Every PR gets a diagram.** The PR Lens GitHub App comments one automatically. When it is not
+installed or not working, `/pr-precheck` can draw one locally with the PR Lens CLI, pinned in that
+skill.
 
 **Release branches are live production.** Only minimal, low-risk changes are cherry-picked onto
 them. Moving a site to a new version is a maintenance event, not a cherry-pick. Fixes land on
@@ -420,6 +431,7 @@ theme, so a hardcoded colour breaks someone else's brand.
 | Layer contracts               | `lint-imports`                                                        |
 | Sync agent config             | `python scripts/sync_agent_config.py`                                 |
 | Export AI audit log           | `python scripts/export_ai_audit.py`                                   |
+| Push finished work as PRs     | `/pr-precheck` (runs `/pr-ddd`, the pre-push checks and `/pr-split`)  |
 | DDD verdict for this commit   | `python scripts/ddd_verdict.py check` (also `scope`, `diff`, `show`)  |
 | Repository script tests       | `python -m unittest discover -s scripts/tests` (standard library only) |
 | Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
