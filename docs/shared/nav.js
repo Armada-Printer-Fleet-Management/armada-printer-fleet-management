@@ -13,10 +13,18 @@ const SECTIONS = [
     ],
   },
   {
-    title: "Applications",
+    title: "Desktop application",
+    links: [{ href: "desktop.html", text: "Overview" }],
+  },
+  {
+    title: "Web application",
+    links: [{ href: "web.html", text: "Overview" }],
+  },
+  {
+    title: "Application server",
     links: [
-      { href: "desktop.html", text: "Desktop application" },
-      { href: "web.html", text: "Web application" },
+      { href: "testing.html", text: "Testing" },
+      { href: "api.html", text: "API reference" },
     ],
   },
   {
@@ -30,7 +38,6 @@ const SECTIONS = [
   {
     title: "Reference",
     links: [
-      { href: "api.html", text: "API reference" },
       { href: "../AGENTS.md", text: "Agent instructions" },
       { href: "../.integrity/POLICY.md", text: "AI use policy" },
     ],

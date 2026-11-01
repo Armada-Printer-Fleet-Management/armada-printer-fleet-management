@@ -85,6 +85,7 @@ Pages carry large inline SVG, so read one only when the task needs its picture.
 | `docs/database-schema.html` | Adding or changing a domain, entity, table or column |
 | `docs/desktop.html` | Working on `apps/desktop/`: IPC, codegen, packaging or the installer |
 | `docs/web.html` | Working on `apps/web/`: the layout, routes, sidebar or adding a page |
+| `docs/testing.html` | Choosing which size of server test to write; the rules are `apps/server/tests/AGENTS.md` |
 | `docs/git-hygiene.html` | Explaining the branch, rebase, release or PR-stack flow to a developer |
 | `docs/data-management-choices.html` | Planning across services; the text version is `data-management-choices.md` |
 | `docs/api.html` | Looking up a server endpoint. Generated; never edit it or `docs/api/` |

@@ -21,8 +21,7 @@ implementations in `plugins/`, never here.
 | `api/infrastructure/dev_data.py` | The one set of development data: the in-memory repositories start with it, tests use its IDs, `dev_seed.py` writes it |
 | `migrations/`, `alembic.ini` | Alembic migrations. Foreign keys only inside a domain; enum columns are `uuid` from `enum_ids.py`. `alembic.ini` holds no connection details |
 | `dev_seed.py`          | Writes `dev_data.py` into the development database, run by the dev stack's `migrate` service. Never run by a deployment |
-| `tests/contract/`      | What every repository adapter must do. A new adapter joins by adding its factory to `ADAPTERS` |
-| `tests/unit/`, `tests/integration/`, `e2e/` | Unit, integration and end-to-end tests; `e2e/README.md` has its setup |
+| `tests/`, `e2e/`       | The server's tests. `tests/AGENTS.md` holds their layout and rules; `e2e/README.md` has the end-to-end setup |
 | `api/plugins.py`       | Builds the plugins each deployment chose in config, such as `FILE_STORE_BACKEND` |
 | `api/common/authentication.py` | `Role`, `Caller` and the current caller, which only `authenticated_as` sets. A caller's `subject` is the identity provider's ID, not a `UserId` |
 | `api/common/access_policy.py` | `ACCESS`, the roles allowed on each endpoint. Every endpoint must be listed: an unlisted one allows no role. The most specific row wins, so one procedure can override its service |
@@ -175,3 +174,8 @@ server serves. Descriptions come from `.proto` comments and REST route docstring
 - A processor added to `SHARED_PROCESSORS` in `api/logging_config.py` runs on every line,
   including uvicorn's and other libraries'. `lifespan.py` applies the configuration at startup,
   so the few lines uvicorn prints before then keep uvicorn's own format.
+
+## Writing tests
+
+Read `tests/AGENTS.md` before writing or changing a test here, including under `e2e/`. It sets the
+standard for the server's tests. Where an existing test disagrees with it, follow `tests/AGENTS.md`.
