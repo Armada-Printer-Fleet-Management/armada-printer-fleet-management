@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Testing</title>
+<link rel="stylesheet" href="shared/docs.css">
+</head>
+<body data-depth="0">
+<div class="layout">
+<nav></nav>
+<main>
+
+<h1>Testing the server</h1>
+<p class="lede">
+  How the server's tests are organised, and why. This page is the quick picture. The rules everyone
+  follows when writing a test, people and agents alike, are in
+  <a href="../apps/server/tests/AGENTS.md">apps/server/tests/AGENTS.md</a>.
+</p>
+
+<h2 id="summary">In short</h2>
+
+<ul>
+  <li><strong>Three sizes, one dividing line.</strong> A test's size depends on how many real
+    programs it runs, not on how many functions it touches.</li>
+  <li><strong>Most tests are unit tests.</strong> They are fast and dependable, so they can cover
+    everything the server decides.</li>
+  <li><strong>Larger tests catch what smaller ones cannot.</strong> A larger test is only worth its
+    extra time if it could fail while every smaller test passes.</li>
+</ul>
+
+<h2 id="sizes">What each size uses for real</h2>
+
+<figure class="diagram">
+  <svg viewBox="0 0 760 260" width="100%" role="img"
+       aria-label="Unit tests run the server for real and mock the database, file store and outside services. Integration tests also run the database and file store for real, and mock outside services. End-to-end tests run everything for real.">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" class="arrowhead" />
+      </marker>
+    </defs>
+
+    <text x="207" y="28" text-anchor="middle" class="label-title" font-size="12">the server</text>
+    <text x="357" y="28" text-anchor="middle" class="label-title" font-size="12">database</text>
+    <text x="507" y="28" text-anchor="middle" class="label-title" font-size="12">file store</text>
+    <text x="657" y="28" text-anchor="middle" class="label-title" font-size="12">outside services</text>
+
+    <text x="10" y="67" class="label-title" font-size="12">Unit</text>
+    <rect x="140" y="42" width="135" height="40" rx="8" class="box-accent" />
+    <text x="207" y="66" text-anchor="middle" font-size="12">real</text>
+    <rect x="290" y="42" width="135" height="40" rx="8" class="box-future" />
+    <text x="357" y="66" text-anchor="middle" class="label-muted">mocked</text>
+    <rect x="440" y="42" width="135" height="40" rx="8" class="box-future" />
+    <text x="507" y="66" text-anchor="middle" class="label-muted">mocked</text>
+    <rect x="590" y="42" width="135" height="40" rx="8" class="box-future" />
+    <text x="657" y="66" text-anchor="middle" class="label-muted">mocked</text>
+
+    <text x="10" y="127" class="label-title" font-size="12">Integration</text>
+    <rect x="140" y="102" width="135" height="40" rx="8" class="box-accent" />
+    <text x="207" y="126" text-anchor="middle" font-size="12">real</text>
+    <rect x="290" y="102" width="135" height="40" rx="8" class="box-accent" />
+    <text x="357" y="126" text-anchor="middle" font-size="12">real</text>
+    <rect x="440" y="102" width="135" height="40" rx="8" class="box-accent" />
+    <text x="507" y="126" text-anchor="middle" font-size="12">real</text>
+    <rect x="590" y="102" width="135" height="40" rx="8" class="box-future" />
+    <text x="657" y="126" text-anchor="middle" class="label-muted">mocked</text>
+
+    <text x="10" y="187" class="label-title" font-size="12">End-to-end</text>
+    <rect x="140" y="162" width="135" height="40" rx="8" class="box-accent" />
+    <text x="207" y="186" text-anchor="middle" font-size="12">real</text>
+    <rect x="290" y="162" width="135" height="40" rx="8" class="box-accent" />
+    <text x="357" y="186" text-anchor="middle" font-size="12">real</text>
+    <rect x="440" y="162" width="135" height="40" rx="8" class="box-accent" />
+    <text x="507" y="186" text-anchor="middle" font-size="12">real</text>
+    <rect x="590" y="162" width="135" height="40" rx="8" class="box-accent" />
+    <text x="657" y="186" text-anchor="middle" font-size="12">real</text>
+
+    <text x="140" y="238" class="label-muted">fewer tests, slower and less predictable as you go down</text>
+    <line x1="120" y1="42" x2="120" y2="202" class="flow" />
+  </svg>
+  <figcaption>
+    A unit test runs real server code from end to end, and replaces only what lives in another
+    program. That is wider than the usual meaning of "unit test", and it is deliberate: testing real
+    code finds more bugs than testing against an imitation of it. End-to-end tests are planned but
+    not built yet.
+  </figcaption>
+</figure>
+
+<h2 id="which">Which test should I write?</h2>
+
+<figure class="diagram">
+  <svg viewBox="0 0 760 300" width="100%" role="img"
+       aria-label="Start at the top. If a test can catch it with every other program mocked, write a unit test. If not, and it needs a real dependency or the real wiring, write an integration test. If not, and it is a key flow a user follows across several steps, write an end-to-end test.">
+    <rect x="20" y="20" width="470" height="64" rx="8" class="box" />
+    <text x="255" y="47" text-anchor="middle" class="label-title" font-size="12">Can a test catch it with every other program mocked?</text>
+    <text x="255" y="67" text-anchor="middle" class="label-muted">rules, responses and logic inside the server</text>
+
+    <rect x="20" y="118" width="470" height="64" rx="8" class="box" />
+    <text x="255" y="145" text-anchor="middle" class="label-title" font-size="12">Does it need a real dependency, or the real wiring?</text>
+    <text x="255" y="165" text-anchor="middle" class="label-muted">one adapter or one endpoint at a time</text>
+
+    <rect x="20" y="216" width="470" height="64" rx="8" class="box" />
+    <text x="255" y="243" text-anchor="middle" class="label-title" font-size="12">Is it a key flow a user follows across several steps?</text>
+    <text x="255" y="263" text-anchor="middle" class="label-muted">against a deployed server that is as close to production as possible</text>
+
+    <rect x="570" y="20" width="170" height="64" rx="8" class="box-accent" />
+    <text x="655" y="47" text-anchor="middle" class="label-title" font-size="12">Unit test</text>
+    <text x="655" y="67" text-anchor="middle" class="label-muted">the most of these</text>
+
+    <rect x="570" y="118" width="170" height="64" rx="8" class="box-accent" />
+    <text x="655" y="145" text-anchor="middle" class="label-title" font-size="12">Integration test</text>
+    <text x="655" y="165" text-anchor="middle" class="label-muted">far fewer</text>
+
+    <rect x="570" y="216" width="170" height="64" rx="8" class="box-accent" />
+    <text x="655" y="243" text-anchor="middle" class="label-title" font-size="12">End-to-end test</text>
+    <text x="655" y="263" text-anchor="middle" class="label-muted">a deliberate few</text>
+
+    <line x1="490" y1="52" x2="567" y2="52" class="flow" />
+    <text x="528" y="44" text-anchor="middle" class="label-muted">yes</text>
+    <line x1="490" y1="150" x2="567" y2="150" class="flow" />
+    <text x="528" y="142" text-anchor="middle" class="label-muted">yes</text>
+    <line x1="490" y1="248" x2="567" y2="248" class="flow" />
+    <text x="528" y="240" text-anchor="middle" class="label-muted">yes</text>
+
+    <line x1="255" y1="84" x2="255" y2="115" class="flow" />
+    <text x="267" y="104" class="label-muted">no</text>
+    <line x1="255" y1="182" x2="255" y2="213" class="flow" />
+    <text x="267" y="202" class="label-muted">no</text>
+  </svg>
+  <figcaption>
+    Start at the top and stop at the first yes. The smallest test that can catch a problem is the
+    one that gives the fastest and clearest answer when something breaks.
+  </figcaption>
+</figure>
+
+<h2 id="why">Why it works this way</h2>
+
+<ul>
+  <li><strong>Mock as little as possible.</strong> An imitation can quietly stop matching the real
+    thing, and then tests keep passing while the product is broken.</li>
+  <li><strong>Use real dependencies where it counts.</strong> Only a real database or file store
+    can show how they really behave, and whether the server is wired to them correctly.</li>
+  <li><strong>A failing test always means something.</strong> Unit and integration tests are never
+    quietly skipped or retried, so a pass really is a pass, and a single failure gets looked at.</li>
+</ul>
+
+<section class="ai-statement">
+  <h2>AI Use Statement</h2>
+  <dl>
+    <dt>Tool</dt><dd>Claude Code (Opus 5.5)</dd>
+    <dt>Mode</dt><dd>Local</dd>
+    <dt>Output</dt><dd>this page's text and diagrams, summarised from the testing rules the developer decided</dd>
+    <dt>Data</dt><dd>none</dd>
+    <dt>Verified</dt><dd class="unfilled">Verified document matched standards that was originally written.  The correctness was validated based on my own understanding and expectations, and where I was unsure I research more information on the topic.</dd>
+  </dl>
+  <p>
+    Required by the project's <a href="../.integrity/POLICY.md">AI use policy</a>. The
+    verification field is written by a developer, never by an agent.
+  </p>
+</section>
+
+</main>
+</div>
+<script src="shared/nav.js"></script>
+</body>
+</html>
