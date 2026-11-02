@@ -1,6 +1,10 @@
 """The desktop's composition root: the only place infrastructure is constructed and handed to the
 domain services that IPC exposes."""
 
+import platform
+from importlib.metadata import version
+
+from armada_app.dialogs import choose_save_path
 from armada_domains.file.service import FileService
 from armada_domains.print_job.service import PrintJobService
 from armada_domains.printer.service import PrinterService
@@ -11,7 +15,10 @@ from armada_infrastructure.application_server.print_job import ApplicationServer
 from armada_infrastructure.application_server.printer import ApplicationServerPrinters
 from armada_infrastructure.application_server.printer_queue import ApplicationServerPrinterQueues
 from armada_ipc import Ipc
+from armada_ipc.logs import LogsIpc
 from armada_runtime.environment import Environment
+from armada_runtime.log_archive import LogArchive
+from armada_runtime.packaging import executable_name
 from armada_runtime.settings import DEV_SERVER_URL, load_settings
 
 
@@ -26,4 +33,18 @@ def build_ipc() -> Ipc:
         printers=PrinterService(ApplicationServerPrinters(server)),
         printer_queues=PrinterQueueService(ApplicationServerPrinterQueues(server)),
         files=FileService(ApplicationServerFiles(server)),
+        logs=LogsIpc(build_log_archive(), choose_save_path, executable_name()),
+    )
+
+
+def build_log_archive() -> LogArchive:
+    return LogArchive(
+        Environment.log_path().parent,
+        manifest={
+            "application": executable_name(),
+            "version": version("backend"),
+            "development": str(Environment.is_dev),
+            "os": platform.platform(),
+            "python": platform.python_version(),
+        },
     )

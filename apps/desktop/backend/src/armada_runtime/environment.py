@@ -31,11 +31,27 @@ class Environment:
         return Environment.resource_path("frontend", "dist", "index.html").as_uri()
 
     @staticmethod
+    def user_data_dir() -> Path:
+        """`%APPDATA%/<exe name>`: per-user files that outlive an uninstall."""
+        app_data = os.environ.get("APPDATA")
+        if not app_data:
+            raise RuntimeError("APPDATA is not set, so there is nowhere to keep per-user files")
+        return Path(app_data) / executable_name()
+
+    @staticmethod
     def settings_path() -> Path:
         """The per-user settings file. Dev uses its own name so running from source never edits an
         installed app's settings."""
-        app_data = os.environ.get("APPDATA")
-        if not app_data:
-            raise RuntimeError("APPDATA is not set, so there is nowhere to keep the settings file")
         name = "settings.dev.yaml" if Environment.is_dev else "settings.yaml"
-        return Path(app_data) / executable_name() / name
+        return Environment.user_data_dir() / name
+
+    @staticmethod
+    def log_path() -> Path:
+        """The active JSONL log file; rotated backups sit beside it. Dev keeps logs in the repo
+        (gitignored) so they never mix with an installed app's."""
+        directory = (
+            Environment.resource_root() / "logs"
+            if Environment.is_dev
+            else Environment.user_data_dir() / "logs"
+        )
+        return directory / f"{executable_name()}.jsonl"

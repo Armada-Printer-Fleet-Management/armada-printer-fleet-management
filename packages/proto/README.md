@@ -23,7 +23,7 @@ only through typed IDs:
 
 ```
             id.v1   (one typed ID per entity: UserId, FileId, PrintJobId, ...)
-          common.v1 (base units: TimeStatus, PageRequest, PageResponse)
+          common.v1 (base units: TimeStatus, PageRequest, PageResponse; application metadata)
               ▲
    ┌──────────┼───────────┬─────────────┬──────────────────┐
  user.v1   file.v1   print_job.v1   printer.v1   printer_queue.v1   domains: entities, enums

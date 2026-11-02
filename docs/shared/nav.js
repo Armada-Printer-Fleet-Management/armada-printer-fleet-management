@@ -17,6 +17,7 @@ const SECTIONS = [
     links: [
       { href: "desktop.html", text: "Desktop application" },
       { href: "web.html", text: "Web application" },
+      { href: "desktop-logging.html", text: "Desktop logging" },
     ],
   },
   {
