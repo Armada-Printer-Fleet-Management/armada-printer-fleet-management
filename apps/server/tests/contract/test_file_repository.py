@@ -6,11 +6,11 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 
 import pytest
+from core_domain.content_asset import File, FileType
 from core_domain.ddd import EntityNotFound
-from core_domain.file import File, FileType
 from core_domain.ids import FileId
 
-from api.domains.file.repository import FileRepository
+from api.domains.content_asset.repository import FileRepository
 from api.infrastructure.file_memory import InMemoryFileRepository
 
 ADAPTERS: list[Callable[[], FileRepository]] = [InMemoryFileRepository]

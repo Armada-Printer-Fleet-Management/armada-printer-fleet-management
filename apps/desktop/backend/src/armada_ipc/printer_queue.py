@@ -1,4 +1,4 @@
-"""Printer queues, read from the application server through the printer_queue domain."""
+"""Printer queues, read from the application server through the queue domain."""
 
 from proto_utils.gen.common.v1.page_pb2 import PageResponse
 from proto_utils.gen.server.v1.printer_queue_service_pb2 import (
@@ -7,7 +7,7 @@ from proto_utils.gen.server.v1.printer_queue_service_pb2 import (
 )
 from proto_utils.mappers import PrinterQueueMapper
 
-from armada_domains.printer_queue.service import PrinterQueueService
+from armada_domains.queue.service import PrinterQueueService
 from armada_ipc._base import IpcModule, proto_call
 
 

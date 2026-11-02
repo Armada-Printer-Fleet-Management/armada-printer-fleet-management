@@ -11,10 +11,10 @@ import pytest
 from google.protobuf.message import Message
 
 import armada_ipc
-from armada_domains.file.service import FileService
+from armada_domains.content_asset.service import FileService
+from armada_domains.fleet.service import PrinterService
 from armada_domains.print_job.service import PrintJobService
-from armada_domains.printer.service import PrinterService
-from armada_domains.printer_queue.service import PrinterQueueService
+from armada_domains.queue.service import PrinterQueueService
 from armada_ipc import Ipc
 from armada_ipc._base import PROTO_CALL_MARKER, PROTO_RESPONSE_MARKER, IpcModule
 

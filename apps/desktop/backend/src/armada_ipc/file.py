@@ -1,10 +1,10 @@
-"""File records, read from the application server through the file domain."""
+"""File records, read from the application server through the content_asset domain."""
 
 from core_domain.ids import FileId
 from proto_utils.gen.server.v1.file_service_pb2 import ListFilesRequest, ListFilesResponse
 from proto_utils.mappers import FileMapper
 
-from armada_domains.file.service import FileService
+from armada_domains.content_asset.service import FileService
 from armada_ipc._base import IpcModule, proto_call
 
 

@@ -1,17 +1,17 @@
 # Stub: plays the printer server, so the desktop can dispatch and watch prints before the server
 # can reach real printers. A dispatched printer reports 25% more progress every 5 seconds and then
 # FINISHED; a faulty printer reports ERROR at 50% instead. Replacing it means a printer server
-# client in api/infrastructure that implements api/domains/printer/repository.py by asking the
+# client in api/infrastructure that implements api/domains/fleet/repository.py by asking the
 # printer server, constructed in api/main.py.
 from collections.abc import Callable, Iterable
 from dataclasses import replace
 from datetime import datetime, timedelta
 
 from core_domain.ddd import EntityNotFound, InvalidPageToken, Page
+from core_domain.fleet import Printer, PrinterStatus
 from core_domain.ids import PrinterId, PrintJobId
-from core_domain.printer import Printer, PrinterStatus
 
-from api.domains.printer.repository import PrinterRepository
+from api.domains.fleet.repository import PrinterRepository
 
 STEP = timedelta(seconds=5)
 PERCENT_PER_STEP = 25

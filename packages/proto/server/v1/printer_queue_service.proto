@@ -4,7 +4,7 @@ package server.v1;
 
 import "common/v1/page.proto";
 import "id/v1/printer_queue_id.proto";
-import "printer_queue/v1/printer_queue.proto";
+import "queue/v1/printer_queue.proto";
 
 // The queues print jobs wait in, served by the remote server.
 service PrinterQueueService {
@@ -23,7 +23,7 @@ message GetPrinterQueueRequest {
 // One queue.
 message GetPrinterQueueResponse {
   // The queue.
-  printer_queue.v1.PrinterQueue printer_queue = 1;
+  queue.v1.PrinterQueue printer_queue = 1;
 }
 
 // Lists queues.
@@ -35,7 +35,7 @@ message ListPrinterQueuesRequest {
 // The queues returned for the requested page, and the token for the page after it.
 message ListPrinterQueuesResponse {
   // The queues.
-  repeated printer_queue.v1.PrinterQueue printer_queues = 1;
+  repeated queue.v1.PrinterQueue printer_queues = 1;
   // How to get the next page.
   common.v1.PageResponse page = 2;
 }

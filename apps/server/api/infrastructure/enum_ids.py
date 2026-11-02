@@ -4,9 +4,9 @@
 # the meaning of existing rows.
 from uuid import UUID
 
-from core_domain.file import FileType
+from core_domain.content_asset import FileType
 from core_domain.print_job import PrintJobStatus
-from proto_utils.gen.user.v1 import user_pb2
+from proto_utils.gen.auth.v1 import user_pb2
 
 PRINT_JOB_STATUS_IDS: dict[PrintJobStatus, UUID] = {
     PrintJobStatus.DRAFT: UUID("2c5216d8-6fe3-4a53-b079-a09029538dc7"),
@@ -38,5 +38,4 @@ USER_ROLE_IDS: dict[user_pb2.UserRole, UUID] = {
 # above, keeping its UUID, when the feature that uses it adds the proto enum.
 USER_STATUS_ACTIVE_ID = UUID("fcbfe76e-3ec2-468e-b0b4-4c61a3045622")
 FLEET_ACCESS_POLICY_STAFF_ONLY_ID = UUID("0893e1a6-e0b8-4035-b001-d08f352398a4")
-FILE_UPLOAD_STATUS_UPLOADED_ID = UUID("5595dd8f-0bf9-4943-8e45-47a796dda538")
 FILE_SCAN_STATUS_CLEAN_ID = UUID("cf2ae902-1b0d-4a06-a1d8-56d7552203d7")

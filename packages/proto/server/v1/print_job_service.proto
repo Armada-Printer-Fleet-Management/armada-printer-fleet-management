@@ -3,8 +3,8 @@ syntax = "proto3";
 package server.v1;
 
 import "common/v1/page.proto";
-import "file/v1/file.proto";
-import "file/v1/file_upload.proto";
+import "content_asset/v1/file.proto";
+import "content_asset/v1/file_upload.proto";
 import "id/v1/print_job_id.proto";
 import "id/v1/printer_id.proto";
 import "id/v1/printer_queue_id.proto";
@@ -47,13 +47,13 @@ message CreatePrintJobUploadRequest {
   // The DRAFT job the file belongs to.
   id.v1.PrintJobId print_job_id = 1;
   // The file to be uploaded.
-  file.v1.FileUploadMetadata metadata = 2;
+  content_asset.v1.FileUploadMetadata metadata = 2;
 }
 
 // Where to upload the job's print file.
 message CreatePrintJobUploadResponse {
   // The upload slot. Its file_id is now the job's file_id.
-  file.v1.FileUploadSlot slot = 1;
+  content_asset.v1.FileUploadSlot slot = 1;
 }
 
 // Submits a DRAFT job.
@@ -67,7 +67,7 @@ message SubmitPrintJobResponse {
   // The job, now SUBMITTED.
   print_job.v1.PrintJob print_job = 1;
   // The job's file.
-  file.v1.File file = 2;
+  content_asset.v1.File file = 2;
 }
 
 // Lists print jobs.
@@ -81,7 +81,7 @@ message ListPrintJobsResponse {
   // The jobs.
   repeated print_job.v1.PrintJob print_jobs = 1;
   // The files the jobs refer to, matched by file_id.
-  repeated file.v1.File files = 2;
+  repeated content_asset.v1.File files = 2;
   // How to get the next page.
   common.v1.PageResponse page = 3;
 }
@@ -97,7 +97,7 @@ message GetPrintJobResponse {
   // The job.
   print_job.v1.PrintJob print_job = 1;
   // The job's file. Unset while a DRAFT job has no upload.
-  file.v1.File file = 2;
+  content_asset.v1.File file = 2;
 }
 
 // Changes a job's status through one staff action.

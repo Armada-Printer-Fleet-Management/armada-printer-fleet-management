@@ -1,9 +1,9 @@
 from datetime import UTC, datetime
 
+from core_domain.fleet import Printer, PrinterStatus
 from core_domain.ids import PrinterId, PrintJobId
-from core_domain.printer import Printer, PrinterStatus
 
-from proto_utils.gen.printer.v1 import printer_pb2
+from proto_utils.gen.fleet.v1 import printer_pb2
 from proto_utils.mappers import PrinterMapper
 
 TIME = datetime(2026, 10, 1, 9, 0, tzinfo=UTC)
@@ -23,7 +23,7 @@ def every_field_set() -> Printer:
 
 
 def test_to_proto_maps_every_field_of_the_message() -> None:
-    """Fails when a field is added to printer.v1.Printer without being mapped."""
+    """Fails when a field is added to fleet.v1.Printer without being mapped."""
     message = PrinterMapper().to_proto(every_field_set())
     mapped = {field.name for field, _ in message.ListFields()}
     assert mapped == {field.name for field in printer_pb2.Printer.DESCRIPTOR.fields}

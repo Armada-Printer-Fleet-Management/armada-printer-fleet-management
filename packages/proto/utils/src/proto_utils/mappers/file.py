@@ -1,10 +1,10 @@
 from datetime import UTC
 
 from core_domain import ids
-from core_domain.file import File, FileType
+from core_domain.content_asset import File, FileType
 
 from proto_utils.gen.common.v1.time_status_pb2 import TimeStatus
-from proto_utils.gen.file.v1 import file_pb2
+from proto_utils.gen.content_asset.v1 import file_pb2
 from proto_utils.gen.id.v1.file_id_pb2 import FileId
 from proto_utils.mapper import ProtoMapper
 

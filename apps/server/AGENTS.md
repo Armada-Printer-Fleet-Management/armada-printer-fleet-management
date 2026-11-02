@@ -99,6 +99,23 @@ plugin or its port, and import-linter enforces it.
   seeds and downgrades a throwaway database it creates and drops. Without them it is skipped.
 - The health check reports the connection as `database`.
 
+Naming, checked against every migration by `tests/unit/test_column_names.py`:
+
+- **ID columns are `id` or `<entity>_id`**, named exactly after what they point at: `printer_id`,
+  `print_job_id`, `fleet_section_id`. No prefixes (`assigned_printer_id`, `owner_user_id` are
+  wrong). A second column pointing at the same entity is usually duplicated data; find its
+  source instead.
+- **An identifier from outside the database is `<name>_ref`**, such as `keycloak_user_ref` or
+  `external_printer_ref`. `_id` always means a row in this schema.
+- **The one exception** is a polymorphic pair, `target_type` beside `target_id`.
+- **Each fact is stored once.** Who did something and when lives in the domain's event table,
+  such as `print_job_events`, not copied onto the entity as `approved_by`/`approved_at`.
+- **Timestamps use the `common.v1.TimeStatus` names:** `created_at` and `updated_at` on every
+  table (only `created_at` on an append-only one), and `deleted_at` or `expires_at` where the
+  row has that lifecycle.
+
+Picture: `docs/database-schema.html`.
+
 ## Images
 
 - A new path dependency goes in `pyproject.toml` **and** both `*.Dockerfile.dockerignore` files.

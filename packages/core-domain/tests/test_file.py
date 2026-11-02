@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
+from core_domain.content_asset import File, FileType
 from core_domain.ddd import InvalidValue
-from core_domain.file import File, FileType
 
-PROTO = Path(__file__).resolve().parents[2] / "proto" / "file" / "v1" / "file.proto"
+PROTO = Path(__file__).resolve().parents[2] / "proto" / "content_asset" / "v1" / "file.proto"
 NOW = datetime(2026, 10, 1, tzinfo=UTC)
 SHA256 = "a" * 64
 

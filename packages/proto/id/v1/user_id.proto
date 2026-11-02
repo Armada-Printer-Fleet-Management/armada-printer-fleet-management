@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-// Strongly typed DDD domain ID for the user domain. A distinct type per entity makes
+// Strongly typed DDD domain ID for the auth domain. A distinct type per entity makes
 // passing one entity's ID where another's belongs a type error. See packages/proto/AGENTS.md.
 package id.v1;
 

@@ -5,10 +5,10 @@ from pathlib import Path
 import pytest
 
 from core_domain.ddd import RuleViolation
+from core_domain.fleet import Printer, PrinterStatus
 from core_domain.ids import PrinterId, PrintJobId
-from core_domain.printer import Printer, PrinterStatus
 
-PROTO = Path(__file__).resolve().parents[2] / "proto" / "printer" / "v1" / "printer.proto"
+PROTO = Path(__file__).resolve().parents[2] / "proto" / "fleet" / "v1" / "printer.proto"
 CREATED = datetime(2026, 10, 1, tzinfo=UTC)
 LATER = datetime(2026, 10, 2, tzinfo=UTC)
 

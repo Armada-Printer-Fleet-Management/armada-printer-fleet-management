@@ -13,7 +13,7 @@ from proto_utils.gen.server.v1.printer_service_pb2 import (
 )
 from proto_utils.mappers import PrinterMapper
 
-from api.domains.printer.service import PrinterService
+from api.domains.fleet.service import PrinterService
 from api.services.domain_errors import domain_errors_as_connect, request_id
 
 

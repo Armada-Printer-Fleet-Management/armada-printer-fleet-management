@@ -4,11 +4,11 @@
 from collections.abc import Iterable
 from dataclasses import replace
 
+from core_domain.content_asset import File
 from core_domain.ddd import EntityNotFound
-from core_domain.file import File
 from core_domain.ids import FileId
 
-from api.domains.file.repository import FileRepository
+from api.domains.content_asset.repository import FileRepository
 
 
 class InMemoryFileRepository(FileRepository):

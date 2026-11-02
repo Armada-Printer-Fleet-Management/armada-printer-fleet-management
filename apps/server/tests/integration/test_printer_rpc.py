@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from proto_utils.gen.server.v1.printer_service_connect import PrinterServiceASGIApplication
 
-from api.domains.printer.service import PrinterService
+from api.domains.fleet.service import PrinterService
 from api.infrastructure.dev_data import (
     STUB_FINISHED_PRINTER_ID,
     STUB_IDLE_PRINTER_ID,

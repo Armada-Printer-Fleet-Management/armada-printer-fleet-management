@@ -3,12 +3,12 @@ import hashlib
 from datetime import UTC, datetime
 
 import pytest
-from core_domain.file import FileType
+from core_domain.content_asset import FileType
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api.common.consts import API_PREFIX
-from api.domains.file.service import FileService
+from api.domains.content_asset.service import FileService
 from api.infrastructure.file_memory import InMemoryFileRepository
 from api.infrastructure.file_store_files import FileStoreFiles
 from api.routers.file import file_router, upload_path

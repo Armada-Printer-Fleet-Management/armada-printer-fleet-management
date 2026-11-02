@@ -10,7 +10,7 @@ import {
   PrintJobService,
   SubmitPrintJobResponseSchema,
 } from './gen/server/v1/print_job_service_pb';
-import { FileUploadSlotSchema } from './gen/file/v1/file_upload_pb';
+import { FileUploadSlotSchema } from './gen/content_asset/v1/file_upload_pb';
 
 function createRpcClient() {
   return {
