@@ -3,6 +3,20 @@ grn() { printf '\033[32m%s\033[0m\n' "$*"; }
 dim() { printf '\033[2m%s\033[0m\n' "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# Prints the first Python on PATH that actually runs. Windows puts python and
+# python3 placeholders on PATH that only point to the Microsoft Store, so the first
+# one found is not necessarily a real interpreter.
+find_python() {
+  local candidate
+  while IFS= read -r candidate; do
+    if "$candidate" -c "" >/dev/null 2>&1; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done < <(type -ap python3 python)
+  return 1
+}
+
 run_in() {
   local dir="$1"; shift
   (cd "$dir" && "$@")
