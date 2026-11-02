@@ -11,6 +11,7 @@ hosts a React frontend in a native window; students use `apps/web/` instead.
 
 - How the two halves talk, and how it is packaged: [`docs/desktop.html`](../../docs/desktop.html)
 - The rules for working in it: [`AGENTS.md`](AGENTS.md)
+- Logging, and where to find the log files: [`docs/desktop-logging.html`](../../docs/desktop-logging.html)
 
 ## Running it
 

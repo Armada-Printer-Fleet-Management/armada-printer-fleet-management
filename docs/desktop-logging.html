@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Desktop logging</title>
+    <link rel="stylesheet" href="shared/docs.css" />
+  </head>
+  <body data-depth="0">
+    <div class="layout">
+      <nav></nav>
+      <main>
+        <h1>Desktop logging</h1>
+        <p class="lede">
+          How to log from the desktop backend, what each level means, and where
+          the log files end up. A quick reference; the wider app is described in
+          <a href="desktop.html">Desktop application</a>.
+        </p>
+
+        <h2 id="how-to-log">How to log</h2>
+
+        <p>
+          Use Python's standard <code>logging</code> module. There is nothing
+          of ours to import, so this works the same in domains, infrastructure,
+          IPC modules and the app itself.
+        </p>
+
+        <pre><code>import logging
+
+logger = logging.getLogger(__name__)  # once, at the top of the file
+
+
+class PrintJobService:
+    def approve(self, print_job_id: PrintJobId) -> PrintJob:
+        logger.info("Approving print job", extra={"print_job_id": str(print_job_id)})
+        try:
+            ...
+        except ServerNotConfigured:
+            logger.exception("Could not approve print job")
+            raise</code></pre>
+
+        <ul>
+          <li>
+            <strong><code>logging.getLogger(__name__)</code></strong> returns a
+            logger named after the module, such as
+            <code>armada_domains.print_job.service</code>. That name is the
+            <code>logger</code> field in each log line.
+          </li>
+          <li>
+            <strong><code>extra={...}</code></strong> adds your own fields. Each
+            key becomes a top-level field in the JSON line, which makes it
+            searchable.
+          </li>
+          <li>
+            <strong>Pass values as arguments</strong>:
+            <code>logger.info("Queue %d%% full", percent)</code>, not an
+            f-string. The text is only built if the record is written.
+          </li>
+          <li>
+            <strong>Never log personal data</strong>: no names, emails or file
+            contents. IDs are fine. Users send these logs to developers.
+          </li>
+          <li>
+            <strong>Never import <code>ApplicationLogger</code>.</strong> It is
+            set up once at startup in <code>armada_app/__main__.py</code>.
+          </li>
+        </ul>
+
+        <h2 id="levels">Log levels</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Call</th>
+              <th>Level</th>
+              <th>Use it when</th>
+              <th>Dev</th>
+              <th>Packaged</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>logger.debug()</code></td>
+              <td>DEBUG</td>
+              <td>Detail that only helps while developing: values, branches taken</td>
+              <td>Written</td>
+              <td>Dropped</td>
+            </tr>
+            <tr>
+              <td><code>logger.info()</code></td>
+              <td>INFO</td>
+              <td>A normal event worth a record: an action started or finished</td>
+              <td>Written</td>
+              <td>Written</td>
+            </tr>
+            <tr>
+              <td><code>logger.warning()</code></td>
+              <td>WARNING</td>
+              <td>Something unexpected that the app recovered from</td>
+              <td>Written</td>
+              <td>Written</td>
+            </tr>
+            <tr>
+              <td><code>logger.error()</code></td>
+              <td>ERROR</td>
+              <td>An action failed</td>
+              <td>Written</td>
+              <td>Written</td>
+            </tr>
+            <tr>
+              <td><code>logger.exception()</code></td>
+              <td>ERROR</td>
+              <td>An action failed, called inside <code>except</code>; adds the traceback</td>
+              <td>Written</td>
+              <td>Written</td>
+            </tr>
+            <tr>
+              <td><code>logger.critical()</code></td>
+              <td>CRITICAL</td>
+              <td>The app cannot carry on. Uncaught crashes on any thread are logged at this level automatically</td>
+              <td>Written</td>
+              <td>Written</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2 id="format">What a log line holds</h2>
+
+        <p>
+          Each record is one JSON object per line (JSON Lines). In dev the same
+          record also prints to the terminal as readable text.
+        </p>
+
+        <pre><code>{"timestamp": "2026-11-01T22:22:02.290832+00:00", "level": "ERROR",
+ "logger": "armada_domains.print_job.service", "message": "Could not assign print job",
+ "module": "service", "file": "service.py", "function": "assign", "line": 27,
+ "process": 46924, "thread": "MainThread",
+ "exception": "Traceback (most recent call last): ...",
+ "print_job_id": "3f2a9c1e-..."}</code></pre>
+
+        <p>
+          Timestamps are UTC. <code>file</code> is the file name only, and the
+          user's home folder in messages and tracebacks is written as
+          <code>~</code>, so no username leaves the machine.
+        </p>
+
+        <h2 id="where">Where to find logs</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Run with</th>
+              <th>Log folder</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                Dev: <code>python apps/desktop/dev_run.py</code> (with or without
+                <code>--dev</code>)
+              </td>
+              <td><code>apps/desktop/logs/</code> in the repository (gitignored)</td>
+            </tr>
+            <tr>
+              <td>Packaged: the built <code>.exe</code> or the installed app</td>
+              <td><code>%APPDATA%\&lt;exe name&gt;\logs\</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          The file is <code>&lt;exe name&gt;.jsonl</code>. At 5&nbsp;MB it rolls
+          over to <code>.jsonl.1</code>, keeping four backups. To follow it
+          live in PowerShell:
+        </p>
+
+        <pre><code>Get-Content apps\desktop\logs\*.jsonl -Wait -Tail 5
+Get-Content "$env:APPDATA\Armada-Printer-Fleet-Management\logs\*.jsonl" -Wait -Tail 5</code></pre>
+
+        <p>
+          The packaged app has no console window, so it writes to the file
+          only. To see output live while debugging a build, set
+          <code>console=True</code> in <code>desktop_backend.spec</code> and
+          rebuild; do not commit that change.
+        </p>
+
+        <h2 id="manual-test">Checking it by hand</h2>
+
+        <p>
+          Open <strong>Settings → Diagnostics</strong> in the app.
+        </p>
+
+        <ul>
+          <li>
+            <strong>Write test log entry</strong> writes one INFO record,
+            <code>"Test log entry from the Settings page"</code> with
+            <code>"source": "test_button"</code>. Look for it in the log folder
+            above to confirm logging works in that build.
+          </li>
+          <li>
+            <strong>Export logs</strong> opens a Save dialog and writes a zip of
+            every log file plus <code>manifest.json</code> (app, version, dev
+            flag, OS, Python version, export time). This is what users send to
+            developers.
+          </li>
+        </ul>
+
+        <h2 id="parts">The parts</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>armada_runtime/logger.py</code></td>
+              <td><code>ApplicationLogger</code> (setup, crash hooks) and <code>JsonLinesFormatter</code></td>
+            </tr>
+            <tr>
+              <td><code>armada_runtime/environment.py</code></td>
+              <td><code>Environment.log_path()</code>: dev versus packaged location</td>
+            </tr>
+            <tr>
+              <td><code>armada_runtime/log_archive.py</code></td>
+              <td><code>LogArchive</code>: builds the export zip</td>
+            </tr>
+            <tr>
+              <td><code>armada_ipc/logs.py</code></td>
+              <td>IPC calls <code>write_test_log</code> and <code>export_logs</code></td>
+            </tr>
+            <tr>
+              <td><code>armada_app/dialogs.py</code></td>
+              <td>The native Save dialog</td>
+            </tr>
+            <tr>
+              <td><code>frontend/src/pages/SettingsPage.tsx</code></td>
+              <td>The Diagnostics card and its two buttons</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <section class="ai-statement">
+          <h2>AI Use Statement</h2>
+          <dl>
+            <dt>Tool</dt>
+            <dd>Claude Code (Opus 5.5)</dd>
+            <dt>Mode</dt>
+            <dd>Local</dd>
+            <dt>Output</dt>
+            <dd>drafted this page from the implementation</dd>
+            <dt>Data</dt>
+            <dd>none</dd>
+            <dt>Verified</dt>
+            <dd>Reviewed for accuracy and clarity of how we can use logging going forward.</dd>
+          </dl>
+          <p>
+            Required by the project's
+            <a href="../.integrity/POLICY.md">AI use policy</a>. The
+            verification field is written by a developer, never by an agent.
+          </p>
+        </section>
+      </main>
+    </div>
+    <script src="shared/nav.js"></script>
+  </body>
+</html>

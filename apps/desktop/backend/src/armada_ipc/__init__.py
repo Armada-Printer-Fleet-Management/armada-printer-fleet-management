@@ -4,6 +4,7 @@ from armada_domains.printer.service import PrinterService
 from armada_domains.printer_queue.service import PrinterQueueService
 from armada_ipc.application_info import ApplicationInfo
 from armada_ipc.file import FileIpc
+from armada_ipc.logs import LogsIpc
 from armada_ipc.print_job import PrintJobIpc
 from armada_ipc.printer import PrinterIpc
 from armada_ipc.printer_queue import PrinterQueueIpc
@@ -21,9 +22,11 @@ class Ipc:
         printers: PrinterService,
         printer_queues: PrinterQueueService,
         files: FileService,
+        logs: LogsIpc,
     ) -> None:
         self.application_info = ApplicationInfo()
         self.print_job = PrintJobIpc(print_jobs)
         self.printer = PrinterIpc(printers)
         self.printer_queue = PrinterQueueIpc(printer_queues)
         self.file = FileIpc(files)
+        self.logs = logs

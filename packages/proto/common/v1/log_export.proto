@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package common.v1;
+
+// The outcome of bundling an application's logs into a zip to send to developers.
+message LogExport {
+  // Local path the zip was saved to, for showing the user. Empty when cancelled.
+  string path = 1;
+  // True when the user closed the save dialog without choosing a location.
+  bool cancelled = 2;
+}

@@ -17,6 +17,8 @@ from armada_domains.printer.service import PrinterService
 from armada_domains.printer_queue.service import PrinterQueueService
 from armada_ipc import Ipc
 from armada_ipc._base import PROTO_CALL_MARKER, PROTO_RESPONSE_MARKER, IpcModule
+from armada_ipc.logs import LogsIpc
+from armada_runtime.log_archive import LogArchive
 
 type Method = Callable[..., object]
 
@@ -77,6 +79,7 @@ EXPOSED_METHODS, EXPOSED_OBJECTS = exposed(
         printers=create_autospec(PrinterService, instance=True),
         printer_queues=create_autospec(PrinterQueueService, instance=True),
         files=create_autospec(FileService, instance=True),
+        logs=LogsIpc(create_autospec(LogArchive, instance=True), lambda _: None, "test"),
     )
 )
 SWEPT_METHODS = swept_methods()

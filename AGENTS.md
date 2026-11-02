@@ -83,6 +83,7 @@ Pages carry large inline SVG, so read one only when the task needs its picture.
 | `docs/index.html` | Orienting in the repository for the first time |
 | `docs/domain-architecture.html` | Adding or changing a domain, entity, service or repository |
 | `docs/desktop.html` | Working on `apps/desktop/`: IPC, codegen, packaging or the installer |
+| `docs/desktop-logging.html` | Adding logging to desktop code, or finding a log file to debug |
 | `docs/web.html` | Working on `apps/web/`: the layout, routes, sidebar or adding a page |
 | `docs/git-hygiene.html` | Explaining the branch, rebase, release or PR-stack flow to a developer |
 | `docs/data-management-choices.html` | Planning across services; the text version is `data-management-choices.md` |

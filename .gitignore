@@ -24,6 +24,7 @@ node_modules/
 *.tsbuildinfo
 apps/web/dist/
 apps/desktop/frontend/dist/
+apps/desktop/logs/
 packages/ui-kit/dist/
 coverage/
 

@@ -58,7 +58,7 @@ Picture: `docs/desktop.html#overview` and `docs/desktop.html#codegen`.
 | `backend/src/armada_ipc/`         | `Ipc` root object, `IpcModule` base, one module per capability       |
 | `backend/src/armada_domains/`     | Domains: a repository port (reads, requests changes; never saves shared entities. Can save desktop specific entities) and a service per domain. Ports extend a `core_domain.ddd` `Abstract*Repository` base, and infrastructure inherits the port |
 | `backend/src/armada_infrastructure/` | The backend's own I/O clients implementing those ports, e.g. `application_server/` over Connect |
-| `backend/src/armada_runtime/`     | `Environment` (dev vs packaged paths), packaging names, the settings file loader |
+| `backend/src/armada_runtime/`     | `Environment` (dev vs packaged paths), packaging names, the settings file loader, `ApplicationLogger` and `LogArchive` |
 | `packages/proto/utils/` (shared)  | Generated Python protobuf (`proto_utils.gen`) and entity mappers     |
 | `frontend/src/ipc/`               | One TS module per backend capability, plus `pywebview.ts` and `global.d.ts` |
 | `frontend/src/gen/`               | Generated protobuf. Gitignored, never edited                         |
@@ -130,6 +130,27 @@ Picture: `docs/desktop.html#ipc`.
 - **Vite `base` is `"./"`** because the default run mode loads `index.html` over `file://`.
 - **Keep the `dedupe` in `vite.config.ts`.** Shared packages sit outside the frontend project,
   and without it they can load a second copy of React or protobuf.
+
+## Logging
+
+Picture and a how-to for developers debugging without an agent: `docs/desktop-logging.html`. Keep
+the two in step.
+
+- **Log with the standard library only.** `logger = logging.getLogger(__name__)` at module top,
+  in any package, domains included. Never import `ApplicationLogger`; `armada_app/__main__.py`
+  installs it once.
+- **Levels:** `debug` (dev only, dropped when packaged), `info` (normal events), `warning`
+  (recovered), `error` (action failed), `exception` (inside `except`; adds the traceback),
+  `critical` (cannot continue; uncaught crashes are logged at this level automatically).
+- **Structured fields go in `extra={...}`**; each key becomes a top-level JSON field. Pass values
+  as arguments (`"%s", value`), not f-strings.
+- **Never log personal data** (names, emails, file contents). IDs are fine. Users send these logs
+  to developers; the formatter already strips the home folder to `~`.
+- **Where:** `Environment.log_path()`. Dev: `apps/desktop/logs/<exe name>.jsonl` (gitignored).
+  Packaged: `%APPDATA%/<exe name>/logs/`. Rotates at 5 MB, four backups.
+- **Manual check:** Settings → Diagnostics → Write test log entry writes one INFO record with
+  `"source": "test_button"`; Export logs zips every log file plus `manifest.json`.
+- **Tests:** `backend/tests/test_logging.py`.
 
 ## Commands
 
