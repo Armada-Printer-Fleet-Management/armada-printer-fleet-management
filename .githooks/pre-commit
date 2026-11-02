@@ -20,6 +20,20 @@ yell() { printf '\033[33m%s\033[0m\n' "$*"; }
 dim()  { printf '\033[2m%s\033[0m\n' "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
+# Prints the first Python on PATH that actually runs. Windows puts python and
+# python3 placeholders on PATH that only point to the Microsoft Store, so the first
+# one found is not necessarily a real interpreter.
+find_python() {
+  local candidate
+  while IFS= read -r candidate; do
+    if "$candidate" -c "" >/dev/null 2>&1; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done < <(type -ap python3 python)
+  return 1
+}
+
 STAGED_FILES=()
 while IFS= read -r -d '' file; do
   STAGED_FILES+=("$file")
@@ -84,7 +98,7 @@ fi
 # Skills and nested AGENTS.md files are the source; prompt files and nested
 # CLAUDE.md stubs are generated from them.
 if printf '%s\n' "${STAGED_FILES[@]}" | grep -qE '(^\.claude/|AGENTS\.md$)'; then
-  PY=$(command -v python3 || command -v python || true)
+  PY=$(find_python || true)
   if [ -n "$PY" ] && "$PY" "$REPO_ROOT/scripts/sync_agent_config.py" >/dev/null 2>&1; then
     REGEN=$(git diff --name-only -- '.github/prompts' '*/CLAUDE.md')
     if [ -n "$REGEN" ]; then

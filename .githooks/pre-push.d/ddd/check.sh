@@ -3,7 +3,7 @@
 # FAILED and NA belong to .githooks/pre-push, which sources this file.
 # shellcheck disable=SC2034
 if [ -f scripts/ddd_verdict.py ]; then
-  PY=$(command -v python3 || command -v python || true)
+  PY=$(find_python || true)
   printf '  %-14s ' "ddd: verdict"
   if [ -z "$PY" ]; then
     red "MISSING"
