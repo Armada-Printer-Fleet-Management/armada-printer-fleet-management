@@ -3,8 +3,8 @@ syntax = "proto3";
 package server.v1;
 
 import "common/v1/page.proto";
+import "fleet/v1/printer.proto";
 import "id/v1/printer_id.proto";
-import "printer/v1/printer.proto";
 
 // The printers the remote server knows of, with their latest reported state.
 service PrinterService {
@@ -26,7 +26,7 @@ message GetPrinterRequest {
 // One printer.
 message GetPrinterResponse {
   // The printer as the printer server reports it.
-  printer.v1.Printer printer = 1;
+  fleet.v1.Printer printer = 1;
 }
 
 // Changes a printer's state through one operator action.
@@ -46,7 +46,7 @@ message TransitionPrinterRequest {
 // The printer after the change.
 message TransitionPrinterResponse {
   // The printer as the printer server reports it.
-  printer.v1.Printer printer = 1;
+  fleet.v1.Printer printer = 1;
 }
 
 // Lists printers.
@@ -58,7 +58,7 @@ message ListPrintersRequest {
 // One page of printers.
 message ListPrintersResponse {
   // The printers.
-  repeated printer.v1.Printer printers = 1;
+  repeated fleet.v1.Printer printers = 1;
   // How to get the next page.
   common.v1.PageResponse page = 2;
 }

@@ -4,11 +4,11 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
 import pytest
+from core_domain.content_asset import File, FileType
 from core_domain.ddd import EntityNotFound, InvalidValue
-from core_domain.file import File, FileType
 from core_domain.ids import FileId
 
-from api.domains.file.service import FileService
+from api.domains.content_asset.service import FileService
 from api.infrastructure.file_memory import InMemoryFileRepository
 from api.infrastructure.file_store_files import FileStoreFiles
 from tests.fakes import MemoryFileStore

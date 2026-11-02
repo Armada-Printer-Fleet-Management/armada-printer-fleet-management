@@ -1,8 +1,8 @@
 from functools import cached_property
 
 from core_domain.ddd import Page
+from core_domain.fleet import Printer
 from core_domain.ids import PrinterId
-from core_domain.printer import Printer
 from proto_utils.gen.common.v1.page_pb2 import PageRequest
 from proto_utils.gen.id.v1 import printer_id_pb2
 from proto_utils.gen.server.v1.printer_service_connect import PrinterServiceClientSync
@@ -13,7 +13,7 @@ from proto_utils.gen.server.v1.printer_service_pb2 import (
 )
 from proto_utils.mappers import PrinterMapper
 
-from armada_domains.printer.repository import PrinterRepository
+from armada_domains.fleet.repository import PrinterRepository
 from armada_infrastructure.application_server.client import ApplicationServerClient
 from armada_infrastructure.application_server.connection import ApplicationServerConnection
 

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request, Response, status
 from fastapi.responses import StreamingResponse
 
 from api.common.consts import API_PREFIX, FILES_PATH
-from api.domains.file.service import FileService
+from api.domains.content_asset.service import FileService
 from api.routers.domain_errors import domain_errors_as_http
 
 

@@ -5,8 +5,8 @@ from types import TracebackType
 from typing import Self
 
 import pytest
+from core_domain.content_asset import File, FileType
 from core_domain.ddd import EntityNotFound, Unavailable
-from core_domain.file import File, FileType
 from plugin_api.file_store import FileStoreError
 
 from api.infrastructure.file_store_files import FileStoreFiles

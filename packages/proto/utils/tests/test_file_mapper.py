@@ -1,10 +1,10 @@
 from datetime import UTC, datetime
 
 import pytest
-from core_domain.file import File, FileType
+from core_domain.content_asset import File, FileType
 from core_domain.ids import FileId
 
-from proto_utils.gen.file.v1 import file_pb2
+from proto_utils.gen.content_asset.v1 import file_pb2
 from proto_utils.mappers import FileMapper
 
 TIME = datetime(2026, 10, 1, 9, 0, tzinfo=UTC)
@@ -15,7 +15,7 @@ def every_field_set() -> File:
 
 
 def test_to_proto_maps_every_field_of_the_message() -> None:
-    """Fails when a field is added to file.v1.File without being mapped."""
+    """Fails when a field is added to content_asset.v1.File without being mapped."""
     message = FileMapper().to_proto(every_field_set())
     mapped = {field.name for field, _ in message.ListFields()}
     assert mapped == {field.name for field in file_pb2.File.DESCRIPTOR.fields}

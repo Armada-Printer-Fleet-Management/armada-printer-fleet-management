@@ -17,18 +17,18 @@ Changing a message shape changes both applications at once. Treat it as a public
 
 ## Domain-driven layout
 
-The contract is split along the same domains as the rest of the system
-(`data-management-choices.md`). Each domain is its own package, and domains refer to each other
-only through typed IDs:
+The contract is split along the same domains as the database schema diagram
+([`docs/database-schema.html`](../../docs/database-schema.html)). Each domain is its own package,
+each entity its own file, and domains refer to each other only through typed IDs:
 
 ```
             id.v1   (one typed ID per entity: UserId, FileId, PrintJobId, ...)
           common.v1 (base units: TimeStatus, PageRequest, PageResponse)
               ▲
-   ┌──────────┼───────────┬─────────────┬──────────────────┐
- user.v1   file.v1   print_job.v1   printer.v1   printer_queue.v1   domains: entities, enums
-   ▲          ▲           ▲             ▲              ▲            (never import each other)
-   └──────────┴─────┬─────┴─────────────┴──────────────┘
+   ┌──────────┼────────────────┬──────────────┬─────────────┐
+ auth.v1  content_asset.v1  print_job.v1    fleet.v1     queue.v1     domains: entities, enums
+   ▲          ▲                ▲              ▲             ▲         (never import each other)
+   └──────────┴───────┬────────┴──────────────┴─────────────┘
                     │
       server.v1             printer_server.v1       servers: services and RPCs,
    (remote server)      (on-premise printer server)  composing domains into responses

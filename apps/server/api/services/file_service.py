@@ -8,7 +8,7 @@ from proto_utils.gen.server.v1.file_service_pb2 import (
 )
 from proto_utils.mappers import FileMapper
 
-from api.domains.file.service import FileService
+from api.domains.content_asset.service import FileService
 from api.services.domain_errors import domain_errors_as_connect, request_id
 
 

@@ -2,10 +2,10 @@ import asyncio
 from datetime import timedelta
 
 import structlog
-from core_domain.printer import PrinterStatus
+from core_domain.fleet import PrinterStatus
 
+from api.domains.fleet.service import PrinterService
 from api.domains.print_job.service import PrintJobService
-from api.domains.printer.service import PrinterService
 
 logger = structlog.stdlib.get_logger(__name__)
 

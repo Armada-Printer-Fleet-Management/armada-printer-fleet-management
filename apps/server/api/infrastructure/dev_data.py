@@ -5,19 +5,19 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from core_domain.file import File, FileType
+from core_domain.content_asset import File, FileType
+from core_domain.fleet import Printer, PrinterStatus
 from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserId
 from core_domain.print_job import PrintJob, PrintJobStatus
-from core_domain.printer import Printer, PrinterStatus
-from core_domain.printer_queue import PrinterQueue
-from proto_utils.gen.user.v1 import user_pb2
+from core_domain.queue import PrinterQueue
+from proto_utils.gen.auth.v1 import user_pb2
 
 STUB_STUDENT_ID = UserId(UUID("00000000-0000-4000-8000-000000000100"))
 STUB_STAFF_ID = UserId(UUID("00000000-0000-4000-8000-000000000101"))
 # Stub: placeholders for the users' Keycloak subjects. Replace them with real subjects once users
 # are created by signing in through Keycloak.
-_STUB_STUDENT_KEYCLOAK_ID = UUID("00000000-0000-4000-8000-000000000110")
-_STUB_STAFF_KEYCLOAK_ID = UUID("00000000-0000-4000-8000-000000000111")
+_STUB_STUDENT_KEYCLOAK_REF = UUID("00000000-0000-4000-8000-000000000110")
+_STUB_STAFF_KEYCLOAK_REF = UUID("00000000-0000-4000-8000-000000000111")
 STUB_DRAFT_JOB_ID = PrintJobId(UUID("00000000-0000-4000-8000-000000000001"))
 STUB_SUBMITTED_JOB_ID = PrintJobId(UUID("00000000-0000-4000-8000-000000000002"))
 STUB_APPROVED_JOB_ID = PrintJobId(UUID("00000000-0000-4000-8000-000000000003"))
@@ -43,7 +43,7 @@ _STUB_TIME = datetime(2026, 10, 1, 9, 0, tzinfo=UTC)
 @dataclass(frozen=True)
 class StubUser:
     id: UserId
-    keycloak_user_id: UUID
+    keycloak_user_ref: UUID
     email: str
     display_name: str
     role: user_pb2.UserRole
@@ -59,14 +59,14 @@ def stub_users() -> list[StubUser]:
     return [
         StubUser(
             STUB_STUDENT_ID,
-            _STUB_STUDENT_KEYCLOAK_ID,
+            _STUB_STUDENT_KEYCLOAK_REF,
             "student@example.com",
             "Stub Student",
             user_pb2.USER_ROLE_STUDENT,
         ),
         StubUser(
             STUB_STAFF_ID,
-            _STUB_STAFF_KEYCLOAK_ID,
+            _STUB_STAFF_KEYCLOAK_REF,
             "staff@example.com",
             "Stub Staff",
             user_pb2.USER_ROLE_STAFF,

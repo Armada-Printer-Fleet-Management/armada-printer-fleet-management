@@ -1,4 +1,4 @@
-"""Printers, read from and changed on the application server through the printer domain."""
+"""Printers, read from and changed on the application server through the fleet domain."""
 
 from core_domain.ids import PrinterId
 from proto_utils.gen.common.v1.page_pb2 import PageResponse
@@ -10,7 +10,7 @@ from proto_utils.gen.server.v1.printer_service_pb2 import (
 )
 from proto_utils.mappers import PrinterMapper
 
-from armada_domains.printer.service import PrinterService
+from armada_domains.fleet.service import PrinterService
 from armada_ipc._base import IpcModule, proto_call
 
 

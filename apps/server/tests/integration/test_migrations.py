@@ -22,7 +22,7 @@ ALEMBIC_INI = Path(__file__).parents[2] / "alembic.ini"
 REVISION_0001_TABLES = {
     "users",
     "audit_logs",
-    "stored_files",
+    "files",
     "printer_queues",
     "printer_queue_tags",
     "printer_queue_memberships",

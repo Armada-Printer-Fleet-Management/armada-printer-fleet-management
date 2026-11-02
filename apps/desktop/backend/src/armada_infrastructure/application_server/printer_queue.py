@@ -2,7 +2,7 @@ from functools import cached_property
 
 from core_domain.ddd import Page
 from core_domain.ids import PrinterQueueId
-from core_domain.printer_queue import PrinterQueue
+from core_domain.queue import PrinterQueue
 from proto_utils.gen.common.v1.page_pb2 import PageRequest
 from proto_utils.gen.id.v1 import printer_queue_id_pb2
 from proto_utils.gen.server.v1.printer_queue_service_connect import PrinterQueueServiceClientSync
@@ -12,7 +12,7 @@ from proto_utils.gen.server.v1.printer_queue_service_pb2 import (
 )
 from proto_utils.mappers import PrinterQueueMapper
 
-from armada_domains.printer_queue.repository import PrinterQueueRepository
+from armada_domains.queue.repository import PrinterQueueRepository
 from armada_infrastructure.application_server.client import ApplicationServerClient
 from armada_infrastructure.application_server.connection import ApplicationServerConnection
 

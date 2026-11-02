@@ -19,10 +19,10 @@ from api.common.health import raising_probe
 from api.common.models import DependencyCheck
 from api.common.openapi import openapi_schema
 from api.common.settings import FileStoreSettings, database_url
-from api.domains.file.service import FileService
+from api.domains.content_asset.service import FileService
+from api.domains.fleet.service import PrinterService
 from api.domains.print_job.service import PrintJobService
-from api.domains.printer.service import PrinterService
-from api.domains.printer_queue.service import PrinterQueueService
+from api.domains.queue.service import PrinterQueueService
 from api.infrastructure.dev_data import (
     STUB_FAULTY_PRINTER_ID,
     STUB_STUDENT_ID,

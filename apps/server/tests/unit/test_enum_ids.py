@@ -1,15 +1,14 @@
 from enum import Enum
 from uuid import UUID
 
-from core_domain.file import FileType
+from core_domain.content_asset import FileType
 from core_domain.print_job import PrintJobStatus
-from proto_utils.gen.user.v1 import user_pb2
+from proto_utils.gen.auth.v1 import user_pb2
 
 from api.infrastructure import enum_ids
 from api.infrastructure.enum_ids import (
     FILE_SCAN_STATUS_CLEAN_ID,
     FILE_TYPE_IDS,
-    FILE_UPLOAD_STATUS_UPLOADED_ID,
     FLEET_ACCESS_POLICY_STAFF_ONLY_ID,
     PRINT_JOB_STATUS_IDS,
     USER_ROLE_IDS,
@@ -46,7 +45,6 @@ def test_seed_only_members_have_a_stored_id() -> None:
     seed_only = [
         USER_STATUS_ACTIVE_ID,
         FLEET_ACCESS_POLICY_STAFF_ONLY_ID,
-        FILE_UPLOAD_STATUS_UPLOADED_ID,
         FILE_SCAN_STATUS_CLEAN_ID,
     ]
     assert set(seed_only) <= set(every_stored_id())

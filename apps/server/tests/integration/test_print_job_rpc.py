@@ -6,17 +6,17 @@ from typing import Any
 from uuid import UUID
 
 import pytest
-from core_domain.file import File
+from core_domain.content_asset import File
 from core_domain.ids import FileId
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from proto_utils.gen.server.v1.print_job_service_connect import PrintJobServiceASGIApplication
 
 from api.common.consts import API_PREFIX
-from api.domains.file.service import FileService
+from api.domains.content_asset.service import FileService
+from api.domains.fleet.service import PrinterService
 from api.domains.print_job.service import PrintJobService
-from api.domains.printer.service import PrinterService
-from api.domains.printer_queue.service import PrinterQueueService
+from api.domains.queue.service import PrinterQueueService
 from api.infrastructure.dev_data import (
     STUB_APPROVED_FILE_ID,
     STUB_APPROVED_JOB_ID,

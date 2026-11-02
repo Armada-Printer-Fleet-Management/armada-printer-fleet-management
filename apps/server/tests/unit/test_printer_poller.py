@@ -2,11 +2,11 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from core_domain.fleet import PrinterStatus
 from core_domain.print_job import PrintJobStatus
-from core_domain.printer import PrinterStatus
 
+from api.domains.fleet.service import PrinterService
 from api.domains.print_job.service import PrintJobService
-from api.domains.printer.service import PrinterService
 from api.infrastructure.dev_data import (
     STUB_APPROVED_JOB_ID,
     STUB_IDLE_PRINTER_ID,

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package server.v1;
 
-import "file/v1/file.proto";
+import "content_asset/v1/file.proto";
 import "id/v1/file_id.proto";
 
 // File records, served by the remote server. The bytes are never sent through this service.
@@ -22,7 +22,7 @@ message GetFileRequest {
 // One file.
 message GetFileResponse {
   // The file.
-  file.v1.File file = 1;
+  content_asset.v1.File file = 1;
 }
 
 // Gets several files.
@@ -34,5 +34,5 @@ message ListFilesRequest {
 // The files that were found.
 message ListFilesResponse {
   // The files. An unknown ID is left out.
-  repeated file.v1.File files = 1;
+  repeated content_asset.v1.File files = 1;
 }

@@ -3,8 +3,8 @@ from contextlib import AsyncExitStack, contextmanager
 from types import TracebackType
 from typing import Self
 
+from core_domain.content_asset import File
 from core_domain.ddd import EntityNotFound, Unavailable
-from core_domain.file import File
 from plugin_api.file_store import FileStore, FileStoreError, StoredFileNotFoundError
 
 _DEPENDENCY = "file storage"

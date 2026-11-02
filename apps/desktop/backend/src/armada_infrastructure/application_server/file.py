@@ -1,14 +1,14 @@
 from collections.abc import Iterable
 from functools import cached_property
 
-from core_domain.file import File
+from core_domain.content_asset import File
 from core_domain.ids import FileId
 from proto_utils.gen.id.v1 import file_id_pb2
 from proto_utils.gen.server.v1.file_service_connect import FileServiceClientSync
 from proto_utils.gen.server.v1.file_service_pb2 import GetFileRequest, ListFilesRequest
 from proto_utils.mappers import FileMapper
 
-from armada_domains.file.repository import FileRepository
+from armada_domains.content_asset.repository import FileRepository
 from armada_infrastructure.application_server.client import ApplicationServerClient
 from armada_infrastructure.application_server.connection import ApplicationServerConnection
 

@@ -240,14 +240,14 @@ window.OPENAPI_SPEC = {
         },
         "type": "object"
       },
-      "file.v1.File": {
+      "content_asset.v1.File": {
         "additionalProperties": false,
         "description": "A file held in file storage. Its storage location is server-internal and never sent.",
         "properties": {
           "fileType": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/file.v1.FileType"
+                "$ref": "#/components/schemas/content_asset.v1.FileType"
               }
             ],
             "description": "The file's format.",
@@ -291,7 +291,7 @@ window.OPENAPI_SPEC = {
         "title": "File",
         "type": "object"
       },
-      "file.v1.FileType": {
+      "content_asset.v1.FileType": {
         "description": "The format of a stored file. Names stay vendor-neutral so any printer brand fits.",
         "enum": [
           "FILE_TYPE_UNSPECIFIED",
@@ -301,14 +301,14 @@ window.OPENAPI_SPEC = {
         "title": "FileType",
         "type": "string"
       },
-      "file.v1.FileUploadMetadata": {
+      "content_asset.v1.FileUploadMetadata": {
         "additionalProperties": false,
         "description": "Upload pair, call 1 of 2: what the client is about to upload. Every domain that accepts\n large files takes this in its own Create<Thing>Upload request, alongside the ID of the\n entity the file belongs to.",
         "properties": {
           "fileType": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/file.v1.FileType"
+                "$ref": "#/components/schemas/content_asset.v1.FileType"
               }
             ],
             "description": "The file's format.",
@@ -334,7 +334,7 @@ window.OPENAPI_SPEC = {
         "title": "FileUploadMetadata",
         "type": "object"
       },
-      "file.v1.FileUploadSlot": {
+      "content_asset.v1.FileUploadSlot": {
         "additionalProperties": false,
         "description": "Where to send the bytes. Upload pair, call 2 of 2, is an HTTP PUT of the raw file bytes to\n upload_url. The slot expires a server-configured time after the file's\n time_status.updated_at.",
         "properties": {
@@ -356,6 +356,81 @@ window.OPENAPI_SPEC = {
         "title": "FileUploadSlot",
         "type": "object"
       },
+      "fleet.v1.Printer": {
+        "additionalProperties": false,
+        "description": "A physical printer.",
+        "properties": {
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.PrinterId"
+              }
+            ],
+            "description": "This printer.",
+            "title": "id"
+          },
+          "model": {
+            "description": "The printer's model.",
+            "title": "model",
+            "type": "string"
+          },
+          "name": {
+            "description": "Display name, stable across restarts.",
+            "title": "name",
+            "type": "string"
+          },
+          "printJobId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.PrintJobId"
+              }
+            ],
+            "description": "The job it is running. Unset when idle.",
+            "title": "print_job_id"
+          },
+          "progressPercent": {
+            "description": "Progress of the current job, 0 to 100, when the printer reports it.",
+            "title": "progress_percent",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/fleet.v1.PrinterStatus"
+              }
+            ],
+            "description": "Latest observed status.",
+            "title": "status"
+          },
+          "timeStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.TimeStatus"
+              }
+            ],
+            "description": "When the printer was added. updated_at is when its status was last observed, which\n clients use to show stale data.",
+            "title": "time_status"
+          }
+        },
+        "title": "Printer",
+        "type": "object"
+      },
+      "fleet.v1.PrinterStatus": {
+        "description": "A printer's normalized state. Adapters map each vendor's states onto these.",
+        "enum": [
+          "PRINTER_STATUS_UNSPECIFIED",
+          "PRINTER_STATUS_OFFLINE",
+          "PRINTER_STATUS_IDLE",
+          "PRINTER_STATUS_PRINTING",
+          "PRINTER_STATUS_FINISHED",
+          "PRINTER_STATUS_ERROR"
+        ],
+        "title": "PrinterStatus",
+        "type": "string"
+      },
       "google.protobuf.Timestamp": {
         "description": "A point in time in RFC 3339 format, with up to nanosecond precision. Output uses UTC (`Z`); input may use an offset from UTC.",
         "examples": [
@@ -367,7 +442,7 @@ window.OPENAPI_SPEC = {
       },
       "id.v1.FileId": {
         "additionalProperties": false,
-        "description": "Identifies a file.v1.File.",
+        "description": "Identifies a content_asset.v1.File.",
         "properties": {
           "value": {
             "description": "UUID.",
@@ -393,7 +468,7 @@ window.OPENAPI_SPEC = {
       },
       "id.v1.PrinterId": {
         "additionalProperties": false,
-        "description": "Identifies a printer.v1.Printer.",
+        "description": "Identifies a fleet.v1.Printer.",
         "properties": {
           "value": {
             "description": "UUID.",
@@ -406,7 +481,7 @@ window.OPENAPI_SPEC = {
       },
       "id.v1.PrinterQueueId": {
         "additionalProperties": false,
-        "description": "Identifies a printer_queue.v1.PrinterQueue.",
+        "description": "Identifies a queue.v1.PrinterQueue.",
         "properties": {
           "value": {
             "description": "UUID.",
@@ -533,82 +608,7 @@ window.OPENAPI_SPEC = {
         "title": "PrintJobStatus",
         "type": "string"
       },
-      "printer.v1.Printer": {
-        "additionalProperties": false,
-        "description": "A physical printer.",
-        "properties": {
-          "id": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/id.v1.PrinterId"
-              }
-            ],
-            "description": "This printer.",
-            "title": "id"
-          },
-          "model": {
-            "description": "The printer's model.",
-            "title": "model",
-            "type": "string"
-          },
-          "name": {
-            "description": "Display name, stable across restarts.",
-            "title": "name",
-            "type": "string"
-          },
-          "printJobId": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/id.v1.PrintJobId"
-              }
-            ],
-            "description": "The job it is running. Unset when idle.",
-            "title": "print_job_id"
-          },
-          "progressPercent": {
-            "description": "Progress of the current job, 0 to 100, when the printer reports it.",
-            "title": "progress_percent",
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/printer.v1.PrinterStatus"
-              }
-            ],
-            "description": "Latest observed status.",
-            "title": "status"
-          },
-          "timeStatus": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/common.v1.TimeStatus"
-              }
-            ],
-            "description": "When the printer was added. updated_at is when its status was last observed, which\n clients use to show stale data.",
-            "title": "time_status"
-          }
-        },
-        "title": "Printer",
-        "type": "object"
-      },
-      "printer.v1.PrinterStatus": {
-        "description": "A printer's normalized state. Adapters map each vendor's states onto these.",
-        "enum": [
-          "PRINTER_STATUS_UNSPECIFIED",
-          "PRINTER_STATUS_OFFLINE",
-          "PRINTER_STATUS_IDLE",
-          "PRINTER_STATUS_PRINTING",
-          "PRINTER_STATUS_FINISHED",
-          "PRINTER_STATUS_ERROR"
-        ],
-        "title": "PrinterStatus",
-        "type": "string"
-      },
-      "printer_queue.v1.PrinterQueue": {
+      "queue.v1.PrinterQueue": {
         "additionalProperties": false,
         "description": "A line of print jobs waiting for a printer.",
         "properties": {
@@ -681,7 +681,7 @@ window.OPENAPI_SPEC = {
           "metadata": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/file.v1.FileUploadMetadata"
+                "$ref": "#/components/schemas/content_asset.v1.FileUploadMetadata"
               }
             ],
             "description": "The file to be uploaded.",
@@ -707,7 +707,7 @@ window.OPENAPI_SPEC = {
           "slot": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/file.v1.FileUploadSlot"
+                "$ref": "#/components/schemas/content_asset.v1.FileUploadSlot"
               }
             ],
             "description": "The upload slot. Its file_id is now the job's file_id.",
@@ -741,7 +741,7 @@ window.OPENAPI_SPEC = {
           "file": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/file.v1.File"
+                "$ref": "#/components/schemas/content_asset.v1.File"
               }
             ],
             "description": "The file.",
@@ -775,7 +775,7 @@ window.OPENAPI_SPEC = {
           "file": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/file.v1.File"
+                "$ref": "#/components/schemas/content_asset.v1.File"
               }
             ],
             "description": "The job's file. Unset while a DRAFT job has no upload.",
@@ -818,7 +818,7 @@ window.OPENAPI_SPEC = {
           "printerQueue": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/printer_queue.v1.PrinterQueue"
+                "$ref": "#/components/schemas/queue.v1.PrinterQueue"
               }
             ],
             "description": "The queue.",
@@ -852,7 +852,7 @@ window.OPENAPI_SPEC = {
           "printer": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/printer.v1.Printer"
+                "$ref": "#/components/schemas/fleet.v1.Printer"
               }
             ],
             "description": "The printer as the printer server reports it.",
@@ -948,7 +948,7 @@ window.OPENAPI_SPEC = {
           "files": {
             "description": "The files. An unknown ID is left out.",
             "items": {
-              "$ref": "#/components/schemas/file.v1.File"
+              "$ref": "#/components/schemas/content_asset.v1.File"
             },
             "title": "files",
             "type": "array"
@@ -981,7 +981,7 @@ window.OPENAPI_SPEC = {
           "files": {
             "description": "The files the jobs refer to, matched by file_id.",
             "items": {
-              "$ref": "#/components/schemas/file.v1.File"
+              "$ref": "#/components/schemas/content_asset.v1.File"
             },
             "title": "files",
             "type": "array"
@@ -1040,7 +1040,7 @@ window.OPENAPI_SPEC = {
           "printerQueues": {
             "description": "The queues.",
             "items": {
-              "$ref": "#/components/schemas/printer_queue.v1.PrinterQueue"
+              "$ref": "#/components/schemas/queue.v1.PrinterQueue"
             },
             "title": "printer_queues",
             "type": "array"
@@ -1082,7 +1082,7 @@ window.OPENAPI_SPEC = {
           "printers": {
             "description": "The printers.",
             "items": {
-              "$ref": "#/components/schemas/printer.v1.Printer"
+              "$ref": "#/components/schemas/fleet.v1.Printer"
             },
             "title": "printers",
             "type": "array"
@@ -1115,7 +1115,7 @@ window.OPENAPI_SPEC = {
           "file": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/file.v1.File"
+                "$ref": "#/components/schemas/content_asset.v1.File"
               }
             ],
             "description": "The job's file.",
@@ -1484,7 +1484,7 @@ window.OPENAPI_SPEC = {
           "printer": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/printer.v1.Printer"
+                "$ref": "#/components/schemas/fleet.v1.Printer"
               }
             ],
             "description": "The printer as the printer server reports it.",
