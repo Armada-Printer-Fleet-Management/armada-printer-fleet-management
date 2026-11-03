@@ -86,9 +86,16 @@ file store's objects are deleted.  Do not rebuild the database or rerun migratio
 
 ### End-to-end tests
 
-E2e tests simulate real user behaviour against a real running hosted server.  The exact target is still to be decided, but it should be as prod-like as possible.
-It will not be production, where at most health checks would run.  At runtime, the test suite is given the target system's URL, as well as the
-values of any test data that it should expect the target to have.  It then runs its tests against the target, as if it were a real user.
+E2e tests simulate real user behaviour against a real running hosted server, as prod-like as possible.  The target is never production.  Before merging,
+they are to run against the pull request's own build, started as an isolated stack on the team's testing machine.  Run them with
+`uv run --directory apps/server pytest e2e`; the default `pytest` run leaves them out.
+
+At runtime, the suite is given the target's URL, its Keycloak issuer, a test-only client and a test user per role, all as `E2E_*` environment variables.
+It signs each user in through Keycloak, so every request carries a real token.  Without that configuration every test fails rather than skips.  The test
+client and users exist only in the target's realm, never in `infra/deploy/armada-realm.json`.  `e2e/README.md` lists the variables and how to prepare a target.
+
+Deployments are not seeded, so each test creates the records it uses.  A test for a flow that depends on an unfinished component is marked
+`@pytest.mark.xfail(strict=True, reason=...)`, naming what it needs.  Strict mode fails the run once the flow works, so the mark is removed with the feature.
 
 ## Coverage
 

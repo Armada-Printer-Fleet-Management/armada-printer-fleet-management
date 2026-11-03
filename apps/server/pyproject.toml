@@ -53,7 +53,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
-include = ["api", "migrations", "dev_seed.py"]
+include = ["api", "migrations", "dev_seed.py", "e2e"]
 exclude = ["api/gen"]
 
 [tool.pytest.ini_options]
