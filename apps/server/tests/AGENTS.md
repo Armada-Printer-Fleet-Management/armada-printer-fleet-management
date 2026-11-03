@@ -31,7 +31,7 @@ infrastructure adapter at a time.  Following a user across several steps is left
 ### End-to-end tests
 
 End-to-end (e2e) tests act as the final sign-off that the system works as expected.  Their purpose is to replicate user behaviour and user flow against
-a deployed server that is as prod-like as possible.  They will most likely be much slower than integration tests, and will inevitably have some
+the full stack, started from the real deploy images, as prod-like as possible.  They will most likely be much slower than integration tests, and will inevitably have some
 amount of flakiness.  The scope of an e2e test is everything.  Nothing is mocked in an e2e test.  The key difference for e2e tests is that their goal
 is not immaculate coverage.  Because of their size and flakiness, e2e tests should be written deliberately to cover the key user flows that we need to ensure
 work as expected.
@@ -86,9 +86,17 @@ file store's objects are deleted.  Do not rebuild the database or rerun migratio
 
 ### End-to-end tests
 
-E2e tests simulate real user behaviour against a real running hosted server.  The exact target is still to be decided, but it should be as prod-like as possible.
-It will not be production, where at most health checks would run.  At runtime, the test suite is given the target system's URL, as well as the
-values of any test data that it should expect the target to have.  It then runs its tests against the target, as if it were a real user.
+E2e tests simulate real user behaviour against the full stack, started from the same deploy images that ship, as prod-like as possible.  The target is
+never production, and never the testing server, which updates only after a merge.  Before merging, they are to run in the pull request's CI workflow,
+against a stack that the workflow builds from that pull request and starts for the run.  Run them with
+`uv run --directory apps/server pytest e2e`; the default `pytest` run leaves them out.
+
+At runtime, the suite is given the target's URL, its Keycloak issuer, a test-only client and a test user per role, all as `E2E_*` environment variables.
+It signs each user in through Keycloak, so every request carries a real token.  Without that configuration every test fails rather than skips.  The test
+client and users exist only in the target's realm, never in `infra/deploy/armada-realm.json`.  `e2e/README.md` lists the variables and how to prepare a target.
+
+Deployments are not seeded, so each test creates the records it uses.  A test for a flow that depends on an unfinished component is marked
+`@pytest.mark.xfail(strict=True, reason=...)`, naming what it needs.  Strict mode fails the run once the flow works, so the mark is removed with the feature.
 
 ## Coverage
 
