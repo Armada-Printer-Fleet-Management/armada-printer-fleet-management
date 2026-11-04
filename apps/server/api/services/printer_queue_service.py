@@ -9,7 +9,7 @@ from proto_utils.gen.server.v1.printer_queue_service_pb2 import (
 )
 from proto_utils.mappers import PrinterQueueMapper
 
-from api.domains.printer_queue.service import PrinterQueueService
+from api.domains.queue.service import PrinterQueueService
 from api.services.domain_errors import domain_errors_as_connect, request_id
 
 

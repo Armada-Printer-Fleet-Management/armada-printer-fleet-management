@@ -14,16 +14,19 @@ implementations in `plugins/`, never here.
 | ---------------------- | ------------------------------------------------------------------------- |
 | `api/main.py`          | ASGI entry point and composition root: builds infrastructure, hands it to domain services, mounts RPC handlers |
 | `api/domains/`         | Domains: a repository port and a service per domain. Every port extends a `core_domain.ddd` `Abstract*Repository` base, and its adapter inherits it; a port over state another service owns, such as printers, requests changes rather than saving |
-| `api/infrastructure/`  | The server's own persistence behind those ports, in memory until the SQL repositories exist, and the adapters over plugins |
+| `api/infrastructure/`  | The server's own persistence behind those ports, and the adapters over plugins. A domain's SQL repository (`<domain>_sql.py`, on `SqlRepository`) is what the server runs; its in-memory one (`<domain>_memory.py`) serves tests, or the server until that domain has a SQL repository |
 | `api/infrastructure/postgres_database.py` | The connection pool to Postgres, opened by the lifespan and probed by the health check |
 | `api/infrastructure/sql_repository.py` | Base for a domain's SQL repository adapter: a transaction, with database failures as `Unavailable` |
 | `api/infrastructure/enum_ids.py` | The UUID the database stores for each enum member. Never change or reuse one |
 | `api/infrastructure/dev_data.py` | The one set of development data: the in-memory repositories start with it, tests use its IDs, `dev_seed.py` writes it |
 | `migrations/`, `alembic.ini` | Alembic migrations. Foreign keys only inside a domain; enum columns are `uuid` from `enum_ids.py`. `alembic.ini` holds no connection details |
 | `dev_seed.py`          | Writes `dev_data.py` into the development database, run by the dev stack's `migrate` service. Never run by a deployment |
-| `tests/contract/`      | What every repository adapter must do. A new adapter joins by adding its factory to `ADAPTERS` |
-| `tests/unit/`, `tests/integration/`, `e2e/` | Unit, integration and end-to-end tests; `e2e/README.md` has its setup |
+| `tests/`, `e2e/`       | The server's tests. `tests/AGENTS.md` holds their layout and rules; `e2e/README.md` has the end-to-end setup |
 | `api/plugins.py`       | Builds the plugins each deployment chose in config, such as `FILE_STORE_BACKEND` |
+| `api/common/authentication.py` | `Role`, `Caller` and the current caller, which only `authenticated_as` sets. A caller's `subject` is the identity provider's ID, not a `UserId` |
+| `api/common/access_policy.py` | `ACCESS`, the roles allowed on each endpoint. Every endpoint must be listed: an unlisted one allows no role. The most specific row wins, so one procedure can override its service |
+| `api/middleware/authentication.py` | Verifies the bearer token (bad token: 401, no token: no caller), then checks `ACCESS`. A refusal is logged, and rejected with 401 or 403 only when `AUTH_ENFORCE` is set |
+| `api/infrastructure/oidc_access_tokens.py` | Wraps the `TokenVerifier` plugin: its result becomes a `Caller`, a rejected token `InvalidAccessToken`, an outage `Unavailable` |
 | `api/services/`        | Connect handlers: translate between the wire and domain services, composing several where an RPC spans domains. No rules. `PrinterPoller` is the same kind of composer, run by the lifespan instead of a request |
 | `api/routers/`         | REST routes that do not fit Connect, such as the health check and file bytes. Built from services handed in by `api/main.py`; domain errors go through `domain_errors_as_http()`. Prefer Connect; REST only where Connect cannot work |
 | `api/common/`          | Shared code internal to the server, such as constants, `health.py` and `openapi.py` |
@@ -82,10 +85,26 @@ plugin or its port, and import-linter enforces it.
   `POST /api/server.v1.HealthCheckService/HealthCheck` (same options in the request,
   `STATUS_PASS`/`STATUS_DEGRADED`/`STATUS_FAIL` in the response). A failing dependency fails the
   service unless its `DependencyCheck` is `critical=False`, which degrades it instead.
+  `identity_provider` is one: requests without a token still work while it is down.
 - **Never put shared objects on `app.state`.** It is untyped, so pyright cannot check reads, and
   tests cannot replace it through `app.dependency_overrides`. Give a REST route what it needs
   through `Depends` or its router factory, and a Connect handler or domain service through its
   constructor in `api/main.py`.
+
+## Access tokens
+
+- A request may carry `Authorization: Bearer <access token>` from the identity provider. The
+  server checks the token's signature, issuer (`AUTH_ISSUER`), audience (`AUTH_AUDIENCE`) and
+  expiry, and reads the caller's roles. A bad token is a 401; a request without one runs with no
+  caller.
+- It then checks the caller against `ACCESS` in `api/common/access_policy.py`, which lists the
+  roles allowed on every endpoint. A refusal is logged as `access would be denied`. With
+  `AUTH_ENFORCE=true` it is rejected instead: 401 without a token, 403 for a role not allowed.
+- Every error body is Connect-shaped, `{"code": ..., "message": ...}`, for REST routes too.
+- The issuer and the key address differ in the stacks on purpose: tokens name the public address,
+  while the server fetches keys over the internal one. In the deploy stack the issuer defaults to
+  `https://<DOMAIN>/auth/realms/armada`; set `AUTH_ISSUER` in `config/compose.deploy.env` when
+  `DOMAIN` is `:80`.
 
 ## Database
 
@@ -98,6 +117,23 @@ plugin or its port, and import-linter enforces it.
 - With `DB_*` set, `pytest` also runs `tests/integration/test_migrations.py`, which upgrades,
   seeds and downgrades a throwaway database it creates and drops. Without them it is skipped.
 - The health check reports the connection as `database`.
+
+Naming, checked against every migration by `tests/unit/test_column_names.py`:
+
+- **ID columns are `id` or `<entity>_id`**, named exactly after what they point at: `printer_id`,
+  `print_job_id`, `fleet_section_id`. No prefixes (`assigned_printer_id`, `owner_user_id` are
+  wrong). A second column pointing at the same entity is usually duplicated data; find its
+  source instead.
+- **An identifier from outside the database is `<name>_ref`**, such as `keycloak_user_ref` or
+  `external_printer_ref`. `_id` always means a row in this schema.
+- **The one exception** is a polymorphic pair, `target_type` beside `target_id`.
+- **Each fact is stored once.** Who did something and when lives in the domain's event table,
+  such as `print_job_events`, not copied onto the entity as `approved_by`/`approved_at`.
+- **Timestamps use the `common.v1.TimeStatus` names:** `created_at` and `updated_at` on every
+  table (only `created_at` on an append-only one), and `deleted_at` or `expires_at` where the
+  row has that lifecycle.
+
+Picture: `docs/database-schema.html`.
 
 ## Images
 
@@ -138,3 +174,8 @@ server serves. Descriptions come from `.proto` comments and REST route docstring
 - A processor added to `SHARED_PROCESSORS` in `api/logging_config.py` runs on every line,
   including uvicorn's and other libraries'. `lifespan.py` applies the configuration at startup,
   so the few lines uvicorn prints before then keep uvicorn's own format.
+
+## Writing tests
+
+Read `tests/AGENTS.md` before writing or changing a test here, including under `e2e/`. It sets the
+standard for the server's tests. Where an existing test disagrees with it, follow `tests/AGENTS.md`.

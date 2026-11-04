@@ -6,28 +6,34 @@ front door and never restates these rules.
 
 ## Domain-driven layout
 
-Packages follow the domains in `data-management-choices.md`. There are four kinds:
+Packages follow the domains of the database schema diagram, `docs/database-schema.html`. There
+are four kinds:
 
 | Kind | Packages | Holds | May import |
 | --- | --- | --- | --- |
 | ID kernel | `id.v1` | One strongly typed ID per entity | nothing |
 | Shared units | `common.v1` | Base units every package reuses (`TimeStatus`, `PageRequest`/`PageResponse`) and application metadata | `google.protobuf.*` |
-| Domain | `user.v1`, `file.v1`, `print_job.v1`, `printer.v1`, `printer_queue.v1` | One bounded context's entities, value types and enums | `id.v1`, `common.v1`, `google.protobuf.*` |
+| Domain | `auth.v1`, `content_asset.v1`, `print_job.v1`, `fleet.v1`, `queue.v1` | One bounded context's entities, value types and enums | `id.v1`, `common.v1`, `google.protobuf.*` |
 | Server (API layer) | `server.v1` (remote server), `printer_server.v1` (on-premise printer server) | Services, RPCs and their request/response messages | domains, `id.v1`, `common.v1`, `google.protobuf.*` |
 
 Never put domain types in `common.v1`. It holds only units with no domain meaning.
 
 - **Domains couple by ID only.** A domain package never imports another domain package. A job
-  refers to its file as `id.v1.FileId file_id`, never by embedding `file.v1.File`.
+  refers to its file as `id.v1.FileId file_id`, never by embedding `content_asset.v1.File`.
+- **The folder is the package, and the file is the entity.** A domain's entity lives in
+  `<domain>/v1/<entity>.proto` (`fleet/v1/printer.proto` holds `fleet.v1.Printer`); a type that
+  only serves one entity, such as `content_asset/v1/file_upload.proto`, sits beside it.
 - **Composition happens in server packages.** When a response needs data from several domains,
   the server message carries each one side by side, e.g. `GetPrintJobResponse { print_job, file }`.
 - **A service lives with the server that serves it**, not with a domain. Name services after the
-  domain they expose (`PrintJobService`), not after the server.
+  entity they expose (`PrinterService`, `PrinterQueueService`), not after the domain or the
+  server, following resource-oriented design ([AIP-121](https://google.aip.dev/121)).
 
-### Adding a domain
+### Adding a domain or entity
 
-1. Create `<domain>/v1/<domain>.proto` with `package <domain>.v1;`.
-2. Create `id/v1/<domain>_id.proto` holding `<Entity>Id` for each of its entities.
+1. Create `<domain>/v1/<entity>.proto` with `package <domain>.v1;`. A domain's name comes from
+   the schema diagram; add it there too.
+2. Create `id/v1/<entity>_id.proto` holding `<Entity>Id`.
 3. Expose it through a service in the server package that owns it.
 
 ## Strongly typed IDs
@@ -38,7 +44,7 @@ TypeScript and a pyright error in Python. That is caught at build time, for ever
 agent, rather than in review.
 
 - Every `id.v1` message is `<Entity>Id { string value = 1; }`, and the value is a UUID.
-- One file per domain in `id/v1/`, named `<domain>_id.proto`, headed by the comment
+- One file per entity in `id/v1/`, named `<entity>_id.proto`, headed by the comment
   "Strongly typed DDD domain ID". Adding an entity adds a file, so concurrent work does not
   collide.
 - An entity's own ID field is `id`, typed `id.v1.<Entity>Id`.
@@ -80,13 +86,14 @@ For print jobs: `CreatePrintJob` → `CreatePrintJobUpload` → PUT → `SubmitP
 **Large-file upload pair.** Never put file bytes in an RPC; browsers cannot stream them through
 Connect.
 
-1. `Create<Thing>Upload(<thing>_id, file.v1.FileUploadMetadata)` creates the `file.v1.File`,
-   links it to the entity, and returns a `file.v1.FileUploadSlot { file_id, upload_url }`
+1. `Create<Thing>Upload(<thing>_id, content_asset.v1.FileUploadMetadata)` creates the
+   `content_asset.v1.File`, links it to the entity, and returns a
+   `content_asset.v1.FileUploadSlot { file_id, upload_url }`
    (call 1 of 2). Calling it again replaces the file.
 2. The client HTTP PUTs the raw bytes to `slot.upload_url` (call 2 of 2). The slot expires a
    server-configured time after the file's `time_status.updated_at`.
 
-Reuse the `file.v1` upload types and comment both calls as a pair.
+Reuse the `content_asset.v1` upload types and comment both calls as a pair.
 
 **Status transitions.** Staff-driven changes to one entity go through a single
 `Transition<Entity>` RPC with a `oneof action`, one nested message per action carrying exactly
@@ -107,7 +114,7 @@ chosen by the caller. A retry with the same ID returns the first result.
 | --- | --- |
 | Lint, including a comment on every element | `buf lint` |
 | No unconfirmed breaking change against `main` (CI: `proto-breaking.yml`; the `proto-breaking-change` label confirms an intended one) | `buf breaking --against ".git#branch=main"` |
-| Typed-ID and TimeStatus rules | `uv run --project packages/proto/utils pytest packages/proto/utils/tests` |
+| Typed-ID, TimeStatus and file layout rules | `uv run --project packages/proto/utils pytest packages/proto/utils/tests` |
 
 Every message, field, enum, enum value, oneof, service and RPC needs a one-line `//` comment
 saying what it is. The comment explains, it does not restate the name.

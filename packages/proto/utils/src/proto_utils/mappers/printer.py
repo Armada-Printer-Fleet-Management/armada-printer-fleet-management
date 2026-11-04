@@ -1,12 +1,12 @@
 from datetime import UTC
 
 from core_domain import ids
-from core_domain.printer import Printer, PrinterStatus
+from core_domain.fleet import Printer, PrinterStatus
 
 from proto_utils.gen.common.v1.time_status_pb2 import TimeStatus
+from proto_utils.gen.fleet.v1 import printer_pb2
 from proto_utils.gen.id.v1.print_job_id_pb2 import PrintJobId
 from proto_utils.gen.id.v1.printer_id_pb2 import PrinterId
-from proto_utils.gen.printer.v1 import printer_pb2
 from proto_utils.mapper import ProtoMapper
 
 _STATUS_PREFIX = "PRINTER_STATUS_"

@@ -3,10 +3,10 @@ syntax = "proto3";
 package printer_server.v1;
 
 import "common/v1/page.proto";
+import "fleet/v1/printer.proto";
 import "id/v1/command_id.proto";
 import "id/v1/print_job_id.proto";
 import "id/v1/printer_id.proto";
-import "printer/v1/printer.proto";
 
 // Printer access, served by the on-premise printer server.
 service PrinterService {
@@ -25,7 +25,7 @@ message ListPrintersRequest {
 // One page of printers.
 message ListPrintersResponse {
   // Printers this server controls.
-  repeated printer.v1.Printer printers = 1;
+  repeated fleet.v1.Printer printers = 1;
   // How to get the next page.
   common.v1.PageResponse page = 2;
 }
@@ -44,5 +44,5 @@ message DispatchPrintJobRequest {
 // The printer after the dispatch.
 message DispatchPrintJobResponse {
   // The printer's status once the command was accepted.
-  printer.v1.Printer printer = 1;
+  fleet.v1.Printer printer = 1;
 }

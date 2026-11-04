@@ -1,0 +1,42 @@
+[project]
+name = "auth-oidc"
+version = "0.1.0"
+description = "TokenVerifier plugin that verifies access tokens issued by any OpenID Connect provider"
+requires-python = "==3.13.*"
+
+dependencies = [
+  "plugin-api",
+  "pyjwt[crypto]>=2.15,<3", # https://github.com/jpadilla/pyjwt, MIT -- decodes and verifies the JWT access tokens; crypto adds RS256
+  "httpx2>=2.16,<3",        # https://github.com/pydantic/httpx2, BSD-3-Clause -- async HTTP client that fetches the provider's signing keys
+]
+
+[tool.uv.sources]
+plugin-api = { path = "../../packages/plugin-api", editable = true }
+
+[dependency-groups]
+dev = [
+  "ruff",
+  "pyright",
+  "pytest>=9,<10",  # https://github.com/pytest-dev/pytest, MIT
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/auth_oidc"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+include = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

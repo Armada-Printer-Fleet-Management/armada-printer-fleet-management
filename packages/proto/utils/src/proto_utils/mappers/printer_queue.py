@@ -1,11 +1,11 @@
 from datetime import UTC
 
 from core_domain import ids
-from core_domain.printer_queue import PrinterQueue
+from core_domain.queue import PrinterQueue
 
 from proto_utils.gen.common.v1.time_status_pb2 import TimeStatus
 from proto_utils.gen.id.v1.printer_queue_id_pb2 import PrinterQueueId
-from proto_utils.gen.printer_queue.v1 import printer_queue_pb2
+from proto_utils.gen.queue.v1 import printer_queue_pb2
 from proto_utils.mapper import ProtoMapper
 
 

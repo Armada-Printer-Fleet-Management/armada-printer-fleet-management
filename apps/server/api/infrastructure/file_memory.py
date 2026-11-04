@@ -1,14 +1,13 @@
-# Stub: keeps file records in process memory, so the other apps can integrate before the server
-# has a database. Everything is lost on restart. Replacing it means writing a SqlFileRepository
-# that passes tests/contract/test_file_repository.py and constructing that in api/main.py.
+# Keeps file records in process memory, for tests that need a FileRepository without Postgres.
+# The server uses SqlFileRepository; both pass tests/contract/test_file_repository.py.
 from collections.abc import Iterable
 from dataclasses import replace
 
+from core_domain.content_asset import File
 from core_domain.ddd import EntityNotFound
-from core_domain.file import File
 from core_domain.ids import FileId
 
-from api.domains.file.repository import FileRepository
+from api.domains.content_asset.repository import FileRepository
 
 
 class InMemoryFileRepository(FileRepository):

@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-// Strongly typed DDD domain ID for the printer domain. A distinct type per entity makes
+// Strongly typed DDD domain ID for the fleet domain. A distinct type per entity makes
 // passing one entity's ID where another's belongs a type error. See packages/proto/AGENTS.md.
 package id.v1;
 
-// Identifies a printer.v1.Printer.
+// Identifies a fleet.v1.Printer.
 message PrinterId {
   // UUID.
   string value = 1;

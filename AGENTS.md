@@ -82,11 +82,23 @@ Pages carry large inline SVG, so read one only when the task needs its picture.
 | --- | --- |
 | `docs/index.html` | Orienting in the repository for the first time |
 | `docs/domain-architecture.html` | Adding or changing a domain, entity, service or repository |
+| `docs/database-schema.html` | Adding or changing a domain, entity, table or column |
 | `docs/desktop.html` | Working on `apps/desktop/`: IPC, codegen, packaging or the installer |
 | `docs/web.html` | Working on `apps/web/`: the layout, routes, sidebar or adding a page |
+| `docs/testing.html` | Choosing which size of server test to write; the rules are `apps/server/tests/AGENTS.md` |
 | `docs/git-hygiene.html` | Explaining the branch, rebase, release or PR-stack flow to a developer |
 | `docs/data-management-choices.html` | Planning across services; the text version is `data-management-choices.md` |
 | `docs/api.html` | Looking up a server endpoint. Generated; never edit it or `docs/api/` |
+
+**The database schema diagram is the map of the core domains.** Its regions are the domains, and
+their code names (`content_asset`, `fleet`, `queue`, ...) name the packages in `core_domain`,
+`packages/proto` and each app's `domains/`.
+
+- **Keep it in sync with the code.** A change that adds, renames or removes a domain, an entity,
+  a table or a column updates the diagram in the same change. Where they disagree and the code
+  is the better design, the code wins and the diagram is corrected.
+- **It is not all-encompassing.** It shows the core domains and their tables, not every message,
+  service or helper. Do not add anything to it that is not in the schema.
 
 ---
 
@@ -149,7 +161,7 @@ stays in components; desktop React reaches everything through the Python backend
 ```
 packages/core-domain/core_domain/
   ddd/          generic bases: TypedId, Entity, Repository ports, Service, change(), errors
-  ids/          the ID kernel, one file per domain, mirroring proto id/v1
+  ids/          the ID kernel, one file per entity, mirroring proto id/v1
   <domain>/     entities.py: the entity and its rules, defined once
 apps/<app>/.../domains/<domain>/
   repository.py port for this app: Repository (server, saves) or ReadRepository (client, requests)

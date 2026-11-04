@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
-from google.protobuf.descriptor_pb2 import DescriptorProto, FileDescriptorSet
+from google.protobuf.descriptor_pb2 import DescriptorProto, FileDescriptorProto, FileDescriptorSet
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
@@ -21,12 +21,19 @@ def _walk(package: str, prefix: str, messages: list[DescriptorProto]) -> Iterato
 
 
 @pytest.fixture(scope="session")
-def messages(tmp_path_factory: pytest.TempPathFactory) -> list[Message]:
-    """Every message in the contract, nested ones included. Built with buf, which a missing
-    install fails loudly rather than skipping."""
+def proto_files(tmp_path_factory: pytest.TempPathFactory) -> list[FileDescriptorProto]:
+    """Every .proto file in the contract. Built with buf, which a missing install fails loudly
+    rather than skipping."""
     image = tmp_path_factory.mktemp("buf") / "image.binpb"
     subprocess.run(
         ["buf", "build", "--exclude-imports", "-o", str(image)], cwd=REPO_ROOT, check=True
     )
-    files = FileDescriptorSet.FromString(image.read_bytes()).file
-    return [found for f in files for found in _walk(f.package, f.package, list(f.message_type))]
+    return list(FileDescriptorSet.FromString(image.read_bytes()).file)
+
+
+@pytest.fixture(scope="session")
+def messages(proto_files: list[FileDescriptorProto]) -> list[Message]:
+    """Every message in the contract, nested ones included."""
+    return [
+        found for f in proto_files for found in _walk(f.package, f.package, list(f.message_type))
+    ]

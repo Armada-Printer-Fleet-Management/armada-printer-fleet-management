@@ -1,6 +1,6 @@
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import type { Client } from '@connectrpc/connect';
-import type { FileUploadSlot } from './gen/file/v1/file_upload_pb';
+import type { FileUploadSlot } from './gen/content_asset/v1/file_upload_pb';
 import {
   CreatePrintJobRequestSchema,
   CreatePrintJobUploadRequestSchema,

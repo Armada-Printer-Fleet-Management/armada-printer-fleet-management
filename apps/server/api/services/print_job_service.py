@@ -4,11 +4,11 @@ import structlog
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
-from core_domain.file import File
+from core_domain.content_asset import File
 from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserId
 from core_domain.print_job import PrintJob
 from proto_utils.gen.common.v1.page_pb2 import PageResponse
-from proto_utils.gen.file.v1.file_upload_pb2 import FileUploadSlot
+from proto_utils.gen.content_asset.v1.file_upload_pb2 import FileUploadSlot
 from proto_utils.gen.id.v1.file_id_pb2 import FileId as FileIdMessage
 from proto_utils.gen.server.v1.print_job_service_pb2 import (
     CreatePrintJobRequest,
@@ -26,10 +26,10 @@ from proto_utils.gen.server.v1.print_job_service_pb2 import (
 )
 from proto_utils.mappers import FileMapper, PrintJobMapper
 
-from api.domains.file.service import FileService
+from api.domains.content_asset.service import FileService
+from api.domains.fleet.service import PrinterService
 from api.domains.print_job.service import PrintJobService
-from api.domains.printer.service import PrinterService
-from api.domains.printer_queue.service import PrinterQueueService
+from api.domains.queue.service import PrinterQueueService
 from api.routers.file import upload_path
 from api.services.domain_errors import domain_errors_as_connect, request_id
 from api.services.request_url import absolute_url
@@ -131,7 +131,8 @@ class PrintJobServiceImplementation:
         ctx: RequestContext[CreatePrintJobRequest, CreatePrintJobResponse],
         /,
     ) -> CreatePrintJobResponse:
-        print_job = await self._print_jobs.create(self._caller(), request.user_notes)
+        with domain_errors_as_connect():
+            print_job = await self._print_jobs.create(self._caller(), request.user_notes)
         return CreatePrintJobResponse(print_job=self._mapper.to_proto(print_job))
 
     async def create_print_job_upload(
@@ -152,7 +153,11 @@ class PrintJobServiceImplementation:
         async def new_file() -> FileId:
             created.append(
                 await self._files.create_upload(
-                    metadata.filename, file_type, metadata.size_bytes, metadata.sha256
+                    self._caller(),
+                    metadata.filename,
+                    file_type,
+                    metadata.size_bytes,
+                    metadata.sha256,
                 )
             )
             return created[0].id

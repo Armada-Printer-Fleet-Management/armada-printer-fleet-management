@@ -9,14 +9,14 @@ import {
   type TempSlicePoll,
   type TempSliceSection,
 } from '@armada/ui-kit';
-import type { File as StoredFile } from '../gen/file/v1/file_pb';
+import type { File as StoredFile } from '../gen/content_asset/v1/file_pb';
+import { type Printer, PrinterStatus } from '../gen/fleet/v1/printer_pb';
 import {
   type PrintJob,
   PrintJobStatus,
   PrintJobStatusSchema,
 } from '../gen/print_job/v1/print_job_pb';
-import { type Printer, PrinterStatus } from '../gen/printer/v1/printer_pb';
-import type { PrinterQueue } from '../gen/printer_queue/v1/printer_queue_pb';
+import type { PrinterQueue } from '../gen/queue/v1/printer_queue_pb';
 import {
   ListPrintJobsResponseSchema,
   TransitionPrintJobRequestSchema,

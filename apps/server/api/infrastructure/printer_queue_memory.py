@@ -1,14 +1,14 @@
 # Stub: keeps printer queues in process memory until the server has a database. Everything is
 # lost on restart, and every queue comes back in one page. Replacing it means writing a SQL
-# repository for api/domains/printer_queue/repository.py and constructing that in api/main.py.
+# repository for api/domains/queue/repository.py and constructing that in api/main.py.
 from collections.abc import Iterable
 from dataclasses import replace
 
 from core_domain.ddd import EntityNotFound, InvalidPageToken, Page
 from core_domain.ids import PrinterQueueId
-from core_domain.printer_queue import PrinterQueue
+from core_domain.queue import PrinterQueue
 
-from api.domains.printer_queue.repository import PrinterQueueRepository
+from api.domains.queue.repository import PrinterQueueRepository
 
 
 class InMemoryPrinterQueueRepository(PrinterQueueRepository):
