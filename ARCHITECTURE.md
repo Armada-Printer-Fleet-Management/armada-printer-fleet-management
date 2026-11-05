@@ -104,6 +104,7 @@ packages/                  shared code, used by more than one app
 plugins/                   L3: adapters (auth-oidc, identity-local, s3-file-store, theme-default)
 infra/
   dev/                     local development stack: server, web, Postgres, Garage, Keycloak
+  test/                    the server's integration test dependencies: Postgres, Garage, Keycloak
   deploy/                  the stack every deployed machine runs, and its installer and armada command
 config/                    deployment configuration; gitignored except *.example.* files
 docs/                      human documentation site: why and pictures (see the Docs map)

@@ -458,7 +458,7 @@ theme, so a hardcoded colour breaks someone else's brand.
 | Run desktop app (build mode)   | `python apps/desktop/dev_run.py`                                     |
 | Run desktop app (hot reload)   | `python apps/desktop/dev_run.py --dev`                               |
 | Server Python deps             | `uv sync --project apps/server`                                      |
-| Server tests                   | `uv run --directory apps/server pytest`                                |
+| Server tests                   | `uv run --directory apps/server pytest` (integration tests need Docker running; they start and stop their own stack) |
 | Run dev stack (Docker, live reload) | `python scripts/compose_run.py dev` (server, web, Postgres, Garage, Keycloak) |
 | Stop dev stack                 | `python scripts/compose_run.py dev down`                             |
 | Run deploy stack locally       | `python scripts/compose_run.py deploy --domain :80 --admin-email <email>` (builds the deploy images first) |

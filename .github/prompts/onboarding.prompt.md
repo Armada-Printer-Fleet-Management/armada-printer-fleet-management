@@ -305,6 +305,10 @@ pnpm -r test --run
 The server and desktop each have their own project, which the root-level `uv run pytest` does not
 reach. The desktop tests import generated code, so step 5 must have run.
 
+The server's integration tests start and stop their own Docker stack, separate from the dev stack,
+so the Docker daemon must be running. Without it they fail rather than skip. The first run also
+pulls the stack's images, so it takes longer.
+
 A fresh clone should have passing tests. If they fail, that is a real problem worth surfacing, not
 something to skip past.
 

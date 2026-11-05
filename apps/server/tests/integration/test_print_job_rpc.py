@@ -38,7 +38,6 @@ from api.infrastructure.file_store_files import FileStoreFiles
 from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
 from api.infrastructure.printer_server_mock import STEP, MockPrinterServer
-from api.main import app
 from api.routers.file import file_router, upload_path
 from api.services.print_job_service import PrintJobServiceImplementation
 from api.services.printer_poller import PrinterPoller
@@ -101,12 +100,8 @@ def call(client: TestClient, rpc: str, body: Json, expect: int = 200) -> Json:
     return result
 
 
-@pytest.mark.skip(
-    reason="api.main's print jobs need an open database, and this suite does not run the app's "
-    "lifespan against one"
-)
-def test_rpc_is_mounted_on_the_app() -> None:
-    response = TestClient(app).post(
+def test_rpc_is_mounted_on_the_app(app_client: TestClient) -> None:
+    response = app_client.post(
         f"/api{_RPC}/GetPrintJob", json={"printJobId": _id(STUB_SUBMITTED_JOB_ID)}
     )
 
