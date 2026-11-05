@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-COMPOSE_FILE = Path(__file__).parents[4] / "infra" / "test" / "compose.yaml"
+COMPOSE_FILE = Path(__file__).parents[5] / "infra" / "test" / "compose.yaml"
 HOST = "127.0.0.1"
 # Keycloak is the slowest to become healthy, and its check allows a long start period.
 WAIT_TIMEOUT_SECONDS = 300
