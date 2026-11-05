@@ -221,6 +221,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "boto3" },
     { name = "httpx2" },
     { name = "import-linter" },
     { name = "pyright" },
@@ -250,6 +251,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "boto3" },
     { name = "httpx2" },
     { name = "import-linter", specifier = ">=2.15,<3" },
     { name = "pyright" },

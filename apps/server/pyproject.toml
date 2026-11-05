@@ -40,6 +40,7 @@ dev = [
   "pyright",
   "pytest",
   "httpx2",  # https://github.com/pydantic/httpx2, BSD-3-Clause -- HTTP client Starlette's TestClient requires
+  "boto3",   # https://github.com/boto/boto3, Apache-2.0 -- empties the test bucket between integration tests; the version comes from aioboto3
   "import-linter>=2.15,<3", # https://github.com/seddonym/import-linter, BSD-2-Clause -- layer contracts below
 ]
 
@@ -58,7 +59,7 @@ exclude = ["api/gen"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-testpaths = ["tests"]
+testpaths = ["tests/unit", "tests/integration"]
 
 [tool.importlinter]
 # The plugin packages are listed so the contracts below can check their imports too.

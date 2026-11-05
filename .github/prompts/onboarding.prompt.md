@@ -305,6 +305,10 @@ pnpm -r test --run
 The server and desktop each have their own project, which the root-level `uv run pytest` does not
 reach. The desktop tests import generated code, so step 5 must have run.
 
+The server's integration tests start and stop their own Docker stack, separate from the dev stack,
+so the Docker daemon must be running. Without it they fail rather than skip. The first run also
+pulls the stack's images, so it takes longer.
+
 The server's end-to-end smoke tests, `uv run --directory apps/server pytest e2e`, are not part of
 onboarding. They need a running deploy stack with a test client and users in its Keycloak, which
 `apps/server/e2e/README.md` describes. Mention them, but do not run them here.
