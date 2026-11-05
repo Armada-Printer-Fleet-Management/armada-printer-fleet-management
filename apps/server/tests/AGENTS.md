@@ -41,12 +41,18 @@ work as expected.
 | Path | Holds |
 | --- | --- |
 | `tests/unit/` | Unit tests, including tests of the code's structure and generated documentation.  These never need Docker |
+| `tests/unit/<folder>/` | The unit tests of `api/<folder>/`: `common`, `domains`, `infrastructure`, `middleware`, `routers` and `services`.  A test of a module directly under `api/`, of `api/main.py`'s wiring or of the migrations stays in `tests/unit/` itself |
 | `tests/integration/` | Integration tests.  These always need Docker |
+| `tests/integration/endpoints/` | Integration tests that enter through an RPC or REST endpoint of the running app |
 | `tests/integration/contract/` | What every adapter of a port must do.  One suite runs against each adapter, whether a fake or the real one.  A new adapter joins by adding its factory to `ADAPTERS` |
+| `tests/integration/business_logic/` | Other integration tests that enter below an endpoint, such as the database connection, the migrations and the per-test reset |
+| `tests/integration/utils/` | Helpers only the integration tests use, such as the Docker stack the session fixture starts |
 | `tests/fakes.py` | Fakes shared between tests |
+| `tests/<name>.py` | Other helpers shared between test files, such as `rpc.py` for calling Connect services as JSON |
 | `e2e/` | End-to-end tests |
 
-Test files are named `test_<what they cover>.py`.
+Test files are named `test_<what they cover>.py`.  Two test files may not share a name, even in different folders, so an integration file
+covering the same code as a unit file adds `_stack`: `tests/unit/routers/test_health.py` and `tests/integration/endpoints/test_health_stack.py`.
 
 Fixtures go in the `conftest.py` of the narrowest folder that covers the tests likely to use them, so that they can be found and are not duplicated.  A fixture stays in
 a test file only if it is very specific to that file.  When a `conftest.py` grows too large to scan easily, move its fixtures into a `fixtures/` folder.

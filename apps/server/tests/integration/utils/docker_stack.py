@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-COMPOSE_FILE = Path(__file__).parents[4] / "infra" / "test" / "compose.yaml"
+COMPOSE_FILE = Path(__file__).parents[5] / "infra" / "test" / "compose.yaml"
 PROJECT_PREFIX = "armada-test-"
 # A project that is starting has containers that are created but not yet running.
 LIVE_STATES = ("running", "restarting", "created", "paused")
