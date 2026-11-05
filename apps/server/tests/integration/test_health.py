@@ -12,11 +12,15 @@ from api.common import health
 from api.common.consts import API_PREFIX, PYPROJECT_PATH
 from api.common.dependencies import application_info
 from api.common.models import DependencyCheck
-from api.main import app
 from api.routers.health import health_router
 from api.services.health_check_service import HealthCheckServiceImplementation
 
 _RPC_PATH = "/server.v1.HealthCheckService/HealthCheck"
+_ALL_REAL_DEPENDENCIES_PASS = {
+    "database": "pass",
+    "file_storage": "pass",
+    "identity_provider": "pass",
+}
 
 
 def _expected_version() -> str:
@@ -50,11 +54,6 @@ _optional_failing = DependencyCheck(_fail, critical=False)
 _optional_raising = DependencyCheck(_raise, critical=False)
 
 
-@pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
-
-
 # The app's own checks probe real infrastructure, so these tests mount the router over fakes.
 def _rest_client(checks: Mapping[str, DependencyCheck]) -> TestClient:
     rest = FastAPI()
@@ -62,18 +61,28 @@ def _rest_client(checks: Mapping[str, DependencyCheck]) -> TestClient:
     return TestClient(rest)
 
 
-def test_health_defaults_to_plain_pass(client: TestClient) -> None:
-    response = client.get("/api/health_check")
+def test_health_defaults_to_plain_pass(app_client: TestClient) -> None:
+    response = app_client.get("/api/health_check")
 
     assert response.status_code == 200
     assert response.text == "pass"
 
 
-def test_health_full_reports_version_without_dependencies(client: TestClient) -> None:
-    response = client.get("/api/health_check", params={"full": True})
+def test_health_full_reports_version_without_dependencies(app_client: TestClient) -> None:
+    response = app_client.get("/api/health_check", params={"full": True})
 
     assert response.status_code == 200
     assert response.json() == {"status": "pass", "version": _expected_version()}
+
+
+def test_health_passes_against_every_real_dependency(app_client: TestClient) -> None:
+    response = app_client.get(
+        "/api/health_check", params={"full": True, "check_dependencies": True}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "pass"
+    assert response.json()["dependencies"] == _ALL_REAL_DEPENDENCIES_PASS
 
 
 def test_health_full_with_dependencies_reports_each() -> None:
@@ -166,11 +175,19 @@ def _rpc_client(checks: Mapping[str, DependencyCheck]) -> TestClient:
     return TestClient(HealthCheckServiceASGIApplication(service))
 
 
-def test_rpc_is_mounted_on_the_app(client: TestClient) -> None:
-    response = client.post("/api" + _RPC_PATH, json={})
+def test_rpc_is_mounted_on_the_app(app_client: TestClient) -> None:
+    response = app_client.post("/api" + _RPC_PATH, json={})
 
     assert response.status_code == 200
     assert response.json() == {"status": "STATUS_PASS"}
+
+
+def test_rpc_passes_against_every_real_dependency(app_client: TestClient) -> None:
+    response = app_client.post("/api" + _RPC_PATH, json={"full": True, "checkDependencies": True})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "STATUS_PASS"
+    assert response.json()["dependencies"] == _ALL_REAL_DEPENDENCIES_PASS
 
 
 def test_rpc_defaults_to_status_only() -> None:

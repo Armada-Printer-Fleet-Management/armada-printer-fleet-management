@@ -1,8 +1,6 @@
-"""Runs the migrations and the dev seed against a real Postgres. Skipped unless DB_HOST and the
-other DB_* variables are set. Each run creates its own throwaway database and drops it after, so
-it never touches the database the variables name."""
+"""Runs the migrations and the dev seed against a real Postgres. Each test creates its own
+throwaway database and drops it after, because downgrading must not touch the shared one."""
 
-import os
 from collections.abc import Iterator
 from pathlib import Path
 from uuid import uuid4
@@ -14,8 +12,6 @@ from alembic.config import Config
 
 from api.common.settings import database_url
 from dev_seed import SEED, seed
-
-pytestmark = pytest.mark.skipif("DB_HOST" not in os.environ, reason="needs Postgres (DB_*)")
 
 ALEMBIC_INI = Path(__file__).parents[2] / "alembic.ini"
 # A merged migration is never edited, so the tables this revision creates never change.

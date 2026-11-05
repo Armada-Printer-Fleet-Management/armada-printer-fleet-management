@@ -1,6 +1,6 @@
 """What every PrintJobRepository must do, whatever stores the jobs. A new adapter joins by adding
 its factory to ADAPTERS. A factory is given the test's request, so one that needs a database can
-ask for the postgres_database fixture and only its own tests need Postgres."""
+ask for the empty_database fixture."""
 
 import base64
 from collections.abc import Callable
@@ -16,7 +16,7 @@ from api.domains.print_job.repository import PrintJobRepository
 from api.infrastructure.postgres_database import PostgresDatabase
 from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 from api.infrastructure.print_job_sql import SqlPrintJobRepository
-from tests.postgres import needs_postgres, run
+from tests.postgres import run
 
 type Factory = Callable[[pytest.FixtureRequest], PrintJobRepository]
 
@@ -26,13 +26,13 @@ def _memory(request: pytest.FixtureRequest) -> PrintJobRepository:
 
 
 def _sql(request: pytest.FixtureRequest) -> PrintJobRepository:
-    database: PostgresDatabase = request.getfixturevalue("postgres_database")
+    database: PostgresDatabase = request.getfixturevalue("empty_database")
     return SqlPrintJobRepository(database)
 
 
 ADAPTERS = [
     pytest.param(_memory, id="memory"),
-    pytest.param(_sql, id="sql", marks=needs_postgres),
+    pytest.param(_sql, id="sql"),
 ]
 START = datetime(2026, 10, 1, 9, 0, tzinfo=UTC)
 

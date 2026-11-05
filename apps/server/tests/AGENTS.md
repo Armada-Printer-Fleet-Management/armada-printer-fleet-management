@@ -76,13 +76,24 @@ All process behaviour outside of the application server is mocked, so these test
 Integration tests cover all behaviour within a system, and run with the same single `pytest` command as the unit tests.  Run them alone with
 `uv run --directory apps/server pytest tests/integration`, or with the unit tests using `uv run --directory apps/server pytest`.  A session fixture starts the
 dependencies in Docker when the suite begins and stops them when it ends, so that nothing is left running.  They run as their own stack, fully separate from the dev
-stack, so that neither influences the other.  If Docker is not available the tests fail rather than skip, so that a passing result always means they ran.
+stack, defined in `infra/test/compose.yaml` at the repository root, so that neither influences the other.  If Docker is not available the tests fail rather than skip, so that a passing result always means they ran.
+
+Each run starts its stack under a compose project of its own, `armada-test-<random>`, so runs in different checkouts, worktrees or terminals can overlap.  On start, a run
+removes any `armada-test-*` project whose containers have all stopped, which is what a killed run leaves behind.  A project with a live container may belong to a run still in
+progress, so it is left alone; one left by a run killed while its containers kept running stays until it is removed with `docker compose -p <name> down --volumes`.
 
 The dependencies are seeded from `api/infrastructure/dev_data.py`.  Data that only tests need, such as additional types of test user, is added on top of it from
 test code and never added to `dev_data.py`.
 
 Before each test, the data is reset so that no test can contaminate another: database tables are truncated and reseeded, keeping the migrations in place, and the
 file store's objects are deleted.  Do not rebuild the database or rerun migrations between tests.
+
+The reset covers only the stack.  `app_client` serves the module-level app from `api/main.py`, so the state its in-memory adapters hold, the printers in
+`MockPrinterServer` and the queues in `InMemoryPrinterQueueRepository`, is shared by every integration test and never reset.  A test that changes printer or queue
+state leaves it changed for the tests after it.
+
+Contract tests are the one exception to starting from seeded data.  A contract describes what an adapter does from a known state, and every adapter under it must start the same way,
+so a SQL adapter's factory uses the `empty_database` fixture, which removes the seed after the reset.
 
 ### End-to-end tests
 

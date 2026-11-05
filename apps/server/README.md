@@ -88,6 +88,7 @@ uv run alembic revision --rev-id 0002 -m "describe the change"   # a new, empty 
 uv run --directory apps/server pytest
 ```
 
-Add `tests/unit` or `tests/integration` to run one suite. Before writing or changing a test, read
+Add `tests/unit` or `tests/integration` to run one suite. Integration tests need Docker running;
+they start and stop their own stack. Before writing or changing a test, read
 the rules in [`tests/AGENTS.md`](tests/AGENTS.md). They apply to everyone, not only agents.
 [`docs/testing.html`](../../docs/testing.html) has the short, visual version.
