@@ -7,8 +7,8 @@ from core_domain.print_job import PrintJob
 
 class PrintJobRepository(AbstractAsyncRepository[PrintJobId, PrintJob]):
     """Where the server keeps print jobs. Implementations live in api/infrastructure, and each
-    must pass tests/contract/test_print_job_repository.py. A save must not silently overwrite a
-    change saved by another request since this one loaded the job."""
+    must pass tests/integration/contract/test_print_job_repository.py. A save must not silently
+    overwrite a change saved by another request since this one loaded the job."""
 
     @abstractmethod
     async def page(self, page_size: int, page_token: str) -> Page[PrintJob]:

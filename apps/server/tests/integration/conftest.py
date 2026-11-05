@@ -17,7 +17,7 @@ from api.common.settings import database_url
 from api.infrastructure.postgres_database import PostgresDatabase
 from api.main import app
 from dev_seed import seed
-from tests.integration.docker_stack import DockerStack
+from tests.integration.utils.docker_stack import DockerStack
 from tests.postgres import run, truncate_tables
 
 ALEMBIC_INI = Path(__file__).parents[2] / "alembic.ini"

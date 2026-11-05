@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from tests.integration.docker_stack import leftover_projects
+from tests.integration.utils.docker_stack import leftover_projects
 
 
 @pytest.mark.parametrize("name", ["armada", "armada-testing", "armada-test", "other-test-ab12"])

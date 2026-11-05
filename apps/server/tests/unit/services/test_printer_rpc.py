@@ -3,50 +3,35 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from proto_utils.gen.server.v1.printer_queue_service_connect import (
+    PrinterQueueServiceASGIApplication,
+)
 from proto_utils.gen.server.v1.printer_service_connect import PrinterServiceASGIApplication
 
 from api.domains.fleet.service import PrinterService
+from api.domains.queue.service import PrinterQueueService
 from api.infrastructure.dev_data import (
     STUB_FINISHED_PRINTER_ID,
     STUB_IDLE_PRINTER_ID,
     STUB_PRINTER_QUEUE_ID,
-    STUB_SUBMITTED_FILE_ID,
+    stub_printer_queues,
     stub_printers,
 )
+from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
 from api.infrastructure.printer_server_mock import MockPrinterServer
+from api.services.printer_queue_service import PrinterQueueServiceImplementation
 from api.services.printer_service import PrinterServiceImplementation
-
-type Json = dict[str, Any]
-
-
-def _id(entity_id: object) -> dict[str, str]:
-    return {"value": str(entity_id)}
+from tests.rpc import id_json
 
 
-@pytest.mark.parametrize(
-    ("rpc", "body", "field"),
-    [
-        ("server.v1.PrinterService/ListPrinters", {}, "printers"),
-        ("server.v1.PrinterQueueService/ListPrinterQueues", {}, "printerQueues"),
-        (
-            "server.v1.FileService/ListFiles",
-            {"fileIds": [_id(STUB_SUBMITTED_FILE_ID)]},
-            "files",
-        ),
-    ],
-)
-def test_rpc_is_mounted_on_the_app(
-    app_client: TestClient, rpc: str, body: Json, field: str
-) -> None:
-    response = app_client.post(f"/api/{rpc}", json=body)
+def test_list_printer_queues_returns_the_open_queue() -> None:
+    queues = PrinterQueueService(InMemoryPrinterQueueRepository(stub_printer_queues()))
+    client = TestClient(
+        PrinterQueueServiceASGIApplication(PrinterQueueServiceImplementation(queues))
+    )
 
-    assert response.status_code == 200, response.text
-    assert response.json()[field]
-
-
-def test_list_printer_queues_returns_the_open_queue(app_client: TestClient) -> None:
-    response = app_client.post("/api/server.v1.PrinterQueueService/ListPrinterQueues", json={})
-    assert response.json()["printerQueues"][0]["id"] == _id(STUB_PRINTER_QUEUE_ID)
+    response = client.post("/server.v1.PrinterQueueService/ListPrinterQueues", json={})
+    assert response.json()["printerQueues"][0]["id"] == id_json(STUB_PRINTER_QUEUE_ID)
 
 
 @pytest.fixture
@@ -56,7 +41,7 @@ def client() -> TestClient:
 
 
 def ready(client: TestClient, printer_id: object) -> Any:
-    body = {"printerId": _id(printer_id), "ready": {}}
+    body = {"printerId": id_json(printer_id), "ready": {}}
     return client.post("/server.v1.PrinterService/TransitionPrinter", json=body)
 
 

@@ -1,5 +1,6 @@
 # Keeps print jobs in process memory, for tests that need a PrintJobRepository without Postgres.
-# The server uses SqlPrintJobRepository; both pass tests/contract/test_print_job_repository.py.
+# The server uses SqlPrintJobRepository; both pass
+# tests/integration/contract/test_print_job_repository.py.
 from collections.abc import Iterable
 from dataclasses import replace
 

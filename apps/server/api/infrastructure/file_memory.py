@@ -1,5 +1,5 @@
 # Keeps file records in process memory, for tests that need a FileRepository without Postgres.
-# The server uses SqlFileRepository; both pass tests/contract/test_file_repository.py.
+# The server uses SqlFileRepository; both pass tests/integration/contract/test_file_repository.py.
 from collections.abc import Iterable
 from dataclasses import replace
 
