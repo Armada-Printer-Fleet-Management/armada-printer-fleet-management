@@ -1,5 +1,4 @@
 from collections.abc import AsyncIterable, AsyncIterator
-from datetime import UTC, datetime
 from types import TracebackType
 from typing import Self
 
@@ -11,6 +10,7 @@ from plugin_api.file_store import FileStoreError
 
 from api.infrastructure.file_store_files import FileStoreFiles
 from tests.fakes import MemoryFileStore
+from tests.samples import NOW
 
 
 class RecordingFileStore:
@@ -100,7 +100,7 @@ async def test_a_store_that_is_not_open_is_unavailable() -> None:
 
 
 async def test_bytes_missing_from_the_store_are_not_found_for_the_file() -> None:
-    file = File.create(UserId.new(), "part.gcode", FileType.GCODE, 1, "a" * 64, datetime.now(UTC))
+    file = File.create(UserId.new(), "part.gcode", FileType.GCODE, 1, "a" * 64, NOW)
 
     async with FileStoreFiles(MemoryFileStore) as files:
         with pytest.raises(EntityNotFound) as raised:
@@ -111,7 +111,7 @@ async def test_bytes_missing_from_the_store_are_not_found_for_the_file() -> None
 
 @pytest.mark.parametrize("name", ["has_upload", "read", "delete"])
 async def test_a_store_outage_is_unavailable_for_every_operation(name: str) -> None:
-    file = File.create(UserId.new(), "part.gcode", FileType.GCODE, 1, "a" * 64, datetime.now(UTC))
+    file = File.create(UserId.new(), "part.gcode", FileType.GCODE, 1, "a" * 64, NOW)
     store = MemoryFileStore()
 
     async with FileStoreFiles(lambda: store) as files:

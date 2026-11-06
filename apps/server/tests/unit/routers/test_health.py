@@ -31,7 +31,8 @@ async def _raise() -> bool:
 
 
 async def _hang() -> bool:
-    await asyncio.sleep(60)
+    # Never set, so this waits until the health check's timeout cancels it, with no timer here.
+    await asyncio.Event().wait()
     return True
 
 

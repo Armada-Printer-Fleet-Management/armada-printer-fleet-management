@@ -1,7 +1,7 @@
 """The file routes on the running app, storing records in Postgres and bytes in Garage."""
 
-from botocore.client import BaseClient
 from fastapi.testclient import TestClient
+from types_boto3_s3.client import S3Client
 
 from api.infrastructure.dev_data import STUB_DRAFT_JOB_ID
 from tests.integration.utils.file_store import stored_object_count
@@ -23,7 +23,7 @@ def test_an_uploaded_file_downloads_with_its_name_and_size(app_client: TestClien
 
 
 def test_bytes_that_do_not_match_are_refused_and_not_stored(
-    app_client: TestClient, file_store_client: BaseClient, stack_environment: dict[str, str]
+    app_client: TestClient, file_store_client: S3Client, stack_environment: dict[str, str]
 ) -> None:
     url = upload_slot(app_client, STUB_DRAFT_JOB_ID)["uploadUrl"]
 
@@ -35,7 +35,7 @@ def test_bytes_that_do_not_match_are_refused_and_not_stored(
 
 
 def test_a_deleted_file_is_gone_with_its_bytes(
-    app_client: TestClient, file_store_client: BaseClient, stack_environment: dict[str, str]
+    app_client: TestClient, file_store_client: S3Client, stack_environment: dict[str, str]
 ) -> None:
     url = upload_slot(app_client, STUB_DRAFT_JOB_ID)["uploadUrl"]
     app_client.put(url, content=CONTENT)

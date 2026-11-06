@@ -7,10 +7,10 @@ import pytest
 import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
-from botocore.client import BaseClient
 from botocore.config import Config as S3Config
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine
+from types_boto3_s3.client import S3Client
 
 from api.app import build_app
 from api.common.settings import database_url
@@ -44,8 +44,10 @@ def stack_environment() -> Iterator[dict[str, str]]:
 
 
 @pytest.fixture(scope="session")
-def file_store_client(stack_environment: dict[str, str]) -> BaseClient:
-    return boto3.client(
+def file_store_client(stack_environment: dict[str, str]) -> S3Client:
+    # boto3.client is overloaded for every AWS service, and only the S3 stubs are installed, so
+    # pyright sees the overload set itself as partly unknown; the S3 overload it picks is typed.
+    return boto3.client(  # pyright: ignore[reportUnknownMemberType]
         "s3",
         endpoint_url=stack_environment["FILE_STORE_ENDPOINT_URL"],
         region_name=stack_environment["FILE_STORE_REGION"],
@@ -73,7 +75,7 @@ def database_engine(stack_environment: dict[str, str]) -> Iterator[sa.Engine]:
 @pytest.fixture(autouse=True)
 def reset_dependencies(
     stack_environment: dict[str, str],
-    file_store_client: BaseClient,
+    file_store_client: S3Client,
     database_engine: sa.Engine,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

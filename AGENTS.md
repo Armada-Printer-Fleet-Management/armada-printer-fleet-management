@@ -459,6 +459,8 @@ theme, so a hardcoded colour breaks someone else's brand.
 | Run desktop app (hot reload)   | `python apps/desktop/dev_run.py --dev`                               |
 | Server Python deps             | `uv sync --project apps/server`                                      |
 | Server tests                   | `uv run --directory apps/server pytest` (integration tests need Docker running; they start and stop their own stack) |
+| Server unit tests              | `uv run --directory apps/server pytest tests/unit` (no Docker; the first suite the pre-push hook and CI run) |
+| Server integration tests       | `uv run --directory apps/server pytest tests/integration` (Docker running) |
 | Server e2e smoke tests         | `uv run --directory apps/server pytest e2e` (set `E2E_*`; see `apps/server/e2e/README.md`) |
 | Run dev stack (Docker, live reload) | `python scripts/compose_run.py dev` (server, web, Postgres, Garage, Keycloak) |
 | Stop dev stack                 | `python scripts/compose_run.py dev down`                             |
