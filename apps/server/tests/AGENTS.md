@@ -70,7 +70,9 @@ Tests follow the same code standards as the rest of the server, including `pyrig
 ## Test suite setup
 
 This section goes into detail about how each test suite should run.  In CI, the unit and integration tests run separately, while also taking coverage metrics.
-Coverage is reported, and does not fail the build.
+Coverage is reported, and does not fail the build.  `.github/workflows/server.ci.yml` runs each suite under `coverage` with its own data file, then
+posts the unit, integration and combined totals in one comment on the pull request, updated on every push, and on the run's summary page.
+The pre-push hook runs the two suites as separate checks too.
 
 ### Unit tests
 

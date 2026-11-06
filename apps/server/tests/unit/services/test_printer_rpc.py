@@ -1,10 +1,9 @@
-from typing import Any
-
 from core_domain.ddd import Unavailable
 from core_domain.fleet import Printer
 from core_domain.ids import PrinterId, PrinterQueueId
 from core_domain.queue import PrinterQueue
 from fastapi.testclient import TestClient
+from httpx2 import Response
 
 from api.infrastructure.dev_data import (
     STUB_FINISHED_PRINTER_ID,
@@ -24,7 +23,7 @@ def test_list_printer_queues_returns_the_open_queue(client: TestClient) -> None:
     assert response.json()["printerQueues"][0]["id"] == id_json(STUB_PRINTER_QUEUE_ID)
 
 
-def ready(client: TestClient, printer_id: object) -> Any:
+def ready(client: TestClient, printer_id: object) -> Response:
     body = {"printerId": id_json(printer_id), "ready": {}}
     return client.post("/api/server.v1.PrinterService/TransitionPrinter", json=body)
 

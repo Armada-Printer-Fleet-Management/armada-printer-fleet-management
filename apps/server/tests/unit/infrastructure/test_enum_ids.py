@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import cast
 from uuid import UUID
 
 from core_domain.content_asset import FileType
@@ -23,7 +24,8 @@ def every_stored_id() -> list[UUID]:
         if isinstance(value, UUID):
             ids.append(value)
         elif isinstance(value, dict):
-            ids.extend(uuid for uuid in value.values() if isinstance(uuid, UUID))
+            members = cast(dict[object, object], value)
+            ids.extend(uuid for uuid in members.values() if isinstance(uuid, UUID))
     return ids
 
 

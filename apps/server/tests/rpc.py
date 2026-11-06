@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+# Decoded JSON is indexed freely by the tests, which a precise recursive type would refuse.
 type Json = dict[str, Any]
 
 

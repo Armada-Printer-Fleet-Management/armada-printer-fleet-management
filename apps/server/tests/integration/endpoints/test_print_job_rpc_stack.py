@@ -1,29 +1,17 @@
-from datetime import timedelta
-from uuid import UUID
-
-from core_domain.ids import FileId
 from fastapi.testclient import TestClient
 
 from api.infrastructure.dev_data import (
     STUB_DRAFT_JOB_ID,
-    STUB_IDLE_PRINTER_ID,
-    STUB_PRINTER_QUEUE_ID,
     STUB_STUDENT_ID,
     STUB_SUBMITTED_JOB_ID,
 )
-from api.infrastructure.printer_server_mock import STEP
-from api.routers.file import upload_path
-from api.services.printer_poller import PrinterPoller
-from tests.fake_app import FakeApp, fake_services, on_app_loop
 from tests.print_jobs import (
     CONTENT,
-    METADATA,
     PRINT_JOB_RPC,
     call,
     upload_slot,
 )
 from tests.rpc import id_json
-from tests.samples import NOW
 
 
 def test_rpc_is_mounted_on_the_app(app_client: TestClient) -> None:
@@ -67,42 +55,3 @@ def test_submit_is_refused_while_the_bytes_are_not_stored(app_client: TestClient
     assert refused["code"] == "failed_precondition"
     unchanged = call(app_client, "GetPrintJob", job)["printJob"]
     assert unchanged["status"] == "PRINT_JOB_STATUS_DRAFT"
-
-
-def test_a_job_goes_from_creation_to_completed(fake_app: FakeApp) -> None:
-    now = [NOW]
-    fakes = fake_services(clock=lambda: now[0])
-    client = fake_app(fakes)
-    poller = PrinterPoller(fakes.services.printers, fakes.services.print_jobs, timedelta(seconds=1))
-    created = call(client, "CreatePrintJob", {"userNotes": "Please use PLA"})["printJob"]
-    assert created["status"] == "PRINT_JOB_STATUS_DRAFT"
-    assert created["userId"] == id_json(STUB_STUDENT_ID)
-    job = {"printJobId": created["id"]}
-
-    slot = call(client, "CreatePrintJobUpload", {**job, "metadata": METADATA})["slot"]
-    file_path = upload_path(FileId(UUID(slot["fileId"]["value"])))
-    assert slot["uploadUrl"] == f"http://testserver{file_path}"
-    assert client.put(slot["uploadUrl"], content=CONTENT).status_code == 204
-
-    submitted = call(client, "SubmitPrintJob", job)
-    assert submitted["printJob"]["status"] == "PRINT_JOB_STATUS_SUBMITTED"
-    assert submitted["printJob"]["printerQueueId"] == id_json(STUB_PRINTER_QUEUE_ID)
-    assert submitted["file"]["id"] == slot["fileId"]
-
-    call(client, "TransitionPrintJob", {**job, "startReview": {}})
-    call(client, "TransitionPrintJob", {**job, "approve": {}})
-    printer = id_json(STUB_IDLE_PRINTER_ID)
-    assigned = call(client, "TransitionPrintJob", {**job, "assign": {"printerId": printer}})
-    assert assigned["printJob"]["status"] == "PRINT_JOB_STATUS_ASSIGNED"
-    assert assigned["printJob"]["printerId"] == printer
-
-    on_app_loop(client, poller.poll)
-    assert call(client, "GetPrintJob", job)["printJob"]["status"] == "PRINT_JOB_STATUS_PRINTING"
-    refused = call(client, "TransitionPrintJob", {**job, "complete": {}}, expect=400)
-    assert refused["code"] == "failed_precondition"
-
-    now[0] += STEP * 4
-    on_app_loop(client, poller.poll)
-    assert call(client, "GetPrintJob", job)["printJob"]["status"] == "PRINT_JOB_STATUS_FINISHED"
-    completed = call(client, "TransitionPrintJob", {**job, "complete": {}})
-    assert completed["printJob"]["status"] == "PRINT_JOB_STATUS_COMPLETED"

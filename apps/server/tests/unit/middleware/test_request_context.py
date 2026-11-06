@@ -1,6 +1,3 @@
-from collections.abc import MutableMapping
-from typing import Any
-
 import pytest
 import structlog
 from fastapi.testclient import TestClient
@@ -9,13 +6,14 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Route
 from structlog.testing import capture_logs
+from structlog.typing import EventDict
 
 from api.middleware.request_context import RequestContextMiddleware
 
 _RPC_PATH = "/api/server.v1.HealthCheckService/HealthCheck"
 
 
-def _finished(logs: list[MutableMapping[str, Any]]) -> list[MutableMapping[str, Any]]:
+def _finished(logs: list[EventDict]) -> list[EventDict]:
     return [entry for entry in logs if entry["event"] == "request finished"]
 
 
