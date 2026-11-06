@@ -1,19 +1,36 @@
-from collections.abc import MutableMapping
+from collections.abc import Iterator, MutableMapping
 from typing import Any
 
 import pytest
 import structlog
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from proto_utils.gen.server.v1.health_check_connect import HealthCheckServiceASGIApplication
 from structlog.testing import capture_logs
 
-from api.main import app
+from api.common.consts import API_PREFIX
+from api.common.dependencies import application_info
+from api.middleware.request_context import RequestContextMiddleware
+from api.routers.health import health_router
+from api.services.health_check_service import HealthCheckServiceImplementation
+from api.services.mount import mount_rpc
 
 _RPC_PATH = "/api/server.v1.HealthCheckService/HealthCheck"
 
 
 @pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
+def client() -> Iterator[TestClient]:
+    """A REST route and a mounted Connect service behind the middleware, as api/main.py has them,
+    with no dependency checks."""
+    app = FastAPI()
+    app.include_router(health_router({}), prefix=API_PREFIX)
+    mount_rpc(
+        app,
+        HealthCheckServiceASGIApplication(HealthCheckServiceImplementation(application_info(), {})),
+    )
+    app.add_middleware(RequestContextMiddleware)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 def _finished(logs: list[MutableMapping[str, Any]]) -> list[MutableMapping[str, Any]]:

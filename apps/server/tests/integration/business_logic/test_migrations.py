@@ -13,7 +13,7 @@ from alembic.config import Config
 from api.common.settings import database_url
 from dev_seed import SEED, seed
 
-ALEMBIC_INI = Path(__file__).parents[2] / "alembic.ini"
+ALEMBIC_INI = Path(__file__).parents[3] / "alembic.ini"
 # A merged migration is never edited, so the tables this revision creates never change.
 REVISION_0001_TABLES = {
     "users",

@@ -114,7 +114,7 @@ plugin or its port, and import-linter enforces it.
 - Development data goes in `api/infrastructure/dev_data.py` with a fixed ID. If its table is not
   seeded yet, add the table to `SEED` in `dev_seed.py`, after the tables it refers to. The seed
   only inserts missing rows and never changes an existing one.
-- `tests/integration/test_migrations.py` upgrades, seeds and downgrades a throwaway database it
+- `tests/integration/business_logic/test_migrations.py` upgrades, seeds and downgrades a throwaway database it
   creates and drops on the integration tests' own Postgres.
 - The health check reports the connection as `database`.
 
