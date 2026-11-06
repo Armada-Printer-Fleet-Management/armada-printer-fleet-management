@@ -1,6 +1,9 @@
 """AuthenticationMiddleware around a one-route app, with a fake verify and a small access table."""
 
+from collections.abc import Awaitable, Callable
+
 import pytest
+from core_domain.ddd import Unavailable
 from fastapi.testclient import TestClient
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -31,9 +34,11 @@ async def who(_request: Request) -> JSONResponse:
     return JSONResponse({"caller": caller.subject if caller else None})
 
 
-def client(enforce: bool = False) -> TestClient:
+def client(
+    enforce: bool = False, verifier: Callable[[str], Awaitable[Caller]] = verify
+) -> TestClient:
     app = Starlette(routes=[Route("/public", who), Route("/staff", who)])
-    app.add_middleware(AuthenticationMiddleware, verify=verify, policy=POLICY, enforce=enforce)
+    app.add_middleware(AuthenticationMiddleware, verify=verifier, policy=POLICY, enforce=enforce)
     return TestClient(app)
 
 
@@ -115,3 +120,14 @@ def test_an_allowed_caller_is_not_logged_when_enforced() -> None:
 
     assert response.json() == {"caller": "staff"}
     assert _denials(logs) == []
+
+
+async def unreachable_verify(token: str) -> Caller:
+    raise Unavailable("identity provider") from OSError("idp.internal refused the connection")
+
+
+def test_a_verifier_outage_is_a_503_without_its_cause() -> None:
+    response = client(verifier=unreachable_verify).get("/public", headers=bearer("student-token"))
+
+    assert response.status_code == 503
+    assert response.json() == {"code": "unavailable", "message": "identity provider is unavailable"}

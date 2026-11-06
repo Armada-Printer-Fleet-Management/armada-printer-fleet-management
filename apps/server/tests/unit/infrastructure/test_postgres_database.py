@@ -1,9 +1,11 @@
 import asyncio
 from collections.abc import Coroutine
+from typing import cast
 
 import pytest
 from core_domain.ddd import Unavailable
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 
 from api.infrastructure.postgres_database import PostgresDatabase
 
@@ -38,9 +40,30 @@ def test_opening_does_not_connect() -> None:
     _run(open_and_close())
 
 
+class _RefusedConnection:
+    async def __aenter__(self) -> AsyncConnection:
+        raise OperationalError("SELECT 1", {}, OSError("connection refused"))
+
+    async def __aexit__(self, *exc_info: object) -> None:
+        return None
+
+
+class _RefusingEngine:
+    """An engine whose every connection is refused, as the driver reports it."""
+
+    def connect(self) -> _RefusedConnection:
+        return _RefusedConnection()
+
+    async def dispose(self) -> None:
+        return None
+
+
 def test_health_check_is_unavailable_when_unreachable() -> None:
+    # Only connect and dispose are used, which the stub provides.
+    database = PostgresDatabase(lambda: cast(AsyncEngine, _RefusingEngine()))
+
     async def check() -> None:
-        async with _unreachable() as database:
+        async with database:
             await database.health_check()
 
     with pytest.raises(Unavailable):
