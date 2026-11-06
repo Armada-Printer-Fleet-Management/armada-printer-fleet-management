@@ -6,6 +6,10 @@ import structlog
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from proto_utils.gen.server.v1.health_check_connect import HealthCheckServiceASGIApplication
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import Response
+from starlette.routing import Route
 from structlog.testing import capture_logs
 
 from api.common.consts import API_PREFIX
@@ -73,3 +77,20 @@ def test_request_id_is_not_exposed_in_the_response(client: TestClient) -> None:
     response = client.get("/api/health_check", headers={"X-Request-ID": "abc-123"})
 
     assert "x-request-id" not in response.headers
+
+
+async def _broken(_request: Request) -> Response:
+    raise RuntimeError("route failed")
+
+
+def test_a_failing_route_is_logged_as_a_500() -> None:
+    app = Starlette(routes=[Route("/broken", _broken)])
+    app.add_middleware(RequestContextMiddleware)
+
+    with capture_logs(processors=[structlog.contextvars.merge_contextvars]) as logs:
+        with TestClient(app) as broken_client, pytest.raises(RuntimeError, match="route failed"):
+            broken_client.get("/broken")
+
+    [entry] = _finished(logs)
+    assert entry["status"] == 500
+    assert entry["path"] == "/broken"

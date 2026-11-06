@@ -109,3 +109,17 @@ def test_a_store_outage_is_unavailable_without_its_details(
 
     assert response.status_code == 503
     assert response.json() == {"detail": "file storage is unavailable"}
+
+
+@pytest.mark.parametrize("method", ["GET", "DELETE"])
+def test_a_store_outage_after_upload_is_unavailable(
+    client: TestClient, service: FileService, store: MemoryFileStore, method: str
+) -> None:
+    url = new_upload(service)
+    client.put(url, content=CONTENT)
+    store.healthy = False
+
+    response = client.request(method, url)
+
+    assert response.status_code == 503
+    assert "refused" not in response.text
