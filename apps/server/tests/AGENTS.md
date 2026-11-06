@@ -77,6 +77,11 @@ Coverage is reported, and does not fail the build.
 All process behaviour outside of the application server is mocked, so these tests need nothing else running.  Run them with
 `uv run --directory apps/server pytest tests/unit`.
 
+A test of an RPC handler or REST route uses the real app over fakes, built through `api/app.py` as production does, so it runs the real
+routes, mounts and middleware.  The `client` fixture in `tests/unit/conftest.py` is that app over the default fakes; a test that needs other
+fakes calls the `fake_app` fixture itself.  `fake_services()` in `tests/fake_app.py` replaces any one fake, such as a repository that raises
+`Unavailable`.  Only a test of one middleware or of the lifespan builds a smaller app of its own.
+
 ### Integration tests
 
 Integration tests cover all behaviour within a system, and run with the same single `pytest` command as the unit tests.  Run them alone with
@@ -187,7 +192,10 @@ Every test must pass alone and in any order, and must not depend on what an earl
 
 Control time by passing a fixed `clock` to the code under test, rather than reading the real time.
 
-Async tests are plain `async def` functions run by `pytest-asyncio`, never by calling `asyncio.run`.
+Async tests are plain `async def` functions run by `pytest-asyncio`, never by calling `asyncio.run`.  Every async test and fixture runs on a
+`SelectorEventLoop`, set by `pytest_asyncio_loop_factories` in `tests/conftest.py`, because async psycopg cannot run on Windows' default
+loop.  A test that must stay sync because it uses a `TestClient` runs a coroutine on the client's own loop with `on_app_loop()` from
+`tests/fake_app.py`.
 
 Anything tied to an event loop, such as a database engine, is only used on the loop that created it.  `TestClient` runs the application on its own loop, so always use it
 as `with TestClient(app)`, which keeps one loop for all of its requests and runs the lifespan.  Let the lifespan create what the application needs, rather than sharing it
