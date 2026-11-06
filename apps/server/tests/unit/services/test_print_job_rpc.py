@@ -1,22 +1,50 @@
 from collections.abc import Callable
 from datetime import UTC, datetime
+from uuid import UUID
 
 import pytest
 from core_domain.content_asset import File
+from core_domain.ddd import Unavailable
+from core_domain.ids import PrinterQueueId, PrintJobId
+from core_domain.print_job import PrintJob
+from core_domain.queue import PrinterQueue
 from fastapi.testclient import TestClient
+from proto_utils.gen.server.v1.print_job_service_connect import PrintJobServiceASGIApplication
 
+from api.domains.content_asset.service import FileService
+from api.domains.fleet.service import PrinterService
+from api.domains.print_job.service import PrintJobService
+from api.domains.queue.service import PrinterQueueService
 from api.infrastructure.dev_data import (
     STUB_APPROVED_FILE_ID,
     STUB_APPROVED_JOB_ID,
     STUB_DRAFT_JOB_ID,
     STUB_FINISHED_JOB_ID,
     STUB_IDLE_PRINTER_ID,
+    STUB_PRINTER_QUEUE_ID,
     STUB_PRINTING_JOB_ID,
+    STUB_STUDENT_ID,
     STUB_SUBMITTED_FILE_ID,
     STUB_SUBMITTED_JOB_ID,
     stub_files,
+    stub_printer_queues,
+    stub_printers,
 )
-from tests.print_jobs import METADATA, PRINT_JOB_RPC, call, fake_client_and_poller
+from api.infrastructure.file_memory import InMemoryFileRepository
+from api.infrastructure.file_store_files import FileStoreFiles
+from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
+from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
+from api.infrastructure.printer_server_mock import MockPrinterServer
+from api.services.print_job_service import PrintJobServiceImplementation
+from tests.fakes import MemoryFileStore
+from tests.print_jobs import (
+    CONTENT,
+    METADATA,
+    PRINT_JOB_RPC,
+    call,
+    fake_client_and_poller,
+    upload_slot,
+)
 from tests.rpc import Json, id_json
 
 
@@ -207,3 +235,152 @@ def test_staff_fail_a_printing_job_with_a_reason(client: TestClient) -> None:
 
     assert body["printJob"]["status"] == "PRINT_JOB_STATUS_FAILED"
     assert body["printJob"]["statusReason"] == "Spaghetti at layer 40"
+
+
+_UNKNOWN_JOB = {"value": "00000000-0000-4000-8000-0000000000ff"}
+_UNKNOWN_PRINTER = {"value": "00000000-0000-4000-8000-0000000003ff"}
+_SECOND_QUEUE_ID = PrinterQueueId(UUID("00000000-0000-4000-8000-000000000402"))
+
+
+def _queue(printer_queue_id: PrinterQueueId, is_active: bool) -> PrinterQueue:
+    created = datetime(2026, 10, 1, 9, 0, tzinfo=UTC)
+    return PrinterQueue(printer_queue_id, "Queue", is_active, created, created)
+
+
+def _client_with_queues(*queues: PrinterQueue) -> TestClient:
+    return fake_client_and_poller(stub_files(), lambda: datetime.now(UTC), list(queues))[0]
+
+
+def test_create_print_job_makes_a_draft_for_the_caller(client: TestClient) -> None:
+    created = call(client, "CreatePrintJob", {"userNotes": "Please use PLA"})["printJob"]
+
+    assert created["status"] == "PRINT_JOB_STATUS_DRAFT"
+    assert created["userId"] == id_json(STUB_STUDENT_ID)
+    assert created["userNotes"] == "Please use PLA"
+
+
+def test_submit_puts_an_uploaded_job_in_the_open_queue(client: TestClient) -> None:
+    slot = upload_slot(client, STUB_DRAFT_JOB_ID)
+    assert client.put(slot["uploadUrl"], content=CONTENT).status_code == 204
+
+    body = call(client, "SubmitPrintJob", {"printJobId": id_json(STUB_DRAFT_JOB_ID)})
+
+    assert body["printJob"]["status"] == "PRINT_JOB_STATUS_SUBMITTED"
+    assert body["printJob"]["printerQueueId"] == id_json(STUB_PRINTER_QUEUE_ID)
+    assert body["file"]["id"] == slot["fileId"]
+
+
+def test_submit_refused_while_no_queue_accepts_jobs() -> None:
+    client = _client_with_queues(_queue(STUB_PRINTER_QUEUE_ID, is_active=False))
+    slot = upload_slot(client, STUB_DRAFT_JOB_ID)
+    client.put(slot["uploadUrl"], content=CONTENT)
+    job = {"printJobId": id_json(STUB_DRAFT_JOB_ID)}
+
+    body = call(client, "SubmitPrintJob", job, expect=400)
+
+    assert body == {
+        "code": "failed_precondition",
+        "message": "No printer queue is accepting print jobs",
+    }
+    assert call(client, "GetPrintJob", job)["printJob"]["status"] == "PRINT_JOB_STATUS_DRAFT"
+
+
+@pytest.mark.parametrize(
+    ("rpc", "body"),
+    [
+        ("CreatePrintJobUpload", {"printJobId": _UNKNOWN_JOB, "metadata": METADATA}),
+        ("SubmitPrintJob", {"printJobId": _UNKNOWN_JOB}),
+        ("TransitionPrintJob", {"printJobId": _UNKNOWN_JOB, "approve": {}}),
+    ],
+    ids=["upload", "submit", "transition"],
+)
+def test_an_unknown_job_is_not_found(client: TestClient, rpc: str, body: Json) -> None:
+    assert call(client, rpc, body, expect=404)["code"] == "not_found"
+
+
+def test_approve_a_job_under_review(client: TestClient) -> None:
+    job = {"printJobId": id_json(STUB_SUBMITTED_JOB_ID)}
+    call(client, "TransitionPrintJob", {**job, "startReview": {}})
+
+    body = call(client, "TransitionPrintJob", {**job, "approve": {}})
+
+    assert body["printJob"]["status"] == "PRINT_JOB_STATUS_APPROVED"
+
+
+def test_assign_an_approved_job_to_an_idle_printer(client: TestClient) -> None:
+    printer = id_json(STUB_IDLE_PRINTER_ID)
+    job = {"printJobId": id_json(STUB_APPROVED_JOB_ID), "assign": {"printerId": printer}}
+
+    body = call(client, "TransitionPrintJob", job)
+
+    assert body["printJob"]["status"] == "PRINT_JOB_STATUS_ASSIGNED"
+    assert body["printJob"]["printerId"] == printer
+
+
+def test_complete_refused_for_a_job_still_printing(client: TestClient) -> None:
+    job = {"printJobId": id_json(STUB_PRINTING_JOB_ID), "complete": {}}
+    assert call(client, "TransitionPrintJob", job, expect=400)["code"] == "failed_precondition"
+
+
+def test_complete_a_finished_job(client: TestClient) -> None:
+    job = {"printJobId": id_json(STUB_FINISHED_JOB_ID), "complete": {}}
+
+    body = call(client, "TransitionPrintJob", job)
+
+    assert body["printJob"]["status"] == "PRINT_JOB_STATUS_COMPLETED"
+
+
+def test_move_to_queue_changes_the_jobs_queue() -> None:
+    client = _client_with_queues(
+        _queue(STUB_PRINTER_QUEUE_ID, is_active=True), _queue(_SECOND_QUEUE_ID, is_active=True)
+    )
+    second = id_json(_SECOND_QUEUE_ID)
+    job = {"printJobId": id_json(STUB_APPROVED_JOB_ID), "moveToQueue": {"printerQueueId": second}}
+
+    body = call(client, "TransitionPrintJob", job)
+
+    assert body["printJob"]["printerQueueId"] == second
+
+
+def test_upload_requires_a_host_header(client: TestClient) -> None:
+    response = client.post(
+        f"{PRINT_JOB_RPC}/CreatePrintJobUpload",
+        json={"printJobId": id_json(STUB_DRAFT_JOB_ID), "metadata": METADATA},
+        headers={"Host": ""},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"code": "invalid_argument", "message": "the Host header is required"}
+
+
+def test_assign_to_an_unknown_printer_is_not_found(client: TestClient) -> None:
+    job = {"printJobId": id_json(STUB_APPROVED_JOB_ID), "assign": {"printerId": _UNKNOWN_PRINTER}}
+    assert call(client, "TransitionPrintJob", job, expect=404)["code"] == "not_found"
+
+
+def test_fail_refused_without_a_reason(client: TestClient) -> None:
+    job = {"printJobId": id_json(STUB_PRINTING_JOB_ID), "fail": {}}
+    assert call(client, "TransitionPrintJob", job, expect=400)["code"] == "failed_precondition"
+
+
+class _UnavailablePrintJobs(InMemoryPrintJobRepository):
+    async def get(self, entity_id: PrintJobId) -> PrintJob:
+        raise Unavailable("database") from OSError("db.internal refused the connection")
+
+
+def test_a_database_outage_is_unavailable_without_its_cause() -> None:
+    def clock() -> datetime:
+        return datetime.now(UTC)
+
+    handler = PrintJobServiceImplementation(
+        PrintJobService(_UnavailablePrintJobs(), clock),
+        FileService(InMemoryFileRepository(), FileStoreFiles(MemoryFileStore), clock),
+        PrinterService(MockPrinterServer(stub_printers(), clock)),
+        PrinterQueueService(InMemoryPrinterQueueRepository(stub_printer_queues())),
+        caller=lambda: STUB_STUDENT_ID,
+    )
+    client = TestClient(PrintJobServiceASGIApplication(handler))
+
+    body = call(client, "GetPrintJob", {"printJobId": id_json(STUB_DRAFT_JOB_ID)}, expect=503)
+
+    assert body == {"code": "unavailable", "message": "database is unavailable"}
