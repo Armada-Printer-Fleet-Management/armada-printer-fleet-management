@@ -33,11 +33,15 @@ async def test_a_rejected_token_is_an_invalid_access_token() -> None:
         await use_tokens(verifier, lambda tokens: tokens.verify("token"))
 
 
-@pytest.mark.parametrize(
-    "use",
-    [lambda tokens: tokens.verify("token"), lambda tokens: tokens.health_check()],
-    ids=["verify", "health_check"],
-)
+async def _verify(tokens: OidcAccessTokens) -> object:
+    return await tokens.verify("token")
+
+
+async def _health_check(tokens: OidcAccessTokens) -> object:
+    return await tokens.health_check()
+
+
+@pytest.mark.parametrize("use", [_verify, _health_check], ids=["verify", "health_check"])
 async def test_an_unreachable_provider_is_unavailable(use: Use[object]) -> None:
     verifier = FakeTokenVerifier(VerifiedToken("subject-1", frozenset()), TokenVerifierError())
 

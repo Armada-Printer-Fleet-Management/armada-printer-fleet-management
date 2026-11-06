@@ -2,7 +2,9 @@ import pytest
 
 import export_openapi
 from api.common.dependencies import application_info
-from api.common.openapi import JsonObject, _merge
+
+# _merge is tested directly: the real spec never produces the duplicates it must handle.
+from api.common.openapi import JsonObject, _merge  # pyright: ignore[reportPrivateUsage]
 from api.main import app
 
 

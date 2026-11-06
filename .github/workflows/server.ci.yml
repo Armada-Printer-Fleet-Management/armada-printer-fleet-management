@@ -6,6 +6,8 @@ on:
 
 permissions:
   contents: read
+  # Only to post the coverage comment on the pull request.
+  pull-requests: write
 
 jobs:
   server:
@@ -34,5 +36,47 @@ jobs:
       - name: Layer contracts
         run: uv run lint-imports
         working-directory: apps/server
-      - run: uv run pytest -q
+      - name: Unit tests
+        run: uv run coverage run --data-file=.coverage.unit -m pytest tests/unit -q
         working-directory: apps/server
+      # Runs after a unit failure too, so both suites are reported.
+      - name: Integration tests
+        if: ${{ !cancelled() }}
+        run: uv run coverage run --data-file=.coverage.integration -m pytest tests/integration -q
+        working-directory: apps/server
+      # Coverage is reported, never enforced, so these steps cannot fail the build.
+      - name: Coverage report
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        working-directory: apps/server
+        run: |
+          total() { uv run coverage report --data-file="$1" --format=total 2>/dev/null || echo "n/a"; }
+          uv run coverage combine --keep --data-file=.coverage .coverage.unit .coverage.integration
+          {
+            echo "<!-- server-coverage -->"
+            echo "### Server test coverage"
+            echo ""
+            echo "| Suite | Lines and branches covered |"
+            echo "| --- | --- |"
+            echo "| Unit | $(total .coverage.unit)% |"
+            echo "| Integration | $(total .coverage.integration)% |"
+            echo "| Combined | $(total .coverage)% |"
+            echo ""
+            echo "<details><summary>Combined coverage by file, fully covered files hidden</summary>"
+            echo ""
+            uv run coverage report --format=markdown --skip-covered
+            echo ""
+            echo "</details>"
+          } > coverage.md
+          cat coverage.md >> "$GITHUB_STEP_SUMMARY"
+      # Pull requests from forks get a read-only token, so only this repository's are commented on.
+      - name: Coverage comment
+        if: >-
+          ${{ !cancelled() && github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository }}
+        continue-on-error: true
+        working-directory: apps/server
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr comment "$PR_NUMBER" --edit-last --create-if-none --body-file coverage.md
