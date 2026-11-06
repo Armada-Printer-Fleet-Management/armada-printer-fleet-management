@@ -12,7 +12,8 @@ implementations in `plugins/`, never here.
 
 | Path                   | Owns                                                                      |
 | ---------------------- | ------------------------------------------------------------------------- |
-| `api/main.py`          | ASGI entry point and composition root: builds infrastructure, hands it to domain services, mounts RPC handlers |
+| `api/main.py`          | ASGI entry point and composition root: builds infrastructure, hands it to domain services, and passes them to `build_app` |
+| `api/app.py`           | `build_app`: the app from the services it is handed, with every route, RPC mount and middleware. Production and the unit tests' `fake_app` both build the app through it, so it imports no plugin or adapter |
 | `api/domains/`         | Domains: a repository port and a service per domain. Every port extends a `core_domain.ddd` `Abstract*Repository` base, and its adapter inherits it; a port over state another service owns, such as printers, requests changes rather than saving |
 | `api/infrastructure/`  | The server's own persistence behind those ports, and the adapters over plugins. A domain's SQL repository (`<domain>_sql.py`, on `SqlRepository`) is what the server runs; its in-memory one (`<domain>_memory.py`) serves tests, or the server until that domain has a SQL repository |
 | `api/infrastructure/postgres_database.py` | The connection pool to Postgres, opened by the lifespan and probed by the health check |
@@ -28,7 +29,7 @@ implementations in `plugins/`, never here.
 | `api/middleware/authentication.py` | Verifies the bearer token (bad token: 401, no token: no caller), then checks `ACCESS`. A refusal is logged, and rejected with 401 or 403 only when `AUTH_ENFORCE` is set |
 | `api/infrastructure/oidc_access_tokens.py` | Wraps the `TokenVerifier` plugin: its result becomes a `Caller`, a rejected token `InvalidAccessToken`, an outage `Unavailable` |
 | `api/services/`        | Connect handlers: translate between the wire and domain services, composing several where an RPC spans domains. No rules. `PrinterPoller` is the same kind of composer, run by the lifespan instead of a request |
-| `api/routers/`         | REST routes that do not fit Connect, such as the health check and file bytes. Built from services handed in by `api/main.py`; domain errors go through `domain_errors_as_http()`. Prefer Connect; REST only where Connect cannot work |
+| `api/routers/`         | REST routes that do not fit Connect, such as the health check and file bytes. Built from services handed in by `api/app.py`; domain errors go through `domain_errors_as_http()`. Prefer Connect; REST only where Connect cannot work |
 | `api/common/`          | Shared code internal to the server, such as constants, `health.py` and `openapi.py` |
 | `api/middleware/`      | ASGI middleware wrapping every request, REST and Connect alike |
 | `api/lifespan.py`      | Startup and shutdown: configures logging and opens the infrastructure |
@@ -69,7 +70,7 @@ plugin or its port, and import-linter enforces it.
 
 - **Every route, REST and Connect, is served under `/api`.** Connect clients use
   `http://<host>:8000/api` as their base URL. Mount a new RPC service with `mount_rpc` in
-  `api/main.py`; a plain `app.mount` under the prefix returns 404. Connect services mount at their
+  `api/app.py`; a plain `app.mount` under the prefix returns 404. Connect services mount at their
   generated `path`, so all share one base URL.
 - **File bytes are REST**, because Connect cannot stream them from a browser. A
   `Create<Thing>Upload` RPC creates the file record and returns its `upload_url`, an absolute URL
@@ -88,8 +89,8 @@ plugin or its port, and import-linter enforces it.
   `identity_provider` is one: requests without a token still work while it is down.
 - **Never put shared objects on `app.state`.** It is untyped, so pyright cannot check reads, and
   tests cannot replace it through `app.dependency_overrides`. Give a REST route what it needs
-  through `Depends` or its router factory, and a Connect handler or domain service through its
-  constructor in `api/main.py`.
+  through `Depends` or its router factory, a Connect handler through its constructor in
+  `api/app.py`, and a domain service through its constructor in `api/main.py`.
 
 ## Access tokens
 

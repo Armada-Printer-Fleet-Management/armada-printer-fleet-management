@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 
-_RPC_PATH = "/api/server.v1.HealthCheckService/HealthCheck"
+from api.common.consts import API_PREFIX
+
+_RPC_PATH = f"{API_PREFIX}/server.v1.HealthCheckService/HealthCheck"
 _ALL_REAL_DEPENDENCIES_PASS = {
     "database": "pass",
     "file_storage": "pass",
@@ -10,7 +12,7 @@ _ALL_REAL_DEPENDENCIES_PASS = {
 
 def test_health_passes_against_every_real_dependency(app_client: TestClient) -> None:
     response = app_client.get(
-        "/api/health_check", params={"full": True, "check_dependencies": True}
+        f"{API_PREFIX}/health_check", params={"full": True, "check_dependencies": True}
     )
 
     assert response.status_code == 200

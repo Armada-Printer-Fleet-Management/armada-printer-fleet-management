@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from api.common.consts import API_PREFIX
 from api.infrastructure.dev_data import STUB_SUBMITTED_FILE_ID
 from tests.rpc import Json, id_json
 
@@ -20,7 +21,7 @@ from tests.rpc import Json, id_json
 def test_rpc_is_mounted_on_the_app(
     app_client: TestClient, rpc: str, body: Json, field: str
 ) -> None:
-    response = app_client.post(f"/api/{rpc}", json=body)
+    response = app_client.post(f"{API_PREFIX}/{rpc}", json=body)
 
     assert response.status_code == 200, response.text
     assert response.json()[field]

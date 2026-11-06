@@ -1,5 +1,5 @@
 import asyncio
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 import pytest
 from core_domain.ddd import Page
@@ -21,17 +21,18 @@ from api.infrastructure.dev_data import (
 from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 from api.infrastructure.printer_server_mock import STEP, MockPrinterServer
 from api.services.printer_poller import PrinterPoller
+from tests.samples import NOW
 
 
 class Clock:
     def __init__(self) -> None:
-        self.now = datetime(2026, 10, 7, 12, 0, tzinfo=UTC)
+        self.now = NOW
 
     def __call__(self) -> datetime:
         return self.now
 
 
-def dispatch_approved_job() -> tuple[Clock, PrinterService, PrintJobService, PrinterPoller]:
+async def dispatch_approved_job() -> tuple[Clock, PrinterService, PrintJobService, PrinterPoller]:
     clock = Clock()
     printers = PrinterService(MockPrinterServer(stub_printers(), clock))
     print_jobs = PrintJobService(InMemoryPrintJobRepository(stub_print_jobs()), clock)
@@ -41,37 +42,33 @@ def dispatch_approved_job() -> tuple[Clock, PrinterService, PrintJobService, Pri
         printer = await printers.dispatch(STUB_IDLE_PRINTER_ID, STUB_APPROVED_JOB_ID)
         return printer.print_job_id == STUB_APPROVED_JOB_ID
 
-    asyncio.run(print_jobs.assign(STUB_APPROVED_JOB_ID, STUB_IDLE_PRINTER_ID, dispatch))
+    await print_jobs.assign(STUB_APPROVED_JOB_ID, STUB_IDLE_PRINTER_ID, dispatch)
     return clock, printers, print_jobs, poller
 
 
-def test_poll_moves_a_job_to_printing_once_its_printer_reports_it() -> None:
-    _, _, print_jobs, poller = dispatch_approved_job()
+async def test_poll_moves_a_job_to_printing_once_its_printer_reports_it() -> None:
+    _, _, print_jobs, poller = await dispatch_approved_job()
 
-    asyncio.run(poller.poll())
+    await poller.poll()
 
-    assert asyncio.run(print_jobs.print_job(STUB_APPROVED_JOB_ID)).status is (
-        PrintJobStatus.PRINTING
-    )
+    assert (await print_jobs.print_job(STUB_APPROVED_JOB_ID)).status is (PrintJobStatus.PRINTING)
 
 
-def test_a_printer_that_finishes_moves_its_job_to_finished_never_completed() -> None:
-    clock, printers, print_jobs, poller = dispatch_approved_job()
-    asyncio.run(poller.poll())
+async def test_a_printer_that_finishes_moves_its_job_to_finished_never_completed() -> None:
+    clock, printers, print_jobs, poller = await dispatch_approved_job()
+    await poller.poll()
 
     clock.now += STEP * 4
-    asyncio.run(poller.poll())
+    await poller.poll()
 
-    printer = asyncio.run(printers.get(STUB_IDLE_PRINTER_ID))
+    printer = await printers.get(STUB_IDLE_PRINTER_ID)
     assert (printer.status, printer.progress_percent) == (PrinterStatus.FINISHED, 100)
     # Only staff complete a job, after checking the print.
-    assert asyncio.run(print_jobs.print_job(STUB_APPROVED_JOB_ID)).status is (
-        PrintJobStatus.FINISHED
-    )
+    assert (await print_jobs.print_job(STUB_APPROVED_JOB_ID)).status is (PrintJobStatus.FINISHED)
 
 
-def test_run_keeps_polling_after_an_unexpected_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    _, printers, print_jobs, _ = dispatch_approved_job()
+async def test_run_keeps_polling_after_an_unexpected_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    _, printers, print_jobs, _ = await dispatch_approved_job()
     poller = PrinterPoller(printers, print_jobs, timedelta(0))
     polls: list[None] = []
 
@@ -83,11 +80,11 @@ def test_run_keeps_polling_after_an_unexpected_error(monkeypatch: pytest.MonkeyP
 
     monkeypatch.setattr(poller, "poll", poll)
     with pytest.raises(asyncio.CancelledError):
-        asyncio.run(poller.run())
+        await poller.run()
     assert len(polls) == 2
 
 
-def test_a_printer_fault_leaves_the_job_for_staff_and_ready_clears_it() -> None:
+async def test_a_printer_fault_leaves_the_job_for_staff_and_ready_clears_it() -> None:
     clock = Clock()
     printers = PrinterService(
         MockPrinterServer(stub_printers(), clock, faulty_printer_ids=[STUB_IDLE_PRINTER_ID])
@@ -99,17 +96,15 @@ def test_a_printer_fault_leaves_the_job_for_staff_and_ready_clears_it() -> None:
         printer = await printers.dispatch(STUB_IDLE_PRINTER_ID, STUB_APPROVED_JOB_ID)
         return printer.print_job_id == STUB_APPROVED_JOB_ID
 
-    asyncio.run(print_jobs.assign(STUB_APPROVED_JOB_ID, STUB_IDLE_PRINTER_ID, dispatch))
-    asyncio.run(poller.poll())
+    await print_jobs.assign(STUB_APPROVED_JOB_ID, STUB_IDLE_PRINTER_ID, dispatch)
+    await poller.poll()
     clock.now += STEP * 4
-    asyncio.run(poller.poll())
+    await poller.poll()
 
-    faulted = asyncio.run(printers.get(STUB_IDLE_PRINTER_ID))
+    faulted = await printers.get(STUB_IDLE_PRINTER_ID)
     assert (faulted.status, faulted.progress_percent) == (PrinterStatus.ERROR, 50)
-    assert asyncio.run(print_jobs.print_job(STUB_APPROVED_JOB_ID)).status is (
-        PrintJobStatus.PRINTING
-    )
-    assert asyncio.run(printers.release(STUB_IDLE_PRINTER_ID)).status is PrinterStatus.IDLE
+    assert (await print_jobs.print_job(STUB_APPROVED_JOB_ID)).status is (PrintJobStatus.PRINTING)
+    assert (await printers.release(STUB_IDLE_PRINTER_ID)).status is PrinterStatus.IDLE
 
 
 class TwoPagePrinterServer(MockPrinterServer):
@@ -120,7 +115,7 @@ class TwoPagePrinterServer(MockPrinterServer):
         return Page(by_name[3:]) if page_token else Page(by_name[:3], "next")
 
 
-def test_poll_reads_every_page_of_printers() -> None:
+async def test_poll_reads_every_page_of_printers() -> None:
     clock = Clock()
     printers = PrinterService(TwoPagePrinterServer(stub_printers(), clock))
     repository = InMemoryPrintJobRepository(stub_print_jobs())
@@ -133,7 +128,7 @@ def test_poll_reads_every_page_of_printers() -> None:
         "notes",
         printer_queue_id=STUB_PRINTER_QUEUE_ID,
     )
-    asyncio.run(repository.save(second_job))
+    await repository.save(second_job)
     print_jobs = PrintJobService(repository, clock)
     # Stub printer 1 is on the first page and stub printer 6 on the second.
     for job_id, printer_id in (
@@ -144,9 +139,9 @@ def test_poll_reads_every_page_of_printers() -> None:
         async def dispatch(job_id: PrintJobId = job_id, printer_id: PrinterId = printer_id) -> bool:
             return (await printers.dispatch(printer_id, job_id)).print_job_id == job_id
 
-        asyncio.run(print_jobs.assign(job_id, printer_id, dispatch))
+        await print_jobs.assign(job_id, printer_id, dispatch)
 
-    asyncio.run(PrinterPoller(printers, print_jobs, timedelta(seconds=1)).poll())
+    await PrinterPoller(printers, print_jobs, timedelta(seconds=1)).poll()
 
     for job_id in (STUB_APPROVED_JOB_ID, second_job.id):
-        assert asyncio.run(print_jobs.print_job(job_id)).status is PrintJobStatus.PRINTING
+        assert (await print_jobs.print_job(job_id)).status is PrintJobStatus.PRINTING

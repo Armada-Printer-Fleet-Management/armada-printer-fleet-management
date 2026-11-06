@@ -1,26 +1,18 @@
 """The reset before each test. Each case runs twice, checking for a clean start and then leaving a
 mess, so whichever run comes second fails if the reset missed anything."""
 
-from collections.abc import Iterator
 from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
 from botocore.client import BaseClient
 
-from api.common.settings import database_url
 from api.infrastructure.dev_data import STUB_STUDENT_ID, stub_users
 from api.infrastructure.enum_ids import FLEET_ACCESS_POLICY_STAFF_ONLY_ID
 from dev_seed import SEED
+from tests.integration.utils.file_store import stored_object_count
 
 twice = pytest.mark.parametrize("run", ["first", "second"])
-
-
-@pytest.fixture
-def engine() -> Iterator[sa.Engine]:
-    test_engine = sa.create_engine(database_url())
-    yield test_engine
-    test_engine.dispose()
 
 
 def _student_name() -> str:
@@ -28,8 +20,8 @@ def _student_name() -> str:
 
 
 @twice
-def test_database_changes_do_not_survive(engine: sa.Engine, run: str) -> None:
-    with engine.begin() as connection:
+def test_database_changes_do_not_survive(database_engine: sa.Engine, run: str) -> None:
+    with database_engine.begin() as connection:
         for table, rows in SEED:
             count = connection.execute(sa.select(sa.func.count()).select_from(table)).scalar()
             assert count == len(rows), table.name
@@ -58,8 +50,8 @@ def test_stored_objects_do_not_survive(
     file_store_client: BaseClient, stack_environment: dict[str, str], run: str
 ) -> None:
     bucket = stack_environment["FILE_STORE_BUCKET"]
-    assert file_store_client.list_objects_v2(Bucket=bucket)["KeyCount"] == 0
+    assert stored_object_count(file_store_client, bucket) == 0
 
     file_store_client.put_object(Bucket=bucket, Key="left-by-a-test.gcode", Body=b"G28")
 
-    assert file_store_client.list_objects_v2(Bucket=bucket)["KeyCount"] == 1
+    assert stored_object_count(file_store_client, bucket) == 1

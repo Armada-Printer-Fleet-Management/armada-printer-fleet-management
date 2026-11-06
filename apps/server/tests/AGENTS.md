@@ -77,6 +77,11 @@ Coverage is reported, and does not fail the build.
 All process behaviour outside of the application server is mocked, so these tests need nothing else running.  Run them with
 `uv run --directory apps/server pytest tests/unit`.
 
+A test of an RPC handler or REST route uses the real app over fakes, built through `api/app.py` as production does, so it runs the real
+routes, mounts and middleware.  The `client` fixture in `tests/unit/conftest.py` is that app over the default fakes; a test that needs other
+fakes calls the `fake_app` fixture itself.  `fake_services()` in `tests/fake_app.py` replaces any one fake, such as a repository that raises
+`Unavailable`.  Only a test of one middleware or of the lifespan builds a smaller app of its own.
+
 ### Integration tests
 
 Integration tests cover all behaviour within a system, and run with the same single `pytest` command as the unit tests.  Run them alone with
@@ -94,9 +99,9 @@ test code and never added to `dev_data.py`.
 Before each test, the data is reset so that no test can contaminate another: database tables are truncated and reseeded, keeping the migrations in place, and the
 file store's objects are deleted.  Do not rebuild the database or rerun migrations between tests.
 
-The reset covers only the stack.  `app_client` serves the module-level app from `api/main.py`, so the state its in-memory adapters hold, the printers in
-`MockPrinterServer` and the queues in `InMemoryPrinterQueueRepository`, is shared by every integration test and never reset.  A test that changes printer or queue
-state leaves it changed for the tests after it.
+State held in process memory is reset by building the app again.  `app_client` builds a new app for each test from `api/main.py`'s `production_parts()`, so
+the in-memory adapters, such as the printers in `MockPrinterServer` and the queues in `InMemoryPrinterQueueRepository`, start from the dev data every time.  The module-level
+`api.main.app` lives for the whole run, so a test reads only its routes and schema from it and sends requests through `app_client`.
 
 Contract tests are the one exception to starting from seeded data.  A contract describes what an adapter does from a known state, and every adapter under it must start the same way,
 so a SQL adapter's factory uses the `empty_database` fixture, which removes the seed after the reset.
@@ -203,7 +208,10 @@ Every test must pass alone and in any order, and must not depend on what an earl
 
 Control time by passing a fixed `clock` to the code under test, rather than reading the real time.
 
-Async tests are plain `async def` functions run by `pytest-asyncio`, never by calling `asyncio.run`.
+Async tests are plain `async def` functions run by `pytest-asyncio`, never by calling `asyncio.run`.  Every async test and fixture runs on a
+`SelectorEventLoop`, set by `pytest_asyncio_loop_factories` in `tests/conftest.py`, because async psycopg cannot run on Windows' default
+loop.  A test that must stay sync because it uses a `TestClient` runs a coroutine on the client's own loop with `on_app_loop()` from
+`tests/fake_app.py`.
 
 Anything tied to an event loop, such as a database engine, is only used on the loop that created it.  `TestClient` runs the application on its own loop, so always use it
 as `with TestClient(app)`, which keeps one loop for all of its requests and runs the lifespan.  Let the lifespan create what the application needs, rather than sharing it
