@@ -3,14 +3,16 @@ from datetime import UTC, datetime
 
 import pytest
 from core_domain.ddd import EntityNotFound, RuleViolation
-from core_domain.ids import FileId, PrinterId, PrintJobId, UserId
+from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserId
 from core_domain.print_job import PrintJobStatus
 
 from api.domains.print_job.service import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, PrintJobService
 from api.infrastructure.dev_data import (
     STUB_APPROVED_JOB_ID,
     STUB_DRAFT_JOB_ID,
+    STUB_FINISHED_JOB_ID,
     STUB_PRINTER_QUEUE_ID,
+    STUB_PRINTING_JOB_ID,
     STUB_SUBMITTED_JOB_ID,
     stub_print_jobs,
 )
@@ -165,6 +167,42 @@ def test_assign_saves_nothing_when_the_printer_refuses(service: PrintJobService)
     with pytest.raises(RuleViolation):
         asyncio.run(service.assign(STUB_APPROVED_JOB_ID, PrinterId.new(), refuse))
     assert status(service, STUB_APPROVED_JOB_ID) is PrintJobStatus.APPROVED
+
+
+def test_complete_saves_the_change(service: PrintJobService) -> None:
+    asyncio.run(service.complete(STUB_FINISHED_JOB_ID))
+
+    stored = asyncio.run(service.print_job(STUB_FINISHED_JOB_ID))
+    assert (stored.status, stored.updated_at) == (PrintJobStatus.COMPLETED, NOW)
+
+
+def test_complete_refused_by_the_rule_saves_nothing(service: PrintJobService) -> None:
+    with pytest.raises(RuleViolation):
+        asyncio.run(service.complete(STUB_PRINTING_JOB_ID))
+
+    assert status(service, STUB_PRINTING_JOB_ID) is PrintJobStatus.PRINTING
+
+
+def test_fail_saves_the_reason(service: PrintJobService) -> None:
+    asyncio.run(service.fail(STUB_PRINTING_JOB_ID, "Spaghetti at layer 40"))
+
+    stored = asyncio.run(service.print_job(STUB_PRINTING_JOB_ID))
+    assert (stored.status, stored.status_reason) == (PrintJobStatus.FAILED, "Spaghetti at layer 40")
+
+
+def test_move_to_queue_saves_the_new_queue(service: PrintJobService) -> None:
+    queue_id = PrinterQueueId.new()
+
+    asyncio.run(service.move_to_queue(STUB_APPROVED_JOB_ID, queue_id))
+
+    assert asyncio.run(service.print_job(STUB_APPROVED_JOB_ID)).printer_queue_id == queue_id
+
+
+def test_move_to_queue_refused_by_the_rule_saves_nothing(service: PrintJobService) -> None:
+    with pytest.raises(RuleViolation):
+        asyncio.run(service.move_to_queue(STUB_DRAFT_JOB_ID, PrinterQueueId.new()))
+
+    assert asyncio.run(service.print_job(STUB_DRAFT_JOB_ID)).printer_queue_id is None
 
 
 @pytest.mark.parametrize(

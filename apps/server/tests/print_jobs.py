@@ -6,6 +6,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 
 from core_domain.content_asset import File
+from core_domain.queue import PrinterQueue
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from proto_utils.gen.server.v1.print_job_service_connect import PrintJobServiceASGIApplication
@@ -43,18 +44,22 @@ METADATA = {
 
 
 def fake_client_and_poller(
-    files: list[File], clock: Callable[[], datetime]
+    files: list[File],
+    clock: Callable[[], datetime],
+    printer_queues: list[PrinterQueue] | None = None,
 ) -> tuple[TestClient, PrinterPoller]:
-    """The RPCs over in-memory adapters and a fake file store. The file routes are served beside
-    them, so an upload_url can be PUT to."""
+    """The RPCs over in-memory adapters and a fake file store, with the seeded printer queues
+    unless others are given. The file routes are served beside them, so an upload_url can be PUT
+    to."""
     storage = FileStoreFiles(MemoryFileStore)
     asyncio.run(storage.__aenter__())
     print_jobs = PrintJobService(InMemoryPrintJobRepository(stub_print_jobs()), clock)
     file_service = FileService(InMemoryFileRepository(files), storage, clock)
     printers = PrinterService(MockPrinterServer(stub_printers(), clock))
-    printer_queues = PrinterQueueService(InMemoryPrinterQueueRepository(stub_printer_queues()))
+    queues = stub_printer_queues() if printer_queues is None else printer_queues
+    queue_service = PrinterQueueService(InMemoryPrinterQueueRepository(queues))
     handler = PrintJobServiceImplementation(
-        print_jobs, file_service, printers, printer_queues, caller=lambda: STUB_STUDENT_ID
+        print_jobs, file_service, printers, queue_service, caller=lambda: STUB_STUDENT_ID
     )
     rest = FastAPI()
     rest.include_router(file_router(file_service), prefix=API_PREFIX)
