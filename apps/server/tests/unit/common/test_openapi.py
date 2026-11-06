@@ -1,6 +1,7 @@
 import pytest
 
 import export_openapi
+from api.common.consts import API_PREFIX
 from api.common.dependencies import application_info
 from api.common.openapi import JsonObject, _merge
 from api.main import app
@@ -9,8 +10,8 @@ from api.main import app
 def test_spec_covers_rest_and_connect_routes() -> None:
     paths = app.openapi()["paths"]
 
-    assert "/api/health_check" in paths
-    assert "/api/server.v1.HealthCheckService/HealthCheck" in paths
+    assert f"{API_PREFIX}/health_check" in paths
+    assert f"{API_PREFIX}/server.v1.HealthCheckService/HealthCheck" in paths
 
 
 def test_spec_leaves_out_other_servers_services() -> None:

@@ -14,7 +14,6 @@ from api.domains.content_asset.repository import FileRepository
 from api.infrastructure.file_memory import InMemoryFileRepository
 from api.infrastructure.file_sql import SqlFileRepository
 from api.infrastructure.postgres_database import PostgresDatabase
-from tests.postgres import run
 
 type Factory = Callable[[pytest.FixtureRequest], FileRepository]
 
@@ -45,58 +44,60 @@ def file() -> File:
     return File.create(UserId.new(), "part.gcode", FileType.GCODE, 1024, "c" * 64, NOW)
 
 
-def test_get_reports_an_unknown_id(repository: FileRepository) -> None:
+async def test_get_reports_an_unknown_id(repository: FileRepository) -> None:
     with pytest.raises(EntityNotFound):
-        run(repository.get(FileId.new()))
+        await repository.get(FileId.new())
 
 
-def test_save_then_get_round_trips_every_field(repository: FileRepository) -> None:
+async def test_save_then_get_round_trips_every_field(repository: FileRepository) -> None:
     stored = file()
-    run(repository.save(stored))
-    assert vars(run(repository.get(stored.id))) == vars(stored)
+    await repository.save(stored)
+    assert vars(await repository.get(stored.id)) == vars(stored)
 
 
-def test_a_change_is_stored_only_once_saved(repository: FileRepository) -> None:
+async def test_a_change_is_stored_only_once_saved(repository: FileRepository) -> None:
     stored = file()
-    run(repository.save(stored))
+    await repository.save(stored)
 
-    run(repository.get(stored.id)).filename = "changed.gcode"
+    (await repository.get(stored.id)).filename = "changed.gcode"
 
-    assert run(repository.get(stored.id)).filename == "part.gcode"
+    assert (await repository.get(stored.id)).filename == "part.gcode"
 
 
-def test_get_many_returns_the_known_files_and_skips_the_rest(repository: FileRepository) -> None:
+async def test_get_many_returns_the_known_files_and_skips_the_rest(
+    repository: FileRepository,
+) -> None:
     first, second = file(), file()
     for stored in (first, second):
-        run(repository.save(stored))
+        await repository.save(stored)
 
-    found = run(repository.get_many([first.id, FileId.new(), second.id, first.id]))
+    found = await repository.get_many([first.id, FileId.new(), second.id, first.id])
 
     assert {stored.id for stored in found} == {first.id, second.id}
     assert len(found) == 2
 
 
-def test_delete_removes_the_file(repository: FileRepository) -> None:
+async def test_delete_removes_the_file(repository: FileRepository) -> None:
     stored = file()
-    run(repository.save(stored))
+    await repository.save(stored)
 
-    run(repository.delete(stored.id))
+    await repository.delete(stored.id)
 
     with pytest.raises(EntityNotFound):
-        run(repository.get(stored.id))
+        await repository.get(stored.id)
 
 
-def test_delete_reports_an_unknown_id(repository: FileRepository) -> None:
+async def test_delete_reports_an_unknown_id(repository: FileRepository) -> None:
     with pytest.raises(EntityNotFound):
-        run(repository.delete(FileId.new()))
+        await repository.delete(FileId.new())
 
 
-def test_is_storage_key_used_matches_a_stored_files_key(repository: FileRepository) -> None:
+async def test_is_storage_key_used_matches_a_stored_files_key(repository: FileRepository) -> None:
     stored = file()
-    run(repository.save(stored))
+    await repository.save(stored)
     other_type = File.create(UserId.new(), "part.bgcode", FileType.CGCODE, 1024, stored.sha256, NOW)
     other_content = File.create(UserId.new(), "part.gcode", FileType.GCODE, 1024, "f" * 64, NOW)
 
-    assert run(repository.is_storage_key_used(stored.storage_key()))
-    assert not run(repository.is_storage_key_used(other_type.storage_key()))
-    assert not run(repository.is_storage_key_used(other_content.storage_key()))
+    assert await repository.is_storage_key_used(stored.storage_key())
+    assert not await repository.is_storage_key_used(other_type.storage_key())
+    assert not await repository.is_storage_key_used(other_content.storage_key())

@@ -1,7 +1,3 @@
-import asyncio
-from datetime import UTC, datetime, timedelta
-from uuid import uuid4
-
 import pytest
 from core_domain.ddd import Page, RuleViolation
 from core_domain.ids import PrinterQueueId
@@ -10,13 +6,7 @@ from core_domain.queue import PrinterQueue
 from api.domains.queue.repository import PrinterQueueRepository
 from api.domains.queue.service import PrinterQueueService
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
-
-START = datetime(2026, 10, 1, 9, 0, tzinfo=UTC)
-
-
-def queue(is_active: bool, minutes: int = 0) -> PrinterQueue:
-    created = START + timedelta(minutes=minutes)
-    return PrinterQueue(PrinterQueueId(uuid4()), "Queue", is_active, created, created)
+from tests.samples import printer_queue
 
 
 class PagedQueues(PrinterQueueRepository):
@@ -38,28 +28,33 @@ class PagedQueues(PrinterQueueRepository):
         return Page(self._pages[index], "" if last else str(index + 1))
 
 
-def open_queue(repository: PrinterQueueRepository) -> PrinterQueueId:
-    return asyncio.run(PrinterQueueService(repository).open_queue())
+async def open_queue(repository: PrinterQueueRepository) -> PrinterQueueId:
+    return await PrinterQueueService(repository).open_queue()
 
 
-def test_the_first_queue_accepting_jobs_is_chosen() -> None:
-    inactive, active = queue(is_active=False), queue(is_active=True)
+async def test_the_first_queue_accepting_jobs_is_chosen() -> None:
+    inactive, active = printer_queue(is_active=False), printer_queue(is_active=True)
 
-    assert open_queue(PagedQueues([inactive, active])) == active.id
-
-
-def test_a_queue_on_a_later_page_is_found() -> None:
-    active = queue(is_active=True)
-
-    assert open_queue(PagedQueues([queue(is_active=False)], [active])) == active.id
+    assert await open_queue(PagedQueues([inactive, active])) == active.id
 
 
-def test_no_queue_accepting_jobs_is_refused() -> None:
+async def test_a_queue_on_a_later_page_is_found() -> None:
+    active = printer_queue(is_active=True)
+
+    assert await open_queue(PagedQueues([printer_queue(is_active=False)], [active])) == active.id
+
+
+async def test_no_queue_accepting_jobs_is_refused() -> None:
     with pytest.raises(RuleViolation):
-        open_queue(PagedQueues([queue(is_active=False)], [queue(is_active=False)]))
+        await open_queue(
+            PagedQueues([printer_queue(is_active=False)], [printer_queue(is_active=False)])
+        )
 
 
-def test_the_oldest_accepting_queue_wins() -> None:
-    older, newer = queue(is_active=True, minutes=0), queue(is_active=True, minutes=5)
+async def test_the_oldest_accepting_queue_wins() -> None:
+    older, newer = (
+        printer_queue(is_active=True, minutes=0),
+        printer_queue(is_active=True, minutes=5),
+    )
 
-    assert open_queue(InMemoryPrinterQueueRepository([newer, older])) == older.id
+    assert await open_queue(InMemoryPrinterQueueRepository([newer, older])) == older.id

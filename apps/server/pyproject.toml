@@ -42,6 +42,7 @@ dev = [
   "httpx2",  # https://github.com/pydantic/httpx2, BSD-3-Clause -- HTTP client Starlette's TestClient requires
   "boto3",   # https://github.com/boto/boto3, Apache-2.0 -- empties the test bucket between integration tests; the version comes from aioboto3
   "import-linter>=2.15,<3", # https://github.com/seddonym/import-linter, BSD-2-Clause -- layer contracts below
+  "pytest-asyncio>=1.4,<2", # https://github.com/pytest-dev/pytest-asyncio, Apache-2.0 -- runs async def tests and fixtures on one event loop each
 ]
 
 [tool.ruff]
@@ -60,6 +61,9 @@ exclude = ["api/gen"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests/unit", "tests/integration"]
+# Async tests and fixtures need no marker, and each test gets its own loop.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.importlinter]
 # The plugin packages are listed so the contracts below can check their imports too.
@@ -76,6 +80,7 @@ forbidden_modules = [
   "api.infrastructure",
   "api.services",
   "api.routers",
+  "api.app",
   "api.main",
   "api.plugins",
   "proto_utils",
@@ -98,11 +103,13 @@ forbidden_modules = [
   "httpx2",
 ]
 
-# Only api/infrastructure and the composition root (api.main, api.plugins) touch a plugin
+# Only api/infrastructure and the composition root (api.main, api.plugins) touch a plugin. The
+# app builder is handed its services, so it needs none.
 [[tool.importlinter.contracts]]
 name = "Only infrastructure and the composition root touch plugins"
 type = "forbidden"
 source_modules = [
+  "api.app",
   "api.common",
   "api.domains",
   "api.lifespan",

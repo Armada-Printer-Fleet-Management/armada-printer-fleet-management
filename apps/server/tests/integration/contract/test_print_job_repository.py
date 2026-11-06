@@ -16,7 +16,6 @@ from api.domains.print_job.repository import PrintJobRepository
 from api.infrastructure.postgres_database import PostgresDatabase
 from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 from api.infrastructure.print_job_sql import SqlPrintJobRepository
-from tests.postgres import run
 
 type Factory = Callable[[pytest.FixtureRequest], PrintJobRepository]
 
@@ -48,44 +47,44 @@ def job(minutes: int = 0) -> PrintJob:
     return PrintJob(PrintJobId.new(), UserId.new(), PrintJobStatus.DRAFT, time, time, "notes")
 
 
-def saved(repository: PrintJobRepository, count: int) -> list[PrintJob]:
+async def saved(repository: PrintJobRepository, count: int) -> list[PrintJob]:
     jobs = [job(minutes) for minutes in range(count)]
     for print_job in jobs:
-        run(repository.save(print_job))
+        await repository.save(print_job)
     return jobs
 
 
-def test_get_reports_an_unknown_id(repository: PrintJobRepository) -> None:
+async def test_get_reports_an_unknown_id(repository: PrintJobRepository) -> None:
     with pytest.raises(EntityNotFound):
-        run(repository.get(PrintJobId.new()))
+        await repository.get(PrintJobId.new())
 
 
-def test_save_then_get_round_trips_every_field(repository: PrintJobRepository) -> None:
+async def test_save_then_get_round_trips_every_field(repository: PrintJobRepository) -> None:
     print_job = job()
-    run(repository.save(print_job))
-    assert vars(run(repository.get(print_job.id))) == vars(print_job)
+    await repository.save(print_job)
+    assert vars(await repository.get(print_job.id)) == vars(print_job)
 
 
-def test_a_change_is_stored_only_once_saved(repository: PrintJobRepository) -> None:
+async def test_a_change_is_stored_only_once_saved(repository: PrintJobRepository) -> None:
     print_job = job()
-    run(repository.save(print_job))
+    await repository.save(print_job)
 
-    loaded = run(repository.get(print_job.id))
+    loaded = await repository.get(print_job.id)
     loaded.user_notes = "changed"
-    assert run(repository.get(print_job.id)).user_notes == "notes"
+    assert (await repository.get(print_job.id)).user_notes == "notes"
 
-    run(repository.save(loaded))
-    assert run(repository.get(print_job.id)).user_notes == "changed"
+    await repository.save(loaded)
+    assert (await repository.get(print_job.id)).user_notes == "changed"
 
 
-def test_page_returns_newest_first_and_ends_with_an_empty_token(
+async def test_page_returns_newest_first_and_ends_with_an_empty_token(
     repository: PrintJobRepository,
 ) -> None:
-    jobs = saved(repository, 5)
+    jobs = await saved(repository, 5)
 
-    first = run(repository.page(2, ""))
-    second = run(repository.page(2, first.next_page_token))
-    last = run(repository.page(2, second.next_page_token))
+    first = await repository.page(2, "")
+    second = await repository.page(2, first.next_page_token)
+    last = await repository.page(2, second.next_page_token)
 
     paged = [print_job.id for page in (first, second, last) for print_job in page.items]
     assert paged == [print_job.id for print_job in reversed(jobs)]
@@ -93,15 +92,15 @@ def test_page_returns_newest_first_and_ends_with_an_empty_token(
     assert last.next_page_token == ""
 
 
-def test_a_page_that_holds_the_rest_has_no_next_token(repository: PrintJobRepository) -> None:
-    saved(repository, 2)
-    page = run(repository.page(2, ""))
+async def test_a_page_that_holds_the_rest_has_no_next_token(repository: PrintJobRepository) -> None:
+    await saved(repository, 2)
+    page = await repository.page(2, "")
     assert len(page.items) == 2
     assert page.next_page_token == ""
 
 
-def test_page_of_an_empty_repository(repository: PrintJobRepository) -> None:
-    page = run(repository.page(10, ""))
+async def test_page_of_an_empty_repository(repository: PrintJobRepository) -> None:
+    page = await repository.page(10, "")
     assert (page.items, page.next_page_token) == ([], "")
 
 
@@ -115,6 +114,8 @@ def test_page_of_an_empty_repository(repository: PrintJobRepository) -> None:
         base64.urlsafe_b64encode(f"2026-10-01T09:00:00|{uuid4()}".encode()).decode(),
     ],
 )
-def test_page_rejects_a_token_it_did_not_issue(repository: PrintJobRepository, token: str) -> None:
+async def test_page_rejects_a_token_it_did_not_issue(
+    repository: PrintJobRepository, token: str
+) -> None:
     with pytest.raises(InvalidPageToken):
-        run(repository.page(10, token))
+        await repository.page(10, token)

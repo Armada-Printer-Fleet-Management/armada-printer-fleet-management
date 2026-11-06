@@ -1,11 +1,9 @@
-from collections.abc import Iterator, MutableMapping
+from collections.abc import MutableMapping
 from typing import Any
 
 import pytest
 import structlog
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from proto_utils.gen.server.v1.health_check_connect import HealthCheckServiceASGIApplication
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import Response
@@ -13,28 +11,9 @@ from starlette.routing import Route
 from structlog.testing import capture_logs
 
 from api.common.consts import API_PREFIX
-from api.common.dependencies import application_info
 from api.middleware.request_context import RequestContextMiddleware
-from api.routers.health import health_router
-from api.services.health_check_service import HealthCheckServiceImplementation
-from api.services.mount import mount_rpc
 
-_RPC_PATH = "/api/server.v1.HealthCheckService/HealthCheck"
-
-
-@pytest.fixture
-def client() -> Iterator[TestClient]:
-    """A REST route and a mounted Connect service behind the middleware, as api/main.py has them,
-    with no dependency checks."""
-    app = FastAPI()
-    app.include_router(health_router({}), prefix=API_PREFIX)
-    mount_rpc(
-        app,
-        HealthCheckServiceASGIApplication(HealthCheckServiceImplementation(application_info(), {})),
-    )
-    app.add_middleware(RequestContextMiddleware)
-    with TestClient(app) as test_client:
-        yield test_client
+_RPC_PATH = f"{API_PREFIX}/server.v1.HealthCheckService/HealthCheck"
 
 
 def _finished(logs: list[MutableMapping[str, Any]]) -> list[MutableMapping[str, Any]]:
@@ -43,12 +22,12 @@ def _finished(logs: list[MutableMapping[str, Any]]) -> list[MutableMapping[str, 
 
 def test_logs_finished_rest_request_with_context(client: TestClient) -> None:
     with capture_logs(processors=[structlog.contextvars.merge_contextvars]) as logs:
-        client.get("/api/health_check")
+        client.get(f"{API_PREFIX}/health_check")
 
     [entry] = _finished(logs)
     assert len(entry["request_id"]) == 32
     assert entry["method"] == "GET"
-    assert entry["path"] == "/api/health_check"
+    assert entry["path"] == f"{API_PREFIX}/health_check"
     assert entry["status"] == 200
     assert entry["duration_ms"] >= 0
 
@@ -65,16 +44,16 @@ def test_logs_finished_rpc_request_with_procedure_path(client: TestClient) -> No
 
 def test_requests_do_not_share_context(client: TestClient) -> None:
     with capture_logs(processors=[structlog.contextvars.merge_contextvars]) as logs:
-        client.get("/api/health_check")
+        client.get(f"{API_PREFIX}/health_check")
         client.post(_RPC_PATH, json={})
 
     first, second = _finished(logs)
     assert first["request_id"] != second["request_id"]
-    assert [first["path"], second["path"]] == ["/api/health_check", _RPC_PATH]
+    assert [first["path"], second["path"]] == [f"{API_PREFIX}/health_check", _RPC_PATH]
 
 
 def test_request_id_is_not_exposed_in_the_response(client: TestClient) -> None:
-    response = client.get("/api/health_check", headers={"X-Request-ID": "abc-123"})
+    response = client.get(f"{API_PREFIX}/health_check", headers={"X-Request-ID": "abc-123"})
 
     assert "x-request-id" not in response.headers
 

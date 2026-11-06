@@ -3,12 +3,14 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from api.common.consts import API_PREFIX
+
 
 @pytest.mark.parametrize(
     ("method", "path"),
     [
-        ("GET", "/api/health_check"),
-        ("POST", "/api/server.v1.PrintJobService/ListPrintJobs"),
+        ("GET", f"{API_PREFIX}/health_check"),
+        ("POST", f"{API_PREFIX}/server.v1.PrintJobService/ListPrintJobs"),
     ],
     ids=["REST", "Connect"],
 )
