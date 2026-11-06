@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
 import boto3
@@ -11,14 +11,14 @@ from botocore.client import BaseClient
 from botocore.config import Config as S3Config
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.pool import NullPool
 
 from api.common.settings import database_url
 from api.infrastructure.postgres_database import PostgresDatabase
 from api.main import app
 from dev_seed import seed
 from tests.integration.utils.docker_stack import DockerStack
-from tests.postgres import run, truncate_tables
+from tests.integration.utils.file_store import empty_bucket
+from tests.postgres import truncate_tables
 
 ALEMBIC_INI = Path(__file__).parents[2] / "alembic.ini"
 
@@ -54,19 +54,17 @@ def file_store_client(stack_environment: dict[str, str]) -> BaseClient:
     )
 
 
-def _reset_database() -> None:
-    engine = sa.create_engine(database_url())
-    try:
-        truncate_tables(engine)
-        seed(engine)
-    finally:
-        engine.dispose()
-
-
-def _empty_bucket(client: BaseClient, bucket: str) -> None:
-    for page in client.get_paginator("list_objects_v2").paginate(Bucket=bucket):
-        for stored in page.get("Contents", []):
-            client.delete_object(Bucket=bucket, Key=stored["Key"])
+@pytest.fixture(scope="session")
+def database_engine(stack_environment: dict[str, str]) -> Iterator[sa.Engine]:
+    """A synchronous engine on the stack's database, for setting up and checking its rows."""
+    # database_url reads DB_*, which is set only while the URL is built.
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        for name, value in stack_environment.items():
+            monkeypatch.setenv(name, value)
+        url = database_url()
+    engine = sa.create_engine(url)
+    yield engine
+    engine.dispose()
 
 
 # Autouse, because no test may see what another left behind. Setting the environment per test also
@@ -75,27 +73,23 @@ def _empty_bucket(client: BaseClient, bucket: str) -> None:
 def reset_dependencies(
     stack_environment: dict[str, str],
     file_store_client: BaseClient,
+    database_engine: sa.Engine,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Points the server's settings at the stack, then restores the seeded data and an empty
     bucket, keeping the migrations in place."""
     for name, value in stack_environment.items():
         monkeypatch.setenv(name, value)
-    _reset_database()
-    _empty_bucket(file_store_client, stack_environment["FILE_STORE_BUCKET"])
+    truncate_tables(database_engine)
+    seed(database_engine)
+    empty_bucket(file_store_client, stack_environment["FILE_STORE_BUCKET"])
 
 
 @pytest.fixture
-def postgres_database() -> Iterator[PostgresDatabase]:
-    """An open PostgresDatabase over the stack's database."""
-    # NullPool, because each run() is a new event loop and a pooled connection belongs to the
-    # loop that opened it.
-    database = PostgresDatabase(lambda: create_async_engine(database_url(), poolclass=NullPool))
-    run(database.__aenter__())
-    try:
+async def postgres_database() -> AsyncIterator[PostgresDatabase]:
+    """An open PostgresDatabase over the stack's database, on the test's own event loop."""
+    async with PostgresDatabase(lambda: create_async_engine(database_url())) as database:
         yield database
-    finally:
-        run(database.__aexit__(None, None, None))
 
 
 @pytest.fixture

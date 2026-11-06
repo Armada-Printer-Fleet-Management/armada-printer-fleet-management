@@ -1,20 +1,12 @@
-from collections.abc import Callable
-from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
-from core_domain.content_asset import File
 from core_domain.ddd import Unavailable
 from core_domain.ids import PrinterQueueId, PrintJobId
 from core_domain.print_job import PrintJob
 from core_domain.queue import PrinterQueue
 from fastapi.testclient import TestClient
-from proto_utils.gen.server.v1.print_job_service_connect import PrintJobServiceASGIApplication
 
-from api.domains.content_asset.service import FileService
-from api.domains.fleet.service import PrinterService
-from api.domains.print_job.service import PrintJobService
-from api.domains.queue.service import PrinterQueueService
 from api.infrastructure.dev_data import (
     STUB_APPROVED_FILE_ID,
     STUB_APPROVED_JOB_ID,
@@ -26,40 +18,20 @@ from api.infrastructure.dev_data import (
     STUB_STUDENT_ID,
     STUB_SUBMITTED_FILE_ID,
     STUB_SUBMITTED_JOB_ID,
-    stub_files,
-    stub_printer_queues,
-    stub_printers,
 )
 from api.infrastructure.file_memory import InMemoryFileRepository
-from api.infrastructure.file_store_files import FileStoreFiles
 from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
-from api.infrastructure.printer_server_mock import MockPrinterServer
-from api.services.print_job_service import PrintJobServiceImplementation
-from tests.fakes import MemoryFileStore
+from tests.fake_app import FakeApp, fake_services
 from tests.print_jobs import (
     CONTENT,
     METADATA,
     PRINT_JOB_RPC,
     call,
-    fake_client_and_poller,
     upload_slot,
 )
 from tests.rpc import Json, id_json
-
-
-@pytest.fixture
-def client() -> TestClient:
-    """A fresh store per test, so a change in one test is not seen by the next."""
-
-    def clock() -> datetime:
-        return datetime.now(UTC)
-
-    return _client(stub_files(), clock)
-
-
-def _client(files: list[File], clock: Callable[[], datetime]) -> TestClient:
-    return fake_client_and_poller(files, clock)[0]
+from tests.samples import printer_queue
 
 
 def test_get_print_job_returns_the_job_and_its_file(client: TestClient) -> None:
@@ -74,8 +46,8 @@ def test_get_print_job_leaves_file_unset_without_an_upload(client: TestClient) -
     assert "file" not in body
 
 
-def test_get_print_job_omits_a_missing_file_record() -> None:
-    client = _client([], lambda: datetime.now(UTC))
+def test_get_print_job_omits_a_missing_file_record(fake_app: FakeApp) -> None:
+    client = fake_app(fake_services(files=InMemoryFileRepository()))
     body = call(client, "GetPrintJob", {"printJobId": id_json(STUB_SUBMITTED_JOB_ID)})
 
     assert body["printJob"]["fileId"] == id_json(STUB_SUBMITTED_FILE_ID)
@@ -242,13 +214,8 @@ _UNKNOWN_PRINTER = {"value": "00000000-0000-4000-8000-0000000003ff"}
 _SECOND_QUEUE_ID = PrinterQueueId(UUID("00000000-0000-4000-8000-000000000402"))
 
 
-def _queue(printer_queue_id: PrinterQueueId, is_active: bool) -> PrinterQueue:
-    created = datetime(2026, 10, 1, 9, 0, tzinfo=UTC)
-    return PrinterQueue(printer_queue_id, "Queue", is_active, created, created)
-
-
-def _client_with_queues(*queues: PrinterQueue) -> TestClient:
-    return fake_client_and_poller(stub_files(), lambda: datetime.now(UTC), list(queues))[0]
+def _client_with_queues(fake_app: FakeApp, *queues: PrinterQueue) -> TestClient:
+    return fake_app(fake_services(printer_queues=InMemoryPrinterQueueRepository(queues)))
 
 
 def test_create_print_job_makes_a_draft_for_the_caller(client: TestClient) -> None:
@@ -270,8 +237,10 @@ def test_submit_puts_an_uploaded_job_in_the_open_queue(client: TestClient) -> No
     assert body["file"]["id"] == slot["fileId"]
 
 
-def test_submit_refused_while_no_queue_accepts_jobs() -> None:
-    client = _client_with_queues(_queue(STUB_PRINTER_QUEUE_ID, is_active=False))
+def test_submit_refused_while_no_queue_accepts_jobs(fake_app: FakeApp) -> None:
+    client = _client_with_queues(
+        fake_app, printer_queue(is_active=False, printer_queue_id=STUB_PRINTER_QUEUE_ID)
+    )
     slot = upload_slot(client, STUB_DRAFT_JOB_ID)
     client.put(slot["uploadUrl"], content=CONTENT)
     job = {"printJobId": id_json(STUB_DRAFT_JOB_ID)}
@@ -330,9 +299,11 @@ def test_complete_a_finished_job(client: TestClient) -> None:
     assert body["printJob"]["status"] == "PRINT_JOB_STATUS_COMPLETED"
 
 
-def test_move_to_queue_changes_the_jobs_queue() -> None:
+def test_move_to_queue_changes_the_jobs_queue(fake_app: FakeApp) -> None:
     client = _client_with_queues(
-        _queue(STUB_PRINTER_QUEUE_ID, is_active=True), _queue(_SECOND_QUEUE_ID, is_active=True)
+        fake_app,
+        printer_queue(is_active=True, printer_queue_id=STUB_PRINTER_QUEUE_ID),
+        printer_queue(is_active=True, printer_queue_id=_SECOND_QUEUE_ID),
     )
     second = id_json(_SECOND_QUEUE_ID)
     job = {"printJobId": id_json(STUB_APPROVED_JOB_ID), "moveToQueue": {"printerQueueId": second}}
@@ -368,18 +339,8 @@ class _UnavailablePrintJobs(InMemoryPrintJobRepository):
         raise Unavailable("database") from OSError("db.internal refused the connection")
 
 
-def test_a_database_outage_is_unavailable_without_its_cause() -> None:
-    def clock() -> datetime:
-        return datetime.now(UTC)
-
-    handler = PrintJobServiceImplementation(
-        PrintJobService(_UnavailablePrintJobs(), clock),
-        FileService(InMemoryFileRepository(), FileStoreFiles(MemoryFileStore), clock),
-        PrinterService(MockPrinterServer(stub_printers(), clock)),
-        PrinterQueueService(InMemoryPrinterQueueRepository(stub_printer_queues())),
-        caller=lambda: STUB_STUDENT_ID,
-    )
-    client = TestClient(PrintJobServiceASGIApplication(handler))
+def test_a_database_outage_is_unavailable_without_its_cause(fake_app: FakeApp) -> None:
+    client = fake_app(fake_services(print_jobs=_UnavailablePrintJobs()))
 
     body = call(client, "GetPrintJob", {"printJobId": id_json(STUB_DRAFT_JOB_ID)}, expect=503)
 

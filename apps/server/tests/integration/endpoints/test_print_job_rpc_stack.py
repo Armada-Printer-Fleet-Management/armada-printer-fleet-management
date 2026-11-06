@@ -1,5 +1,4 @@
-import asyncio
-from datetime import UTC, datetime
+from datetime import timedelta
 from uuid import UUID
 
 from core_domain.ids import FileId
@@ -11,26 +10,25 @@ from api.infrastructure.dev_data import (
     STUB_PRINTER_QUEUE_ID,
     STUB_STUDENT_ID,
     STUB_SUBMITTED_JOB_ID,
-    stub_files,
 )
 from api.infrastructure.printer_server_mock import STEP
 from api.routers.file import upload_path
+from api.services.printer_poller import PrinterPoller
+from tests.fake_app import FakeApp, fake_services, on_app_loop
 from tests.print_jobs import (
     CONTENT,
     METADATA,
     PRINT_JOB_RPC,
     call,
-    fake_client_and_poller,
     upload_slot,
 )
 from tests.rpc import id_json
-
-API = "/api"
+from tests.samples import NOW
 
 
 def test_rpc_is_mounted_on_the_app(app_client: TestClient) -> None:
     response = app_client.post(
-        f"{API}{PRINT_JOB_RPC}/GetPrintJob", json={"printJobId": id_json(STUB_SUBMITTED_JOB_ID)}
+        f"{PRINT_JOB_RPC}/GetPrintJob", json={"printJobId": id_json(STUB_SUBMITTED_JOB_ID)}
     )
 
     assert response.status_code == 200
@@ -38,10 +36,10 @@ def test_rpc_is_mounted_on_the_app(app_client: TestClient) -> None:
 
 
 def test_a_created_job_reads_back_from_the_database(app_client: TestClient) -> None:
-    created = call(app_client, "CreatePrintJob", {"userNotes": "Please use PLA"}, prefix=API)
+    created = call(app_client, "CreatePrintJob", {"userNotes": "Please use PLA"})
 
     job = {"printJobId": created["printJob"]["id"]}
-    stored = call(app_client, "GetPrintJob", job, prefix=API)["printJob"]
+    stored = call(app_client, "GetPrintJob", job)["printJob"]
 
     assert stored["id"] == created["printJob"]["id"]
     assert stored["status"] == "PRINT_JOB_STATUS_DRAFT"
@@ -50,30 +48,32 @@ def test_a_created_job_reads_back_from_the_database(app_client: TestClient) -> N
 
 
 def test_a_job_whose_bytes_are_stored_can_be_submitted(app_client: TestClient) -> None:
-    slot = upload_slot(app_client, STUB_DRAFT_JOB_ID, prefix=API)
+    slot = upload_slot(app_client, STUB_DRAFT_JOB_ID)
     assert app_client.put(slot["uploadUrl"], content=CONTENT).status_code == 204
 
     job = {"printJobId": id_json(STUB_DRAFT_JOB_ID)}
-    submitted = call(app_client, "SubmitPrintJob", job, prefix=API)
+    submitted = call(app_client, "SubmitPrintJob", job)
 
     assert submitted["printJob"]["status"] == "PRINT_JOB_STATUS_SUBMITTED"
     assert submitted["file"]["id"] == slot["fileId"]
 
 
 def test_submit_is_refused_while_the_bytes_are_not_stored(app_client: TestClient) -> None:
-    upload_slot(app_client, STUB_DRAFT_JOB_ID, prefix=API)
+    upload_slot(app_client, STUB_DRAFT_JOB_ID)
 
     job = {"printJobId": id_json(STUB_DRAFT_JOB_ID)}
-    refused = call(app_client, "SubmitPrintJob", job, expect=400, prefix=API)
+    refused = call(app_client, "SubmitPrintJob", job, expect=400)
 
     assert refused["code"] == "failed_precondition"
-    unchanged = call(app_client, "GetPrintJob", job, prefix=API)["printJob"]
+    unchanged = call(app_client, "GetPrintJob", job)["printJob"]
     assert unchanged["status"] == "PRINT_JOB_STATUS_DRAFT"
 
 
-def test_a_job_goes_from_creation_to_completed() -> None:
-    now = [datetime(2026, 10, 7, 12, 0, tzinfo=UTC)]
-    client, poller = fake_client_and_poller(stub_files(), lambda: now[0])
+def test_a_job_goes_from_creation_to_completed(fake_app: FakeApp) -> None:
+    now = [NOW]
+    fakes = fake_services(clock=lambda: now[0])
+    client = fake_app(fakes)
+    poller = PrinterPoller(fakes.services.printers, fakes.services.print_jobs, timedelta(seconds=1))
     created = call(client, "CreatePrintJob", {"userNotes": "Please use PLA"})["printJob"]
     assert created["status"] == "PRINT_JOB_STATUS_DRAFT"
     assert created["userId"] == id_json(STUB_STUDENT_ID)
@@ -96,13 +96,13 @@ def test_a_job_goes_from_creation_to_completed() -> None:
     assert assigned["printJob"]["status"] == "PRINT_JOB_STATUS_ASSIGNED"
     assert assigned["printJob"]["printerId"] == printer
 
-    asyncio.run(poller.poll())
+    on_app_loop(client, poller.poll)
     assert call(client, "GetPrintJob", job)["printJob"]["status"] == "PRINT_JOB_STATUS_PRINTING"
     refused = call(client, "TransitionPrintJob", {**job, "complete": {}}, expect=400)
     assert refused["code"] == "failed_precondition"
 
     now[0] += STEP * 4
-    asyncio.run(poller.poll())
+    on_app_loop(client, poller.poll)
     assert call(client, "GetPrintJob", job)["printJob"]["status"] == "PRINT_JOB_STATUS_FINISHED"
     completed = call(client, "TransitionPrintJob", {**job, "complete": {}})
     assert completed["printJob"]["status"] == "PRINT_JOB_STATUS_COMPLETED"
