@@ -14,7 +14,6 @@ from api.infrastructure.dev_data import (
     stub_printers,
 )
 from api.infrastructure.printer_server_mock import MockPrinterServer
-from api.main import app
 from api.services.printer_service import PrinterServiceImplementation
 
 type Json = dict[str, Any]
@@ -29,26 +28,24 @@ def _id(entity_id: object) -> dict[str, str]:
     [
         ("server.v1.PrinterService/ListPrinters", {}, "printers"),
         ("server.v1.PrinterQueueService/ListPrinterQueues", {}, "printerQueues"),
-        pytest.param(
+        (
             "server.v1.FileService/ListFiles",
             {"fileIds": [_id(STUB_SUBMITTED_FILE_ID)]},
             "files",
-            marks=pytest.mark.skip(
-                reason="api.main's files need an open database, and this suite does not run the "
-                "app's lifespan against one"
-            ),
         ),
     ],
 )
-def test_rpc_is_mounted_on_the_app(rpc: str, body: Json, field: str) -> None:
-    response = TestClient(app).post(f"/api/{rpc}", json=body)
+def test_rpc_is_mounted_on_the_app(
+    app_client: TestClient, rpc: str, body: Json, field: str
+) -> None:
+    response = app_client.post(f"/api/{rpc}", json=body)
 
     assert response.status_code == 200, response.text
     assert response.json()[field]
 
 
-def test_list_printer_queues_returns_the_open_queue() -> None:
-    response = TestClient(app).post("/api/server.v1.PrinterQueueService/ListPrinterQueues", json={})
+def test_list_printer_queues_returns_the_open_queue(app_client: TestClient) -> None:
+    response = app_client.post("/api/server.v1.PrinterQueueService/ListPrinterQueues", json={})
     assert response.json()["printerQueues"][0]["id"] == _id(STUB_PRINTER_QUEUE_ID)
 
 

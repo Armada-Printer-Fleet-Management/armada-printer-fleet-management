@@ -114,8 +114,8 @@ plugin or its port, and import-linter enforces it.
 - Development data goes in `api/infrastructure/dev_data.py` with a fixed ID. If its table is not
   seeded yet, add the table to `SEED` in `dev_seed.py`, after the tables it refers to. The seed
   only inserts missing rows and never changes an existing one.
-- With `DB_*` set, `pytest` also runs `tests/integration/test_migrations.py`, which upgrades,
-  seeds and downgrades a throwaway database it creates and drops. Without them it is skipped.
+- `tests/integration/test_migrations.py` upgrades, seeds and downgrades a throwaway database it
+  creates and drops on the integration tests' own Postgres.
 - The health check reports the connection as `database`.
 
 Naming, checked against every migration by `tests/unit/test_column_names.py`:
