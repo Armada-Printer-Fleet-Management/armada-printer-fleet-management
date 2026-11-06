@@ -1,8 +1,9 @@
+from datetime import timedelta
 from uuid import UUID
 
 import pytest
 from core_domain.ddd import Unavailable
-from core_domain.ids import PrinterQueueId, PrintJobId
+from core_domain.ids import FileId, PrinterQueueId, PrintJobId
 from core_domain.print_job import PrintJob
 from core_domain.queue import PrinterQueue
 from fastapi.testclient import TestClient
@@ -23,7 +24,10 @@ from api.infrastructure.dev_data import (
 from api.infrastructure.file_memory import InMemoryFileRepository
 from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
-from tests.fake_app import FakeApp, fake_services
+from api.infrastructure.printer_server_mock import STEP
+from api.routers.file import upload_path
+from api.services.printer_poller import PrinterPoller
+from tests.fake_app import FakeApp, fake_services, on_app_loop
 from tests.print_jobs import (
     CONTENT,
     METADATA,
@@ -32,7 +36,7 @@ from tests.print_jobs import (
     upload_slot,
 )
 from tests.rpc import Json, id_json
-from tests.samples import printer_queue
+from tests.samples import NOW, printer_queue
 
 
 def test_get_print_job_returns_the_job_and_its_file(client: TestClient) -> None:
@@ -348,3 +352,42 @@ def test_a_database_outage_is_unavailable_without_its_cause(fake_app: FakeApp) -
     body = call(client, "GetPrintJob", {"printJobId": id_json(STUB_DRAFT_JOB_ID)}, expect=503)
 
     assert body == {"code": "unavailable", "message": "database is unavailable"}
+
+
+def test_a_job_goes_from_creation_to_completed(fake_app: FakeApp) -> None:
+    now = [NOW]
+    fakes = fake_services(clock=lambda: now[0])
+    client = fake_app(fakes)
+    poller = PrinterPoller(fakes.services.printers, fakes.services.print_jobs, timedelta(seconds=1))
+    created = call(client, "CreatePrintJob", {"userNotes": "Please use PLA"})["printJob"]
+    assert created["status"] == "PRINT_JOB_STATUS_DRAFT"
+    assert created["userId"] == id_json(STUB_STUDENT_ID)
+    job = {"printJobId": created["id"]}
+
+    slot = call(client, "CreatePrintJobUpload", {**job, "metadata": METADATA})["slot"]
+    file_path = upload_path(FileId(UUID(slot["fileId"]["value"])))
+    assert slot["uploadUrl"] == f"http://testserver{file_path}"
+    assert client.put(slot["uploadUrl"], content=CONTENT).status_code == 204
+
+    submitted = call(client, "SubmitPrintJob", job)
+    assert submitted["printJob"]["status"] == "PRINT_JOB_STATUS_SUBMITTED"
+    assert submitted["printJob"]["printerQueueId"] == id_json(STUB_PRINTER_QUEUE_ID)
+    assert submitted["file"]["id"] == slot["fileId"]
+
+    call(client, "TransitionPrintJob", {**job, "startReview": {}})
+    call(client, "TransitionPrintJob", {**job, "approve": {}})
+    printer = id_json(STUB_IDLE_PRINTER_ID)
+    assigned = call(client, "TransitionPrintJob", {**job, "assign": {"printerId": printer}})
+    assert assigned["printJob"]["status"] == "PRINT_JOB_STATUS_ASSIGNED"
+    assert assigned["printJob"]["printerId"] == printer
+
+    on_app_loop(client, poller.poll)
+    assert call(client, "GetPrintJob", job)["printJob"]["status"] == "PRINT_JOB_STATUS_PRINTING"
+    refused = call(client, "TransitionPrintJob", {**job, "complete": {}}, expect=400)
+    assert refused["code"] == "failed_precondition"
+
+    now[0] += STEP * 4
+    on_app_loop(client, poller.poll)
+    assert call(client, "GetPrintJob", job)["printJob"]["status"] == "PRINT_JOB_STATUS_FINISHED"
+    completed = call(client, "TransitionPrintJob", {**job, "complete": {}})
+    assert completed["printJob"]["status"] == "PRINT_JOB_STATUS_COMPLETED"

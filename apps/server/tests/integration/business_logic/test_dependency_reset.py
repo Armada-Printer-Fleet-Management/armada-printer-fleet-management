@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from botocore.client import BaseClient
+from types_boto3_s3.client import S3Client
 
 from api.infrastructure.dev_data import STUB_STUDENT_ID, stub_users
 from api.infrastructure.enum_ids import FLEET_ACCESS_POLICY_STAFF_ONLY_ID
@@ -47,7 +47,7 @@ def test_database_changes_do_not_survive(database_engine: sa.Engine, run: str) -
 
 @twice
 def test_stored_objects_do_not_survive(
-    file_store_client: BaseClient, stack_environment: dict[str, str], run: str
+    file_store_client: S3Client, stack_environment: dict[str, str], run: str
 ) -> None:
     bucket = stack_environment["FILE_STORE_BUCKET"]
     assert stored_object_count(file_store_client, bucket) == 0

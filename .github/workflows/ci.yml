@@ -88,6 +88,10 @@ jobs:
   server:
     needs: detect
     if: needs.detect.outputs.server == 'true'
+    # A called workflow cannot have more than its caller grants; this lets it comment coverage.
+    permissions:
+      contents: read
+      pull-requests: write
     uses: ./.github/workflows/server.ci.yml
 
   typescript:

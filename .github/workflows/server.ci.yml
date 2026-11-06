@@ -6,6 +6,8 @@ on:
 
 permissions:
   contents: read
+  # Only to post the coverage comment on the pull request.
+  pull-requests: write
 
 jobs:
   server:
@@ -34,5 +36,66 @@ jobs:
       - name: Layer contracts
         run: uv run lint-imports
         working-directory: apps/server
-      - run: uv run pytest -q
+      - name: Unit tests
+        run: uv run coverage run --data-file=.coverage.unit -m pytest tests/unit -q
         working-directory: apps/server
+      # Runs after a unit failure too, so both suites are reported.
+      - name: Integration tests
+        if: ${{ !cancelled() }}
+        run: uv run coverage run --data-file=.coverage.integration -m pytest tests/integration -q
+        working-directory: apps/server
+      # Coverage is reported, never enforced, so these steps cannot fail the build.
+      - name: Coverage report
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        working-directory: apps/server
+        run: |
+          # coverage prints "No data to report." to stdout when it fails, so only a success is used.
+          total() { local t; t=$(uv run coverage report --data-file="$1" --format=total 2>/dev/null) && echo "$t%" || echo "n/a"; }
+          # A suite that crashed leaves no data file; the suites that ran are still reported. Without
+          # a combined file, reading .coverage would quietly merge and delete whichever files exist.
+          combined=true
+          uv run coverage combine --keep --data-file=.coverage .coverage.unit .coverage.integration \
+            || { combined=false; echo "::warning::Could not combine coverage; only the suites that ran are reported."; }
+          combined_total() { if $combined; then total .coverage; else echo "n/a"; fi; }
+          combined_report() {
+            if $combined; then uv run coverage report --format=markdown --skip-covered; else echo "_No combined coverage data._"; fi
+          }
+          {
+            echo "<!-- server-coverage -->"
+            echo "### Server test coverage"
+            echo ""
+            echo "| Suite | Lines and branches covered |"
+            echo "| --- | --- |"
+            echo "| Unit | $(total .coverage.unit) |"
+            echo "| Integration | $(total .coverage.integration) |"
+            echo "| Combined | $(combined_total) |"
+            echo ""
+            echo "<details><summary>Combined coverage by file, fully covered files hidden</summary>"
+            echo ""
+            combined_report
+            echo ""
+            echo "</details>"
+          } > coverage.md
+          cat coverage.md >> "$GITHUB_STEP_SUMMARY"
+      # Pull requests from forks get a read-only token, so only this repository's are commented on.
+      - name: Coverage comment
+        if: >-
+          ${{ !cancelled() && github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository }}
+        continue-on-error: true
+        working-directory: apps/server
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        # Found by its marker and the bot's login, so neither another workflow's comment nor a
+        # person quoting the table is ever overwritten.
+        run: |
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]"
+                  and (.body | startswith("<!-- server-coverage -->"))) | .id' | head -n 1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@coverage.md
+          else
+            gh pr comment "$PR_NUMBER" --body-file coverage.md
+          fi

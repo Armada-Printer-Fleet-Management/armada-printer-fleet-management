@@ -43,6 +43,8 @@ dev = [
   "boto3",   # https://github.com/boto/boto3, Apache-2.0 -- empties the test bucket between integration tests; the version comes from aioboto3
   "import-linter>=2.15,<3", # https://github.com/seddonym/import-linter, BSD-2-Clause -- layer contracts below
   "pytest-asyncio>=1.4,<2", # https://github.com/pytest-dev/pytest-asyncio, Apache-2.0 -- runs async def tests and fixtures on one event loop each
+  "coverage>=7.17,<8",      # https://github.com/nedbat/coveragepy, Apache-2.0 -- measures what the unit and integration runs cover, reported by CI
+  "types-boto3[s3]",        # https://github.com/youtype/types-boto3, MIT -- type stubs for the boto3 S3 client the integration tests use; versions track boto3's
 ]
 
 [tool.ruff]
@@ -55,7 +57,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
-include = ["api", "migrations", "dev_seed.py", "e2e"]
+include = ["api", "migrations", "dev_seed.py", "e2e", "tests"]
 exclude = ["api/gen"]
 
 [tool.pytest.ini_options]
@@ -64,6 +66,13 @@ testpaths = ["tests/unit", "tests/integration"]
 # Async tests and fixtures need no marker, and each test gets its own loop.
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.run]
+source = ["api", "dev_seed"]
+branch = true
+omit = ["api/gen/*"]
+# Only the integration tests import dev_seed, so the unit run would always warn.
+disable_warnings = ["module-not-imported"]
 
 [tool.importlinter]
 # The plugin packages are listed so the contracts below can check their imports too.
