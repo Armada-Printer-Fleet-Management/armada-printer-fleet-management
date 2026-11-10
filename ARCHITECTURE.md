@@ -101,6 +101,8 @@ packages/                  shared code, used by more than one app
   organization-info/       the organization's title, description, licence and repository
   ui-kit/                  presentational React components shared by both frontends
   api-client/              generated ConnectRPC client and typed web API
+  slicer-engine/ †         the WebAssembly slicer engine both frontends load, fetched from the sister
+                           repository armada-slicer-engine, which builds it
 plugins/                   L3: adapters (auth-oidc, identity-local, s3-file-store, theme-default)
 infra/
   dev/                     local development stack: server, web, Postgres, Garage, Keycloak

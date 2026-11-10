@@ -116,6 +116,12 @@ services:
           target: /repo/packages/api-client
           ignore:
             - package.json
+        # Includes gen/, so fetching a new engine on the host reaches the dev server.
+        - action: sync
+          path: ../../packages/slicer-engine
+          target: /repo/packages/slicer-engine
+          ignore:
+            - package.json
         # Read once when the dev server starts, so a change needs a restart.
         - action: sync+restart
           path: ../../apps/web/vite.config.ts
@@ -146,6 +152,8 @@ services:
           path: ../../packages/organization-info/package.json
         - action: rebuild
           path: ../../packages/api-client/package.json
+        - action: rebuild
+          path: ../../packages/slicer-engine/package.json
 
   db:
     image: postgres:17-alpine
