@@ -4,6 +4,7 @@
 import { toJson } from '@bufbuild/protobuf';
 import { TempVerticalSlicePage, type TempSliceSection } from '@armada/ui-kit';
 import type { createApiClient } from '@armada/api-client';
+import { loadSlicerEngine, slicerEngineUrl } from '@armada/slicer-engine';
 import {
   GetPrintJobResponseSchema,
   ListPrintJobsResponseSchema,
@@ -40,6 +41,20 @@ export function TempVerticalSlice({ printJobs }: { printJobs: PrintJobsApi }) {
               await printJobs.getPrintJob({ printJobId: firstJob.id }),
             );
           },
+        },
+      ],
+    },
+    {
+      title: 'Slicer engine',
+      boundary: ['Web UI', 'Slicer engine (WASM)'],
+      actions: [
+        {
+          label: 'version',
+          run: async () => ({
+            version: (
+              await loadSlicerEngine(slicerEngineUrl(import.meta.env.BASE_URL))
+            ).version(),
+          }),
         },
       ],
     },

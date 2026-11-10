@@ -15,9 +15,11 @@
 !packages/organization-info/
 !packages/ui-kit/
 !packages/api-client/
+!packages/slicer-engine/
 !buf.yaml
 !buf.gen.web_ts.yaml
 !scripts/generate_proto.py
+!scripts/fetch_slicer_engine.py
 !infra/deploy/Caddyfile
 
 # Re-excluded inside the allowed paths: host-built or host-specific state. Generated output stays

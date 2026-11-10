@@ -154,6 +154,18 @@ This produces the Python code and TypeScript clients from `packages/proto`. The 
 is gitignored and must exist before anything type-checks. Every template sets `clean: true`, so each
 run deletes that template's output folders before regenerating them; re-running a row is always safe.
 
+## 5a. Fetch the slicer engine
+
+If `packages/slicer-engine/engine.pin.json` exists, run:
+
+```
+python scripts/fetch_slicer_engine.py
+```
+
+It downloads the pinned CuraEngine WebAssembly release into `packages/slicer-engine/gen/` (gitignored),
+checking every file's SHA-256 and, because `gh` is installed and signed in, its build attestation. Both
+frontends fail to build and type-check without it. Re-running it is always safe.
+
 ## 5b. Check TypeScript style
 
 The root ESLint and Prettier configurations cover the web app, desktop frontend, and TypeScript
