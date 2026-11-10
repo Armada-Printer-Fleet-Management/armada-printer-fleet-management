@@ -1,0 +1,21 @@
+{
+  "name": "@armada/slicer-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./vite": "./vite.ts"
+  },
+  "scripts": {
+    "lint": "eslint src vite.ts --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^26",
+    "typescript": "^5",
+    "vite": "^6",
+    "vitest": "^5"
+  }
+}
