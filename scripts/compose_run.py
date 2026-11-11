@@ -138,8 +138,8 @@ def build_deploy_images(env: dict[str, str]) -> None:
         revision = ["--label", f"org.opencontainers.image.revision={commit}"]
     for name, dockerfile in DEPLOY_IMAGES.items():
         # An image inherits its base image's labels, so web would otherwise carry Caddy's name,
-        # license and links, and GHCR shows the description and license on the package page. A
-        # label cannot be removed, only overridden, so the ones we have no value for are emptied.
+        # license and links. A label cannot be removed, only overridden, so the ones we have no
+        # value for are emptied. GHCR does not show these; deploy.yml adds the description it shows.
         # version stays empty because images are promoted without a rebuild: the tag says it.
         oci = {
             "title": name,
