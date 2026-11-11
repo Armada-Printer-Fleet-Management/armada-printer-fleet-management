@@ -12,3 +12,6 @@ infra/deploy/systemd/* text eol=lf
 *.tsx text eol=lf
 *.mjs text eol=lf
 *.cjs text eol=lf
+
+# Legal documents are pinned by SHA-256 in organization.json, so their bytes must match on every OS.
+LICENSE text eol=lf

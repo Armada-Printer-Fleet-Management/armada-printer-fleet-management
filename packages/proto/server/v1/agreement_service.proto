@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package server.v1;
+
+import "common/v1/legal_document.proto";
+import "id/v1/agreement_id.proto";
+import "id/v1/user_id.proto";
+import "legal/v1/agreement.proto";
+
+// Users' acceptance of the legal documents, served by the remote server.
+//
+// TEMP: until sign-in exists, each request names its user. Once it does, the user is the
+// authenticated caller and the user_id fields are removed.
+service AgreementService {
+  // The current version of every legal document.
+  rpc ListLegalDocuments(ListLegalDocumentsRequest) returns (ListLegalDocumentsResponse);
+  // The current documents a user has not accepted yet.
+  rpc ListOutstandingLegalDocuments(ListOutstandingLegalDocumentsRequest) returns (ListOutstandingLegalDocumentsResponse);
+  // Records that a user accepted the current version of a document.
+  rpc AcceptAgreement(AcceptAgreementRequest) returns (AcceptAgreementResponse);
+  // Gets one agreement.
+  rpc GetAgreement(GetAgreementRequest) returns (GetAgreementResponse);
+}
+
+// Gets one agreement.
+message GetAgreementRequest {
+  // The agreement to get.
+  id.v1.AgreementId agreement_id = 1;
+}
+
+// One agreement.
+message GetAgreementResponse {
+  // The agreement.
+  legal.v1.Agreement agreement = 1;
+}
+
+// Asks for the current legal documents.
+message ListLegalDocumentsRequest {}
+
+// The current legal documents.
+message ListLegalDocumentsResponse {
+  // One per kind, at its current version.
+  repeated common.v1.LegalDocument legal_documents = 1;
+}
+
+// Asks which current documents a user still has to accept.
+message ListOutstandingLegalDocumentsRequest {
+  // The user. TEMP: a client-chosen ID until sign-in exists.
+  id.v1.UserId user_id = 1;
+}
+
+// The documents a user still has to accept.
+message ListOutstandingLegalDocumentsResponse {
+  // Empty when the user has accepted every current document.
+  repeated common.v1.LegalDocument legal_documents = 1;
+}
+
+// Accepts one document version.
+message AcceptAgreementRequest {
+  // The user accepting. TEMP: a client-chosen ID until sign-in exists.
+  id.v1.UserId user_id = 1;
+  // The document accepted.
+  common.v1.LegalDocumentKind kind = 2;
+  // The version shown to the user. Refused when it is no longer the current one.
+  string effective_date = 3;
+}
+
+// The recorded acceptance.
+message AcceptAgreementResponse {
+  // The agreement. Accepting the same version again returns the first one.
+  legal.v1.Agreement agreement = 1;
+}

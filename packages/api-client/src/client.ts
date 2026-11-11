@@ -1,5 +1,7 @@
 import { createClient } from '@connectrpc/connect';
 import { createConnectTransport } from '@connectrpc/connect-web';
+import { createAgreementApi } from './agreement';
+import { AgreementService } from './gen/server/v1/agreement_service_pb';
 import { PrintJobService } from './gen/server/v1/print_job_service_pb';
 import { createPrintJobApi } from './print-job';
 
@@ -15,8 +17,10 @@ export function createApiClient(options: ApiClientOptions = {}) {
     fetch: requestFetch,
   });
   const printJobClient = createClient(PrintJobService, transport);
+  const agreementClient = createClient(AgreementService, transport);
 
   return {
     printJobs: createPrintJobApi(printJobClient, requestFetch),
+    agreements: createAgreementApi(agreementClient),
   };
 }

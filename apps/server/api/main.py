@@ -3,6 +3,7 @@ from datetime import timedelta
 from fastapi import FastAPI
 from organization_info import read
 from proto_utils.gen.common.v1 import organization_info_pb2
+from proto_utils.gen.server.v1.agreement_service_connect import AgreementServiceASGIApplication
 from proto_utils.gen.server.v1.file_service_connect import FileServiceASGIApplication
 from proto_utils.gen.server.v1.health_check_connect import HealthCheckServiceASGIApplication
 from proto_utils.gen.server.v1.print_job_service_connect import PrintJobServiceASGIApplication
@@ -10,6 +11,7 @@ from proto_utils.gen.server.v1.printer_queue_service_connect import (
     PrinterQueueServiceASGIApplication,
 )
 from proto_utils.gen.server.v1.printer_service_connect import PrinterServiceASGIApplication
+from proto_utils.mappers import AgreementMapper
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from api.common.access_policy import ACCESS, AccessPolicy
@@ -22,8 +24,10 @@ from api.common.openapi import openapi_schema
 from api.common.settings import AuthSettings, FileStoreSettings, database_url
 from api.domains.content_asset.service import FileService
 from api.domains.fleet.service import PrinterService
+from api.domains.legal.service import AgreementService
 from api.domains.print_job.service import PrintJobService
 from api.domains.queue.service import PrinterQueueService
+from api.infrastructure.agreement_sql import SqlAgreementRepository
 from api.infrastructure.dev_data import (
     STUB_FAULTY_PRINTER_ID,
     STUB_STUDENT_ID,
@@ -43,6 +47,7 @@ from api.middleware.request_context import RequestContextMiddleware
 from api.plugins import build_file_store, build_token_verifier
 from api.routers.file import file_router
 from api.routers.health import health_router
+from api.services.agreement_service import AgreementServiceImplementation
 from api.services.file_service import FileServiceImplementation
 from api.services.health_check_service import HealthCheckServiceImplementation
 from api.services.mount import mount_rpc
@@ -50,6 +55,8 @@ from api.services.print_job_service import PrintJobServiceImplementation
 from api.services.printer_poller import PrinterPoller
 from api.services.printer_queue_service import PrinterQueueServiceImplementation
 from api.services.printer_service import PrinterServiceImplementation
+
+organization = read(organization_info_pb2.OrganizationInfo())
 
 # Infrastructure
 files = FileStoreFiles(lambda: build_file_store(FileStoreSettings()))  # Built at lifespan
@@ -62,6 +69,12 @@ access_tokens = OidcAccessTokens(lambda: build_token_verifier(AuthSettings()))  
 # Moving one to the database means constructing its SQL adapter here; nothing else changes.
 print_job_service = PrintJobService(SqlPrintJobRepository(database), clock)
 file_service = FileService(SqlFileRepository(database), files, clock)
+legal_documents = list(organization.legal_documents)
+agreement_service = AgreementService(
+    SqlAgreementRepository(database),
+    [AgreementMapper.legal_document_from_proto(d) for d in legal_documents],
+    clock,
+)
 printer_service = PrinterService(
     MockPrinterServer(stub_printers(), clock, faulty_printer_ids=[STUB_FAULTY_PRINTER_ID])
 )
@@ -71,7 +84,7 @@ printer_poller = PrinterPoller(printer_service, print_job_service, timedelta(sec
 # App
 
 app = FastAPI(
-    title=read(organization_info_pb2.OrganizationInfo()).title,
+    title=organization.title,
     version=application_info().version_string(),
     lifespan=lifespan([files, database, access_tokens], background=[printer_poller.run]),
     docs_url=f"{API_PREFIX}/docs",
@@ -122,3 +135,9 @@ mount_rpc(
     PrinterQueueServiceASGIApplication(PrinterQueueServiceImplementation(printer_queue_service)),
 )
 mount_rpc(app, FileServiceASGIApplication(FileServiceImplementation(file_service)))
+mount_rpc(
+    app,
+    AgreementServiceASGIApplication(
+        AgreementServiceImplementation(agreement_service, legal_documents)
+    ),
+)

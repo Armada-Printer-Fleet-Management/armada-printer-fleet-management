@@ -11,6 +11,8 @@
 !pnpm-workspace.yaml
 !pnpm-lock.yaml
 !tsconfig.base.json
+# Legal documents, which the build checks against organization.json and bundles.
+!LICENSE
 !packages/proto/
 !packages/organization-info/
 !packages/ui-kit/

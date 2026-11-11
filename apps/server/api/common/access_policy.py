@@ -51,6 +51,9 @@ ACCESS: Mapping[Endpoint, Allowed] = {
     # Every transition is a staff action; students submit through SubmitPrintJob.
     Endpoint("POST", f"{API_PREFIX}/server.v1.PrintJobService/TransitionPrintJob"): STAFF,
     rpc_service("FileService"): STUDENTS_AND_STAFF,
+    # TEMP: public until sign-in exists, because each request names its own user. With sign-in
+    # the user is the caller, and this becomes every signed-in role.
+    rpc_service("AgreementService"): PUBLIC,
     rpc_service("PrinterService"): STAFF,
     rpc_service("PrinterQueueService"): STAFF,
     Endpoint("PUT", f"{API_PREFIX}{FILES_PATH}/{{file_id}}"): STUDENTS_AND_STAFF,

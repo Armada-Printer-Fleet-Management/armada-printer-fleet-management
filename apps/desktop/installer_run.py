@@ -74,7 +74,9 @@ def main() -> None:
     if sys.platform != "win32":
         fail("the desktop installer is Windows only")
 
-    if not args.skip_build:
+    if args.skip_build:
+        build_run.check_legal_documents()
+    else:
         build_run.main()
 
     info = installer_info()

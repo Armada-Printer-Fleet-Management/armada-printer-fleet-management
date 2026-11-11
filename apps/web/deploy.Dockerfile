@@ -44,7 +44,7 @@ RUN set -eu; cd /tmp \
  && echo "${BUF_SHA256}  buf" | sha256sum -c - \
  && install -m 0755 buf /usr/local/bin/buf \
  && rm -f buf
-COPY buf.yaml buf.gen.web_ts.yaml tsconfig.base.json ./
+COPY buf.yaml buf.gen.web_ts.yaml tsconfig.base.json LICENSE ./
 COPY packages/proto packages/proto
 COPY packages/organization-info packages/organization-info
 COPY packages/ui-kit packages/ui-kit
@@ -54,7 +54,8 @@ COPY scripts/generate_proto.py scripts/fetch_slicer_engine.py scripts/
 COPY apps/web apps/web
 # Writes packages/api-client/src/gen from packages/proto using the web's buf template, with
 # node_modules/.bin on PATH so buf finds protoc-gen-es. Fetches the pinned slicer engine, checked
-# against its SHA-256s (its attestation is checked in CI). Then vite build writes the static site.
+# against its SHA-256s (its attestation is checked in CI). Then vite build writes the static site,
+# refusing if a legal document no longer matches organization.json.
 RUN python3 scripts/generate_proto.py buf.gen.web_ts.yaml --node-modules apps/web/node_modules \
  && python3 scripts/fetch_slicer_engine.py \
  && cd apps/web && pnpm build

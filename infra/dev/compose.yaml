@@ -133,6 +133,9 @@ services:
           path: ../../tsconfig.base.json
           target: /repo/tsconfig.base.json
         - action: sync+restart
+          path: ../../LICENSE
+          target: /repo/LICENSE
+        - action: sync+restart
           path: ../../packages/organization-info
           target: /repo/packages/organization-info
           ignore:
