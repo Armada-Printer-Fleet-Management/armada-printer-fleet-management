@@ -186,16 +186,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          declare -A pushed
           for name in armada-server armada-web armada-release; do
             repo="ghcr.io/$OWNER/$name-preview"
             docker push "$repo:$TAG"
-            digest=$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$repo:$TAG" | grep "^$repo@")
-            echo "${name#armada-}=$digest" >> "$GITHUB_OUTPUT"
+            # GHCR shows an index's description only from the index's own annotations, and docker
+            # push drops them, so the description is added in the registry. The images inside the
+            # index are reused unchanged; only the index around them is rewritten.
+            description=$(jq -r --arg name "$name" '.[$name]' infra/deploy/image-descriptions.json)
+            docker buildx imagetools create \
+              --annotation "index:org.opencontainers.image.description=$description" \
+              -t "$repo:$TAG" "$repo:$TAG"
+            digest=$(docker buildx imagetools inspect "$repo:$TAG" | awk '/^Digest:/ { print $2; exit }')
+            pushed[$name]="$repo@$digest"
+            echo "${name#armada-}=$repo@$digest" >> "$GITHUB_OUTPUT"
           done
           for name in armada-server armada-web armada-release; do
             repo="ghcr.io/$OWNER/$name-preview"
-            docker tag "$repo:$TAG" "$repo:$POINTER"
-            docker push "$repo:$POINTER"
+            # Copied in the registry, so the pointer keeps the annotated index and its digest.
+            docker buildx imagetools create --prefer-index=false -t "$repo:$POINTER" "${pushed[$name]}"
           done
 
       # A hot fix candidate gets the same git tag as one promoted by release.yml, which numbers the
