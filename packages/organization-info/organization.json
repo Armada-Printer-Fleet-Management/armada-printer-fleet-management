@@ -1,6 +1,31 @@
 {
   "title": "Armada - Printer Fleet Management",
   "description": "Specialized 3D printer fleet management software for universities.",
-  "license": "TODO",
-  "repositoryUrl": "https://github.com/Armada-Printer-Fleet-Management/armada-printer-fleet-management"
+  "repositoryUrl": "https://github.com/Armada-Printer-Fleet-Management/armada-printer-fleet-management",
+  "legalDocuments": [
+    {
+      "kind": "LEGAL_DOCUMENT_KIND_LICENSE",
+      "title": "GNU Affero General Public License v3.0",
+      "spdx": "AGPL-3.0-only",
+      "path": "LICENSE",
+      "effectiveDate": "2026-11-11",
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+    },
+    {
+      "kind": "LEGAL_DOCUMENT_KIND_TERMS_OF_SERVICE",
+      "title": "Terms of Service",
+      "spdx": "",
+      "path": "packages/organization-info/legal/terms-of-service.md",
+      "effectiveDate": "2026-11-16",
+      "sha256": "3ac15794bbd47ea5496d68a8905ed9948adf2214564338ab0ccc19c46d3fd2a3"
+    },
+    {
+      "kind": "LEGAL_DOCUMENT_KIND_PRIVACY_POLICY",
+      "title": "Privacy Policy",
+      "spdx": "",
+      "path": "packages/organization-info/legal/privacy-policy.md",
+      "effectiveDate": "2026-11-16",
+      "sha256": "39c6e850d73f5d3e08dbb78e0c58a88a20d42178fa692e05a5dc3a475ac0f316"
+    }
+  ]
 }

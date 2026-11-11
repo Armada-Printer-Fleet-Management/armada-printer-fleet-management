@@ -25,9 +25,18 @@ def executable_name() -> str:
     return result.stdout.strip()
 
 
+def check_legal_documents() -> None:
+    """Fails when a legal document changed without a new effective date and SHA-256."""
+    with step("Checking legal documents"):
+        repository = ROOT.parents[1]
+        run([sys.executable, str(repository / "scripts" / "check_legal_documents.py")], repository)
+
+
 def main() -> None:
     if sys.platform != "win32":
         fail("the desktop build is Windows only")
+
+    check_legal_documents()
 
     with step("Checking generated code"):
         python_gen = ROOT.parents[1] / "packages" / "proto" / "utils" / "src" / "proto_utils" / "gen"

@@ -18,3 +18,7 @@ packages/sample-prints/**/*.stl   filter=lfs diff=lfs merge=lfs -text
 packages/sample-prints/**/*.3mf   filter=lfs diff=lfs merge=lfs -text
 packages/sample-prints/**/*.gcode filter=lfs diff=lfs merge=lfs -text
 packages/sample-prints/**/*.bgcode filter=lfs diff=lfs merge=lfs -text
+
+# Legal documents are pinned by SHA-256 in organization.json, so their bytes must match on every OS.
+LICENSE text eol=lf
+packages/organization-info/legal/* text eol=lf

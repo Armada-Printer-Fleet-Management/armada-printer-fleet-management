@@ -1,5 +1,8 @@
 from datetime import timedelta
 
+from organization_info import read
+from proto_utils.gen.organization.v1 import organization_info_pb2
+from proto_utils.mappers import AgreementMapper
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from api.app import AppParts, AppServices, build_app
@@ -9,8 +12,10 @@ from api.common.models import DependencyCheck
 from api.common.settings import AuthSettings, FileStoreSettings, database_url
 from api.domains.content_asset.service import FileService
 from api.domains.fleet.service import PrinterService
+from api.domains.legal.service import AgreementService
 from api.domains.print_job.service import PrintJobService
 from api.domains.queue.service import PrinterQueueService
+from api.infrastructure.agreement_sql import SqlAgreementRepository
 from api.infrastructure.dev_data import (
     STUB_FAULTY_PRINTER_ID,
     STUB_STUDENT_ID,
@@ -50,6 +55,14 @@ def production_parts() -> AppParts:
         InMemoryPrinterQueueRepository(stub_printer_queues())
     )
     printer_poller = PrinterPoller(printer_service, print_job_service, timedelta(seconds=1))
+    agreement_service = AgreementService(
+        SqlAgreementRepository(database),
+        [
+            AgreementMapper.legal_document_from_proto(document)
+            for document in read(organization_info_pb2.OrganizationInfo()).legal_documents
+        ],
+        clock,
+    )
 
     dependency_checks = {
         "file_storage": DependencyCheck(raising_probe(files.health_check)),
@@ -66,6 +79,7 @@ def production_parts() -> AppParts:
             files=file_service,
             printers=printer_service,
             printer_queues=printer_queue_service,
+            agreements=agreement_service,
         ),
         # Stub: every caller is the seeded student until the server authenticates requests.
         caller=lambda: STUB_STUDENT_ID,

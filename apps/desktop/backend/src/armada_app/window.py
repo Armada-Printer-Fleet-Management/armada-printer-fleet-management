@@ -1,6 +1,6 @@
 import webview
 from organization_info import read
-from proto_utils.gen.common.v1 import organization_info_pb2
+from proto_utils.gen.organization.v1 import organization_info_pb2
 
 from armada_app.composition import build_ipc
 

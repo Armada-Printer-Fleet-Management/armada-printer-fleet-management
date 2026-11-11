@@ -5,14 +5,30 @@ import {
   CardHeader,
   CardTitle,
 } from './card';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from './collapsible';
+
+/** A legal document as the about box lists it. */
+export interface AboutLegalDocument {
+  /** What the document is, such as Licence or Privacy Policy. */
+  label: string;
+  title: string;
+  /** The day this version took effect, YYYY-MM-DD. */
+  effectiveDate: string;
+  /** The document's text, or undefined when this build does not ship that version. */
+  text: string | undefined;
+}
 
 export interface AboutBoxProps {
   organization: {
     title: string;
     description: string;
-    license: string;
     repositoryUrl: string;
   };
+  legalDocuments: AboutLegalDocument[];
   version?: {
     major: number;
     minor: number;
@@ -21,7 +37,13 @@ export interface AboutBoxProps {
   };
 }
 
-export function AboutBox({ organization, version }: AboutBoxProps) {
+const row = 'grid grid-cols-[8rem_minmax(0,1fr)] gap-x-4';
+
+export function AboutBox({
+  organization,
+  legalDocuments,
+  version,
+}: AboutBoxProps) {
   const versionText = version
     ? `${version.major}.${version.minor}.${version.maintenance}${version.postfix ? `-${version.postfix}` : ''}`
     : 'unavailable';
@@ -36,15 +58,42 @@ export function AboutBox({ organization, version }: AboutBoxProps) {
       </CardHeader>
       <CardContent>
         <dl className="grid gap-4 text-sm">
-          <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-4">
+          <div className={row}>
             <dt className="font-medium text-foreground/70">Version</dt>
             <dd>{versionText}</dd>
           </div>
-          <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-4">
-            <dt className="font-medium text-foreground/70">License</dt>
-            <dd>{organization.license}</dd>
-          </div>
-          <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-4">
+          {legalDocuments.map((document) => (
+            <div key={`${document.label}-${document.title}`} className={row}>
+              <dt className="font-medium text-foreground/70">
+                {document.label}
+              </dt>
+              <dd className="min-w-0">
+                <Collapsible>
+                  <CollapsibleTrigger>
+                    <span className="flex-1">
+                      {document.title}, effective {document.effectiveDate}
+                    </span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    {document.text === undefined ? (
+                      <p>
+                        This copy does not include the text of this version.
+                      </p>
+                    ) : (
+                      <pre
+                        tabIndex={0}
+                        aria-label={`${document.title} text`}
+                        className="max-h-80 overflow-y-auto whitespace-pre-wrap rounded-lg border bg-background p-4 font-mono text-xs focus-visible:outline-2 focus-visible:outline-primary"
+                      >
+                        {document.text}
+                      </pre>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+              </dd>
+            </div>
+          ))}
+          <div className={row}>
             <dt className="font-medium text-foreground/70">Source</dt>
             <dd className="min-w-0">
               <a

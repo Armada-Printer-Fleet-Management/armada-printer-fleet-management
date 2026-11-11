@@ -526,9 +526,9 @@ Full environment setup is `/onboarding`.
 
 ## Shared organization identity: `packages/organization-info/organization.json`
 
-The title, description, license and source repository live in exactly one place:
+The title, description, legal documents and source repository live in exactly one place:
 `packages/organization-info/organization.json`, typed by `OrganizationInfo` in
-`packages/proto/common/v1/organization_info.proto`. **Never hardcode them** in an application —
+`packages/proto/organization/v1/organization_info.proto`. **Never hardcode them** in an application —
 window and page titles, headings and executable names all read it.
 
 - **Python:** `organization_info.read(OrganizationInfo())` (a local path dependency; the caller
@@ -542,6 +542,10 @@ this base information.
 
 `uv` installs path dependencies as built copies, so `packages/organization-info/pyproject.toml`
 lists `organization.json` in `cache-keys`. Keep that when editing the file.
+
+**Legal documents** such as `LICENSE` are pinned in `legalDocuments` by `effectiveDate` and
+`sha256`: changing one's text means bumping both in the same change, or every build refuses
+(`scripts/check_legal_documents.py` prints the new hash).
 
 ---
 

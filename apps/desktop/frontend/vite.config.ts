@@ -2,8 +2,9 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { read } from '../../../packages/organization-info/organization-info';
+import { legalDocuments } from '../../../packages/organization-info/vite';
 import { slicerEngine } from '../../../packages/slicer-engine/vite';
-import { OrganizationInfoSchema } from './src/gen/common/v1/organization_info_pb';
+import { OrganizationInfoSchema } from './src/gen/organization/v1/organization_info_pb';
 
 const { title } = read(OrganizationInfoSchema);
 
@@ -12,6 +13,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     slicerEngine(),
+    legalDocuments(),
     {
       name: 'organization-title',
       transformIndexHtml: {

@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router';
 
 import { AppLayout } from './components/AppLayout';
+import { AgreementGate } from './legal/AgreementGate';
 import { HelpPage } from './pages/HelpPage';
 import { HomePage } from './pages/HomePage';
 import { MyPrintsPage } from './pages/MyPrintsPage';
@@ -26,7 +27,14 @@ export function WebRouter() {
           path={routePaths.signInCallback.path}
           element={<SignInCallbackPage />}
         />
-        <Route element={<AppLayout />}>
+        {/* The sign-in callback above is never gated, so signing in always completes. */}
+        <Route
+          element={
+            <AgreementGate>
+              <AppLayout />
+            </AgreementGate>
+          }
+        >
           <Route index element={<HomePage />} />
           <Route path={routePaths.myPrints.path} element={<MyPrintsPage />} />
           <Route path={routePaths.training.path} element={<TrainingPage />} />
