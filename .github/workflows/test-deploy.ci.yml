@@ -29,7 +29,8 @@ jobs:
       - run: shellcheck infra/deploy/armada infra/deploy/*.sh
 
   install-and-update:
-    runs-on: ubuntu-latest
+    # Pinned: Ubuntu 26.04's sudo ignores -E, which the shell below depends on.
+    runs-on: ubuntu-24.04
     defaults:
       run:
         # armada and install.sh run as root, as they do on a real machine. -E keeps the overrides below.
