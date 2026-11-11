@@ -32,6 +32,7 @@ type Allowed = frozenset[Role] | None
 PUBLIC: Allowed = None
 STAFF = frozenset({Role.STAFF, Role.ADMIN})
 STUDENTS_AND_STAFF = STAFF | {Role.STUDENT}
+EVERY_ROLE = frozenset(Role)
 
 
 def rpc_service(service: str) -> Endpoint:
@@ -51,6 +52,8 @@ ACCESS: Mapping[Endpoint, Allowed] = {
     # Every transition is a staff action; students submit through SubmitPrintJob.
     Endpoint("POST", f"{API_PREFIX}/server.v1.PrintJobService/TransitionPrintJob"): STAFF,
     rpc_service("FileService"): STUDENTS_AND_STAFF,
+    # Everyone who uses the software accepts the agreements, whatever their role.
+    rpc_service("AgreementService"): EVERY_ROLE,
     rpc_service("PrinterService"): STAFF,
     rpc_service("PrinterQueueService"): STAFF,
     Endpoint("PUT", f"{API_PREFIX}{FILES_PATH}/{{file_id}}"): STUDENTS_AND_STAFF,

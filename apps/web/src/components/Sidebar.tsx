@@ -1,5 +1,5 @@
 import { read } from '@armada/organization-info';
-import { OrganizationInfoSchema } from '@armada/api-client/gen/common/v1/organization_info_pb';
+import { OrganizationInfoSchema } from '@armada/api-client/gen/organization/v1/organization_info_pb';
 import {
   cn,
   DevToolsIcon,

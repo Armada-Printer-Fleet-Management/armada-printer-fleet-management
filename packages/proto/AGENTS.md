@@ -7,16 +7,19 @@ front door and never restates these rules.
 ## Domain-driven layout
 
 Packages follow the domains of the database schema diagram, `docs/database-schema.html`. There
-are four kinds:
+are five kinds:
 
 | Kind | Packages | Holds | May import |
 | --- | --- | --- | --- |
 | ID kernel | `id.v1` | One strongly typed ID per entity | nothing |
-| Shared units | `common.v1` | Base units every package reuses (`TimeStatus`, `PageRequest`/`PageResponse`) and application metadata | `google.protobuf.*` |
-| Domain | `auth.v1`, `content_asset.v1`, `print_job.v1`, `fleet.v1`, `queue.v1` | One bounded context's entities, value types and enums | `id.v1`, `common.v1`, `google.protobuf.*` |
+| Shared units | `common.v1` | Base units every package reuses (`TimeStatus`, `PageRequest`/`PageResponse`) | `google.protobuf.*` |
+| Application identity | `organization.v1` | `OrganizationInfo`, the identity every application shares, read from `organization.json` | domains, `common.v1`, `google.protobuf.*` |
+| Domain | `auth.v1`, `content_asset.v1`, `print_job.v1`, `fleet.v1`, `queue.v1`, `legal.v1` | One bounded context's entities, value types and enums | `id.v1`, `common.v1`, `google.protobuf.*` |
 | Server (API layer) | `server.v1` (remote server), `printer_server.v1` (on-premise printer server) | Services, RPCs and their request/response messages | domains, `id.v1`, `common.v1`, `google.protobuf.*` |
 
-Never put domain types in `common.v1`. It holds only units with no domain meaning.
+Never put domain types in `common.v1`. It holds only units with no domain meaning. Something the
+whole application needs from a domain, such as its legal documents, goes in `organization.v1`,
+which may import domains; `common.v1` importing one would make a package import cycle.
 
 - **Domains couple by ID only.** A domain package never imports another domain package. A job
   refers to its file as `id.v1.FileId file_id`, never by embedding `content_asset.v1.File`.

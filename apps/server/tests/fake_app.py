@@ -8,6 +8,9 @@ from datetime import datetime
 from typing import Protocol
 
 from fastapi.testclient import TestClient
+from organization_info import read
+from proto_utils.gen.organization.v1 import organization_info_pb2
+from proto_utils.mappers import AgreementMapper
 
 from api.app import AppServices
 from api.common.authentication import Caller
@@ -16,10 +19,13 @@ from api.domains.content_asset.repository import FileRepository
 from api.domains.content_asset.service import FileService
 from api.domains.fleet.repository import PrinterRepository
 from api.domains.fleet.service import PrinterService
+from api.domains.legal.repository import AgreementRepository
+from api.domains.legal.service import AgreementService
 from api.domains.print_job.repository import PrintJobRepository
 from api.domains.print_job.service import PrintJobService
 from api.domains.queue.repository import PrinterQueueRepository
 from api.domains.queue.service import PrinterQueueService
+from api.infrastructure.agreement_memory import InMemoryAgreementRepository
 from api.infrastructure.dev_data import (
     stub_files,
     stub_print_jobs,
@@ -50,6 +56,7 @@ def fake_services(
     store: MemoryFileStore | None = None,
     printer_server: PrinterRepository | None = None,
     printer_queues: PrinterQueueRepository | None = None,
+    agreements: AgreementRepository | None = None,
 ) -> FakeServices:
     """Every service over an in-memory fake seeded from the development data, on a fixed clock.
     Pass a fake to replace the default one, such as a repository that raises Unavailable."""
@@ -62,6 +69,12 @@ def fake_services(
         printer_server = MockPrinterServer(stub_printers(), clock)
     if printer_queues is None:
         printer_queues = InMemoryPrinterQueueRepository(stub_printer_queues())
+    if agreements is None:
+        agreements = InMemoryAgreementRepository()
+    documents = [
+        AgreementMapper.legal_document_from_proto(document)
+        for document in read(organization_info_pb2.OrganizationInfo()).legal_documents
+    ]
 
     storage = FileStoreFiles(lambda: file_store)
     services = AppServices(
@@ -69,6 +82,7 @@ def fake_services(
         files=FileService(files, storage, clock),
         printers=PrinterService(printer_server),
         printer_queues=PrinterQueueService(printer_queues),
+        agreements=AgreementService(agreements, documents, clock),
     )
     return FakeServices(services, [storage])
 

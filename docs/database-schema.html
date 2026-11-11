@@ -9,14 +9,14 @@
       /* Page-local: the seven domain colours. Everything else comes from docs.css tokens. */
       :root {
         --d-auth: #6650c8; --d-content_asset: #2f6fd0; --d-queue: #23845a; --d-print_job: #c24a12;
-        --d-fleet: #0b7f8a; --d-filament: #a06600; --d-notification: #b8336f;
+        --d-fleet: #0b7f8a; --d-filament: #a06600; --d-notification: #b8336f; --d-legal: #5a6e1f;
         --er-hair: color-mix(in srgb, var(--rule) 60%, transparent);
         --er-faint: color-mix(in srgb, var(--muted) 70%, var(--bg));
       }
       @media (prefers-color-scheme: dark) {
         :root {
           --d-auth: #a898f0; --d-content_asset: #82aaf2; --d-queue: #62c996; --d-print_job: #f08a55;
-          --d-fleet: #4fc4cd; --d-filament: #e1ae4b; --d-notification: #ee7cae;
+          --d-fleet: #4fc4cd; --d-filament: #e1ae4b; --d-notification: #ee7cae; --d-legal: #b5cc6a;
         }
       }
 
@@ -46,7 +46,7 @@
       .scroller {
         --bg: #161513; --fg: #e8e4dc; --muted: #9a938a; --rule: #302d29; --card: #1c1b18; --warn: #d9ab5c;
         --d-auth: #a898f0; --d-content_asset: #82aaf2; --d-queue: #62c996; --d-print_job: #f08a55;
-        --d-fleet: #4fc4cd; --d-filament: #e1ae4b; --d-notification: #ee7cae;
+        --d-fleet: #4fc4cd; --d-filament: #e1ae4b; --d-notification: #ee7cae; --d-legal: #b5cc6a;
         --er-hair: color-mix(in srgb, var(--rule) 60%, transparent);
         --er-faint: color-mix(in srgb, var(--muted) 70%, var(--bg));
         color-scheme: dark; color: var(--fg);
@@ -207,6 +207,7 @@
           fleet: { name: 'Printer Fleet', n: 5 },
           filament: { name: 'Filament Allocation', n: 6 },
           notification: { name: 'Notification', n: 7 },
+          legal: { name: 'Legal', n: 8 },
         };
         const SHORT = { PrintServerInstance: 'ServerInstance' };
         // [name, type, mark, ref/ext, note]
@@ -230,6 +231,13 @@
             ['target_id', 'uuid', '', '', 'Polymorphic, read with target_type, so no line is drawn. The one exception to the ID naming rule.'],
             ['details', 'json', '', '', 'Never contains secrets or unnecessary personal data.'],
             ['created_at', 'timestamp', '', '', 'Rows are never updated or deleted.']] },
+          Agreement: { d: 'legal', f: ['unique: user_id, kind, effective_date'], c: [
+            ['id', 'uuid', 'pk', ''],
+            ['user_id', 'uuid', 'ref', 'User', 'Who accepted. No foreign key yet: until sign-in exists, clients send a temporary ID.'],
+            ['kind', 'enum', '', '', 'Which legal document, such as the licence.'],
+            ['effective_date', 'date', '', '', 'The version accepted. A later version asks the user again.'],
+            ['created_at', 'timestamp', '', '', 'When the user accepted.'],
+            ['updated_at', 'timestamp', '', '']] },
           File: { d: 'content_asset', b: ['soft delete'], f: ['content-addressed: same bytes, one stored copy'], c: [
             ['id', 'uuid', 'pk', ''],
             ['user_id', 'uuid', 'ref', 'User', 'Who uploaded it.'],
@@ -385,7 +393,7 @@
             ['enabled', 'bool', '', '']] },
         };
         const COLS = [
-          [['auth', ['User', 'AuditLog']], ['notification', ['Notification', 'Broadcast', 'NotificationPreference']]],
+          [['auth', ['User', 'AuditLog']], ['legal', ['Agreement']], ['notification', ['Notification', 'Broadcast', 'NotificationPreference']]],
           [['content_asset', ['File']], ['filament', ['FilamentLedgerEntry', 'FilamentAllocation', 'Period', 'FilamentMaterial']]],
           [['print_job', ['PrintJob', 'PrintJobEvent']], ['queue', ['PrinterQueue', 'PrinterQueueTag', 'PrinterQueueMembership']]],
           [['fleet', ['Printer', 'PrinterEvent', 'Tag']]],

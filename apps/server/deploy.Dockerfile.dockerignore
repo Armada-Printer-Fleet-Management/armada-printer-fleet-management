@@ -15,6 +15,9 @@
 !buf.gen.python.yaml
 !buf.gen.server.yaml
 !scripts/generate_proto.py
+# Legal documents, checked against organization.json during the build.
+!scripts/check_legal_documents.py
+!LICENSE
 
 # Re-excluded inside the allowed paths: host-built or host-specific state. Unlike the dev image,
 # generated code stays out: this image generates its own.
