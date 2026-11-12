@@ -420,6 +420,15 @@ window.OPENAPI_SPEC = {
         "additionalProperties": false,
         "description": "A physical printer.",
         "properties": {
+          "capabilities": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/fleet.v1.PrinterCapabilities"
+              }
+            ],
+            "description": "What it can print. Kept by the application server, so it is known even while the printer\n server cannot reach the printer.",
+            "title": "capabilities"
+          },
           "id": {
             "allOf": [
               {
@@ -478,6 +487,44 @@ window.OPENAPI_SPEC = {
         "title": "Printer",
         "type": "object"
       },
+      "fleet.v1.PrinterCapabilities": {
+        "additionalProperties": false,
+        "description": "What a printer can physically print: the facts a slicer needs to slice for it.",
+        "properties": {
+          "buildVolumeXMm": {
+            "description": "Printable width along the X axis, in millimetres.",
+            "format": "double",
+            "title": "build_volume_x_mm",
+            "type": "number"
+          },
+          "buildVolumeYMm": {
+            "description": "Printable depth along the Y axis, in millimetres.",
+            "format": "double",
+            "title": "build_volume_y_mm",
+            "type": "number"
+          },
+          "buildVolumeZMm": {
+            "description": "Printable height along the Z axis, in millimetres.",
+            "format": "double",
+            "title": "build_volume_z_mm",
+            "type": "number"
+          },
+          "filamentDiameterMm": {
+            "description": "Diameter of the filament the printer takes, in millimetres.",
+            "format": "double",
+            "title": "filament_diameter_mm",
+            "type": "number"
+          },
+          "nozzleDiameterMm": {
+            "description": "Diameter of the fitted nozzle, in millimetres.",
+            "format": "double",
+            "title": "nozzle_diameter_mm",
+            "type": "number"
+          }
+        },
+        "title": "PrinterCapabilities",
+        "type": "object"
+      },
       "fleet.v1.PrinterStatus": {
         "description": "A printer's normalized state. Adapters map each vendor's states onto these.",
         "enum": [
@@ -490,6 +537,28 @@ window.OPENAPI_SPEC = {
         ],
         "title": "PrinterStatus",
         "type": "string"
+      },
+      "fleet.v1.PrinterType": {
+        "additionalProperties": false,
+        "description": "A kind of printer in the fleet: what a student slices for. It names no printer and carries no\n state, so it reveals neither how many printers there are nor whether any is free.",
+        "properties": {
+          "capabilities": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/fleet.v1.PrinterCapabilities"
+              }
+            ],
+            "description": "What printers of this type can print.",
+            "title": "capabilities"
+          },
+          "model": {
+            "description": "The printer model, such as a manufacturer's product name.",
+            "title": "model",
+            "type": "string"
+          }
+        },
+        "title": "PrinterType",
+        "type": "object"
       },
       "google.protobuf.Timestamp": {
         "description": "A point in time in RFC 3339 format, with up to nanosecond precision. Output uses UTC (`Z`); input may use an offset from UTC.",
@@ -1306,6 +1375,28 @@ window.OPENAPI_SPEC = {
           }
         },
         "title": "ListPrinterQueuesResponse",
+        "type": "object"
+      },
+      "server.v1.ListPrinterTypesRequest": {
+        "additionalProperties": false,
+        "description": "Lists the printer types.",
+        "title": "ListPrinterTypesRequest",
+        "type": "object"
+      },
+      "server.v1.ListPrinterTypesResponse": {
+        "additionalProperties": false,
+        "description": "Every printer type, sorted by model.",
+        "properties": {
+          "printerTypes": {
+            "description": "The types.",
+            "items": {
+              "$ref": "#/components/schemas/fleet.v1.PrinterType"
+            },
+            "title": "printer_types",
+            "type": "array"
+          }
+        },
+        "title": "ListPrinterTypesResponse",
         "type": "object"
       },
       "server.v1.ListPrintersRequest": {
@@ -2933,6 +3024,68 @@ window.OPENAPI_SPEC = {
           }
         },
         "summary": "GetPrinter",
+        "tags": [
+          "server.v1.PrinterService"
+        ]
+      }
+    },
+    "/api/server.v1.PrinterService/ListPrinterTypes": {
+      "post": {
+        "description": "Lists the kinds of printer in the fleet, for choosing what to slice for. Open to students,\n because it names no printer and shows no status.",
+        "operationId": "server.v1.PrinterService.ListPrinterTypes",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.ListPrinterTypesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.ListPrinterTypesResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "ListPrinterTypes",
         "tags": [
           "server.v1.PrinterService"
         ]

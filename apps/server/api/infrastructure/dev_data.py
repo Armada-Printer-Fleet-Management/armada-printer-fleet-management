@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from core_domain.content_asset import File, FileType
-from core_domain.fleet import Printer, PrinterStatus
+from core_domain.fleet import Printer, PrinterCapabilities, PrinterStatus
 from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserId
 from core_domain.print_job import PrintJob, PrintJobStatus
 from core_domain.queue import PrinterQueue
@@ -147,30 +147,40 @@ def stub_printer_queues() -> list[PrinterQueue]:
     return [PrinterQueue(STUB_PRINTER_QUEUE_ID, "General", True, _STUB_TIME, _STUB_TIME)]
 
 
+# Real printer models with their published specifications, so slices of the development fleet are
+# realistic: build volume in millimetres (X, Y, Z), nozzle and filament diameters.
+_MK4S = ("Original Prusa MK4S", PrinterCapabilities(250, 210, 220, 0.4, 1.75))
+_CORE_ONE = ("Prusa CORE One", PrinterCapabilities(250, 220, 270, 0.4, 1.75))
+_MINI = ("Original Prusa MINI+", PrinterCapabilities(180, 180, 180, 0.4, 1.75))
+_XL = ("Original Prusa XL", PrinterCapabilities(360, 360, 360, 0.4, 1.75))
+
+
 def stub_printers() -> list[Printer]:
     def stub(
         number: int,
         printer_id: PrinterId,
+        model: tuple[str, PrinterCapabilities],
         status: PrinterStatus,
         print_job_id: PrintJobId | None = None,
         progress_percent: int | None = None,
     ) -> Printer:
         return Printer(
-            printer_id,
-            f"Stub printer {number}",
-            "Stub model",
-            status,
-            _STUB_TIME,
-            _STUB_TIME,
-            print_job_id,
-            progress_percent,
+            id=printer_id,
+            name=f"Stub printer {number}",
+            model=model[0],
+            capabilities=model[1],
+            status=status,
+            created_at=_STUB_TIME,
+            updated_at=_STUB_TIME,
+            print_job_id=print_job_id,
+            progress_percent=progress_percent,
         )
 
     return [
-        stub(1, STUB_IDLE_PRINTER_ID, PrinterStatus.IDLE),
-        stub(2, STUB_SECOND_IDLE_PRINTER_ID, PrinterStatus.IDLE),
-        stub(3, STUB_PRINTING_PRINTER_ID, PrinterStatus.PRINTING, STUB_PRINTING_JOB_ID, 0),
-        stub(4, STUB_FINISHED_PRINTER_ID, PrinterStatus.FINISHED, STUB_FINISHED_JOB_ID, 100),
-        stub(5, STUB_OFFLINE_PRINTER_ID, PrinterStatus.OFFLINE),
-        stub(6, STUB_FAULTY_PRINTER_ID, PrinterStatus.IDLE),
+        stub(1, STUB_IDLE_PRINTER_ID, _MK4S, PrinterStatus.IDLE),
+        stub(2, STUB_SECOND_IDLE_PRINTER_ID, _CORE_ONE, PrinterStatus.IDLE),
+        stub(3, STUB_PRINTING_PRINTER_ID, _MK4S, PrinterStatus.PRINTING, STUB_PRINTING_JOB_ID, 0),
+        stub(4, STUB_FINISHED_PRINTER_ID, _MINI, PrinterStatus.FINISHED, STUB_FINISHED_JOB_ID, 100),
+        stub(5, STUB_OFFLINE_PRINTER_ID, _XL, PrinterStatus.OFFLINE),
+        stub(6, STUB_FAULTY_PRINTER_ID, _CORE_ONE, PrinterStatus.IDLE),
     ]
