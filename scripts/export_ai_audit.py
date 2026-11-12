@@ -152,6 +152,7 @@ class Source:
     patterns: tuple[str, ...]
     structured: bool
     scoped_by_directory: bool
+    session_id_from_parent: bool = False
 
 
 def claude_project_dir(root: Path) -> Path:
@@ -194,6 +195,14 @@ def known_sources(root: Path, config: Config) -> list[Source]:
             ),
             structured=False,
             scoped_by_directory=False,
+        ),
+        Source(
+            tool="Copilot CLI",
+            directory=copilot / "session-state",
+            patterns=("*/events.jsonl",),
+            structured=False,
+            scoped_by_directory=False,
+            session_id_from_parent=True,
         ),
         Source(
             tool="manual",
@@ -372,12 +381,13 @@ def collect_facts(source: Source, path: Path) -> SessionFacts:
 def opaque_facts(source: Source, path: Path) -> SessionFacts:
     """Facts for a record whose format this script does not parse.
 
-    The file's own timestamp dates it and its name identifies it. Nothing else is
-    claimed, because nothing else has been established.
+    The file's own timestamp dates it. If the source uses session_id_from_parent,
+    the record is identified by its parent directory name; otherwise by the file
+    name. Nothing else is claimed, because nothing else has been established.
     """
     modified = datetime.fromtimestamp(path.stat().st_mtime).astimezone()
     return SessionFacts(
-        session_id=path.stem,
+        session_id=path.parent.name if source.session_id_from_parent else path.stem,
         source=path,
         tool=source.tool,
         parsed=False,
