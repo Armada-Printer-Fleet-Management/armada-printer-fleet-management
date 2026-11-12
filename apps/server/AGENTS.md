@@ -30,7 +30,7 @@ implementations in `plugins/`, never here.
 | `api/infrastructure/oidc_access_tokens.py` | Wraps the `TokenVerifier` plugin: its result becomes a `Caller`, a rejected token `InvalidAccessToken`, an outage `Unavailable` |
 | `api/services/`        | Connect handlers: translate between the wire and domain services, composing several where an RPC spans domains. No rules. `PrinterPoller` is the same kind of composer, run by the lifespan instead of a request |
 | `api/routers/`         | REST routes that do not fit Connect, such as the health check and file bytes. Built from services handed in by `api/app.py`; domain errors go through `domain_errors_as_http()`. Prefer Connect; REST only where Connect cannot work |
-| `api/common/`          | Shared code internal to the server, such as constants, `health.py` and `openapi.py` |
+| `api/common/`          | Shared code internal to the server, such as constants, `health.py` and `openapi.py`. Imports nothing from the rest of `api`; import-linter enforces it |
 | `api/middleware/`      | ASGI middleware wrapping every request, REST and Connect alike |
 | `api/lifespan.py`      | Startup and shutdown: configures logging and opens the infrastructure |
 | `api/logging_config.py` | structlog configuration |
@@ -153,6 +153,8 @@ Picture: `docs/database-schema.html`.
 
 `protoc-gen-connect-openapi` describes the Connect services during server codegen
 (`api/gen/openapi/`), FastAPI describes the REST routes, and `api/common/openapi.py` merges them.
+Only services mounted with `mount_rpc` are published, so a service defined in the contract but not
+yet implemented stays out of the spec, and out of the `ACCESS` completeness test.
 The result is served at `/api/openapi.json`, `/api/docs` (Swagger UI) and `/api/redoc`, under
 the API prefix so the deployed reverse proxy forwards them, and `export_openapi.py` writes it into
 `docs/api/` for `docs/api.html`. The pre-commit hook runs codegen and the export when files under

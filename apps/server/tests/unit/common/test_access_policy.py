@@ -9,6 +9,7 @@ from starlette.routing import Route
 from api.common.access_policy import ACCESS, PUBLIC, STAFF, AccessPolicy, Decision, Endpoint
 from api.common.authentication import Caller, Role
 from api.common.consts import API_PREFIX
+from api.common.mounted_services import mounted_services
 from api.main import app
 
 STUDENT = Caller("student", frozenset({Role.STUDENT}))
@@ -156,11 +157,14 @@ def _rest_endpoints() -> list[tuple[str, str]]:
 
 
 def _rpc_endpoints() -> list[tuple[str, str]]:
+    mounted = mounted_services(app)
     endpoints: list[tuple[str, str]] = []
     for module in pkgutil.iter_modules(server_v1.__path__):
         if module.name.endswith("_pb2"):
             descriptor = import_module(f"{server_v1.__name__}.{module.name}").DESCRIPTOR
             for service in descriptor.services_by_name.values():
+                if service.full_name not in mounted:
+                    continue
                 endpoints += [
                     ("POST", f"{API_PREFIX}/{service.full_name}/{method.name}")
                     for method in service.methods
