@@ -292,6 +292,27 @@ exited with code 0, and read `docker compose -p armada-dev logs migrate` if it d
 If it fails with "Ports are not available" on 5432, a Postgres installed natively on the machine
 holds that port. Set `DB_PORT` to a free port in `config/compose.dev.env` and run it again.
 
+## 7b. Check for stale domain directories
+
+Before running tests, inspect the immediate subdirectories of these roots when they exist:
+
+- `packages/core-domain/src/core_domain/` (exclude `ddd`, `ids`, and `__pycache__`)
+- `apps/server/api/domains/` (exclude `__pycache__`)
+- `apps/desktop/backend/src/armada_domains/` (exclude `__pycache__`)
+
+The structure tests treat every remaining directory as a domain. A checkout can leave an obsolete
+directory containing only ignored Python bytecode after its source was removed, causing those tests
+to fail.
+
+For any candidate without the expected `entities.py` (core) or `repository.py` and `service.py`
+(server and desktop), inspect its entire contents, including ignored and hidden files, and check
+Git for tracked files under it. A directory is a cleanup candidate only if it has no tracked files
+and contains nothing except an optional `__pycache__/` directory with `.pyc` files. Do not follow
+symlinks or reparse points. Report exact candidate paths and ask the developer for approval before
+deleting them; delete only the approved, rechecked paths. If a candidate contains anything else,
+is a symlink or reparse point, or its status is uncertain, leave it untouched and report it for
+investigation. Report when there are no candidates.
+
 ## 8. Run the tests
 
 Run whichever apply, and report results honestly — including failures:
