@@ -152,6 +152,10 @@ session ends and on demand via `/export-ai-integrity`.
   `AI_AUDIT_EXTRA_SOURCES`.
 - The export is **not redacted**. It is confidential to the team, and a partial redactor would
   only create false confidence.
+- **Sessions holding confidential beta material are never copied.** The developer excludes each
+  one with a reason, kept on their machine. The index lists it as excluded, so the gap is
+  declared rather than hidden. See the _Confidential beta_ section of `AGENTS.md` and
+  `/export-ai-integrity`.
 - Transcripts plus commit statements are the coverage. Neither alone is enough: the log shows
   what was asked, the statements show what was accepted and checked.
 

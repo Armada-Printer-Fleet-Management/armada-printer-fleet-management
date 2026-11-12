@@ -26,6 +26,11 @@ public commit message, which `/commit-message` handles.
 SESSION.md never carries a filled-in `Verified:` field. Only the developer can
 answer that, and `/export-ai-integrity` exists to ask them.
 
+A developer can exclude a session, such as one holding confidential beta material,
+with `--exclude ID --reason TEXT`. The ID and reason are kept only in the git-ignored
+`.integrity/excluded-sessions.local.txt`. INDEX.md lists the session as excluded
+without the reason, and any copy already in the log is deleted.
+
 Standard library only, by design: this runs from a git hook and before dependencies
 are installed.
 """
@@ -36,11 +41,12 @@ import argparse
 import json
 import os
 import shutil
+import stat
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, cast
+from typing import Callable, Iterator, cast
 
 LOG_DIR_VAR = "AI_AUDIT_LOG_DIR"
 AUTHOR_VAR = "AI_AUDIT_AUTHOR"
@@ -56,6 +62,12 @@ UNFILLED = "<!-- UNFILLED: only the developer may answer this. Run /export-ai-in
 # Claude Code names a session's model on each assistant message. Failed turns carry
 # this placeholder instead, which says nothing about what was used.
 SYNTHETIC_MODEL = "<synthetic>"
+
+# Git-ignored by the `*.local.*` rule. One `<session id> <reason>` per line. The
+# reason stays on this machine because it may describe what the session held.
+EXCLUSIONS_FILE = Path(".integrity") / "excluded-sessions.local.txt"
+
+EXCLUDED_STATUS = "Excluded by the developer"
 
 
 # ─── configuration ───────────────────────────────────────────────────────────
@@ -232,6 +244,43 @@ def mentions_repository(path: Path, root: Path) -> bool:
     except OSError:
         return False
     return any(needle in text for needle in needles | encoded)
+
+
+def read_exclusions(root: Path) -> dict[str, str]:
+    """Excluded session IDs, or prefixes of them, each mapped to its reason."""
+    path = root / EXCLUSIONS_FILE
+    if not path.is_file():
+        return {}
+    entries: dict[str, str] = {}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        session, _, reason = line.partition(" ")
+        entries[session] = reason.strip()
+    return entries
+
+
+def add_exclusion(root: Path, session: str, reason: str) -> bool:
+    """Record a session as excluded. Returns False if it was already listed."""
+    entry = session.strip()
+    if entry in read_exclusions(root):
+        return False
+
+    path = root / EXCLUSIONS_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing = path.read_text(encoding="utf-8") if path.is_file() else (
+        "# Sessions never exported to the AI audit log: <session id> <reason>\n"
+    )
+    if not existing.endswith("\n"):
+        existing += "\n"
+    single_line = " ".join(reason.split())
+    _ = path.write_text(f"{existing}{entry} {single_line}\n", encoding="utf-8", newline="\n")
+    return True
+
+
+def is_listed(facts: SessionFacts, exclusions: dict[str, str]) -> bool:
+    return any(facts.session_id.startswith(entry) for entry in exclusions)
 
 
 def find_records(root: Path, config: Config) -> list[tuple[Source, Path]]:
@@ -476,7 +525,8 @@ and no agent may write it.
 """
 
 
-def render_index(author: str, sessions: list[SessionFacts]) -> str:
+def render_index(author: str, sessions: list[SessionFacts], excluded: list[SessionFacts]) -> str:
+    """The log's table of contents. Excluded sessions are listed so the gap is declared."""
     generated = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z")
     lines = [
         f"# AI audit log — {author}",
@@ -484,19 +534,26 @@ def render_index(author: str, sessions: list[SessionFacts]) -> str:
         "Agent session transcripts for the capstone project, exported by",
         "`scripts/export_ai_audit.py`. Confidential to the team.",
         "",
-        f"Rebuilt {generated}. {len(sessions)} session(s).",
+        f"Rebuilt {generated}. {len(sessions)} session(s) exported, {len(excluded)} excluded.",
         "",
-        "| Session | Date | Tool | Branch | Human prompts | Models |",
-        "|---|---|---|---|---|---|",
+        "| Session | Date | Tool | Branch | Human prompts | Models | Status |",
+        "|---|---|---|---|---|---|---|",
     ]
 
-    for facts in sorted(sessions, key=lambda item: item.directory_name, reverse=True):
+    rows = [(facts, False) for facts in sessions] + [(facts, True) for facts in excluded]
+    for facts, is_excluded in sorted(rows, key=lambda row: row[0].directory_name, reverse=True):
+        if is_excluded:
+            lines.append(
+                f"| `{facts.session_id[:8]}` | {facts.date} | {facts.tool} | — | — | — "
+                f"| {EXCLUDED_STATUS} |"
+            )
+            continue
         branches = ", ".join(sorted(facts.branches)) or "—"
         models = ", ".join(sorted(facts.models)) or "—"
         prompts = str(facts.prompts) if facts.parsed else "—"
         lines.append(
             f"| [`{facts.session_id[:8]}`]({facts.directory_name}/SESSION.md) "
-            f"| {facts.date} | {facts.tool} | {branches} | {prompts} | {models} |"
+            f"| {facts.date} | {facts.tool} | {branches} | {prompts} | {models} | Exported |"
         )
 
     lines.append("")
@@ -561,6 +618,18 @@ def apply_verification(destination: Path, exported: list[SessionFacts], answer: 
     return filled, already
 
 
+def exported_copies(destination: Path, facts: SessionFacts) -> list[Path]:
+    """Folders in the log holding this session, including any filed under another date."""
+    if not destination.is_dir():
+        return []
+    suffix = f"_{facts.session_id[:8]}"
+    return sorted(
+        entry
+        for entry in destination.iterdir()
+        if entry.is_dir() and (entry.name == facts.directory_name or entry.name.endswith(suffix))
+    )
+
+
 def export(
     root: Path,
     config: Config,
@@ -577,14 +646,46 @@ def export(
         print("No session records found for this repository. Nothing to export.")
         return 0
 
+    exclusions = read_exclusions(root)
     exported: list[SessionFacts] = []
+    excluded: list[SessionFacts] = []
+    # Sessions outside --session, still listed so the rebuilt index stays complete.
+    others: list[SessionFacts] = []
+    others_excluded: list[SessionFacts] = []
+    removed = 0
+    failed: list[Path] = []
     copied = 0
     skipped = 0
 
     for source, path in records:
         facts = collect_facts(source, path)
         if only and not facts.session_id.startswith(only):
+            if is_listed(facts, exclusions):
+                others_excluded.append(facts)
+            elif (destination / facts.directory_name).is_dir():
+                others.append(facts)
             continue
+
+        if is_listed(facts, exclusions):
+            excluded.append(facts)
+            if not quiet:
+                print(f"{'would exclude' if dry_run else 'excluded'}  {facts.directory_name}")
+            # Printed even when quiet: deleting from the shared log must never be silent.
+            for copy in exported_copies(destination, facts):
+                if dry_run:
+                    removed += 1
+                    print(f"would remove  {copy.name} (confidential)")
+                    continue
+                try:
+                    remove_tree(copy)
+                except OSError as error:
+                    failed.append(copy)
+                    print(f"COULD NOT REMOVE  {copy} (confidential): {error}", file=sys.stderr)
+                    continue
+                removed += 1
+                print(f"removed  {copy.name} (confidential)")
+            continue
+
         exported.append(facts)
 
         session_dir = destination / facts.directory_name
@@ -608,17 +709,24 @@ def export(
         content = preserve_verification(session_target, render_session(facts, config.author))
         _ = session_target.write_text(content, encoding="utf-8", newline="\n")
 
-    if only and not exported:
+    if only and not exported and not excluded:
         print(f"No session matching '{only}'.", file=sys.stderr)
         return 1
 
     if not dry_run:
         destination.mkdir(parents=True, exist_ok=True)
         index = destination / "INDEX.md"
-        _ = index.write_text(render_index(config.author, exported), encoding="utf-8", newline="\n")
+        rendered = render_index(config.author, exported + others, excluded + others_excluded)
+        _ = index.write_text(rendered, encoding="utf-8", newline="\n")
 
     prefix = "would export" if dry_run else "exported"
-    print(f"{prefix} {copied}, unchanged {skipped}  ->  {destination}")
+    print(f"{prefix} {copied}, unchanged {skipped}, excluded {len(excluded)}  ->  {destination}")
+
+    if removed and not dry_run:
+        print(
+            f"\nRemoved {removed} confidential session folder(s) from the shared log. OneDrive keeps\n"
+            "deleted files in its recycle bin: empty it there too."
+        )
 
     if verified and dry_run:
         print("verification not written: --dry-run")
@@ -637,7 +745,27 @@ def export(
                 print(f"  {facts.directory_name}")
             print("Run /export-ai-integrity to supply it.")
 
+    if failed:
+        print(
+            f"\n{len(failed)} confidential session folder(s) are still in the shared log. Delete them"
+            " by hand, then empty the OneDrive recycle bin:",
+            file=sys.stderr,
+        )
+        for copy in failed:
+            print(f"  {copy}", file=sys.stderr)
+        return 1
+
     return 0
+
+
+def remove_tree(path: Path) -> None:
+    """Delete a folder, clearing the read-only flag OneDrive sets on synced folders."""
+
+    def clear_read_only(function: Callable[[str], object], target: str, _: BaseException) -> None:
+        os.chmod(target, stat.S_IWRITE)
+        function(target)
+
+    shutil.rmtree(path, onexc=clear_read_only)
 
 
 def needs_verification(destination: Path, facts: SessionFacts) -> bool:
@@ -693,12 +821,42 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--exclude",
+        metavar="ID",
+        help=(
+            "Never export the session whose id starts with ID. Needs --reason. Recorded in "
+            "the git-ignored exclusion list, and any copy already in the log is deleted."
+        ),
+    )
+    parser.add_argument(
+        "--reason",
+        metavar="TEXT",
+        help="Why the session passed to --exclude is excluded. Kept only on this machine.",
+    )
+    parser.add_argument(
         "--root",
         type=Path,
         default=Path(__file__).resolve().parent.parent,
         help="Repository root (defaults to the parent of scripts/).",
     )
     args = parser.parse_args()
+
+    # Recorded before the config check, so an unconfigured log cannot lose an exclusion.
+    exclude = cast("str | None", args.exclude)
+    reason = cast("str | None", args.reason)
+    if reason is not None and exclude is None:
+        print("--reason only applies with --exclude.", file=sys.stderr)
+        return 1
+    if exclude is not None:
+        if not exclude.strip():
+            print("--exclude needs a session id.", file=sys.stderr)
+            return 1
+        if reason is None or not reason.strip():
+            print('--exclude needs --reason "<why this session is excluded>".', file=sys.stderr)
+            return 1
+        added = add_exclusion(args.root, exclude, reason)
+        state = "excluded" if added else "already excluded"
+        print(f"{state}  {exclude.strip()}  (listed in {EXCLUSIONS_FILE.as_posix()})")
 
     try:
         config = load_config(args.root)
