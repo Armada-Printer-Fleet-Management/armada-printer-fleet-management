@@ -16,6 +16,8 @@ set -uo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT" || exit 1
+# Git passes the refs being pushed on stdin; Git LFS needs them at the end to upload large files.
+PUSHED_REFS="$(cat)"
 # shellcheck source=.githooks/pre-push.d/_lib.sh
 source .githooks/pre-push.d/_lib.sh
 
@@ -52,6 +54,15 @@ fi
 
 if [ $FAILED -ne 0 ]; then
   red "✗ Push aborted."
+  exit 1
+fi
+
+# core.hooksPath replaces Git LFS's own pre-push hook, so its upload runs here. Without it the push
+# would carry LFS pointers whose files never reach the remote.
+if git lfs version >/dev/null 2>&1; then
+  printf '%s\n' "$PUSHED_REFS" | git lfs pre-push "$@" || exit 1
+elif git ls-files ':(attr:filter=lfs)' | grep -q .; then
+  red "✗ Git LFS is not installed, so the large files in this push cannot be uploaded. Run /onboarding."
   exit 1
 fi
 

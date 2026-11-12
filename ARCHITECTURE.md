@@ -103,6 +103,7 @@ packages/                  shared code, used by more than one app
   api-client/              generated ConnectRPC client and typed web API
   slicer-engine/ †         the WebAssembly slicer engine both frontends load, fetched from the sister
                            repository armada-slicer-engine, which builds it
+  sample-prints/           real model and G-code files in Git LFS: bundled/ ships in the apps, test/ never does
 plugins/                   L3: adapters (auth-oidc, identity-local, s3-file-store, theme-default)
 infra/
   dev/                     local development stack: server, web, Postgres, Garage, Keycloak

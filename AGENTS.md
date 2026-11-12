@@ -209,6 +209,12 @@ Picture: `docs/domain-architecture.html`.
 Slicing uses CuraEngine compiled to WebAssembly, built in a sister repository. **Before any slicing work, read
 `packages/slicer-engine/AGENTS.md`**: it holds the repository split, and what runs in the browser versus Python.
 
+## Sample and test prints
+
+Real model and G-code files live in `packages/sample-prints/`, stored in Git LFS. **Before adding or
+using one, read `packages/sample-prints/AGENTS.md`**: it holds which prints ship in the apps and
+which never may, and the licences a print may carry.
+
 ---
 
 ## Open core: all logic here is generic
@@ -455,6 +461,8 @@ theme, so a hardcoded colour breaks someone else's brand.
 | DDD verdict for this commit   | `python scripts/ddd_verdict.py check` (also `scope`, `diff`, `show`)  |
 | Repository script tests       | `python -m unittest discover -s scripts/tests` (standard library only) |
 | Fetch the slicer engine        | `python scripts/fetch_slicer_engine.py` (`--check` offline; `--require-attestation` in CI) |
+| Fetch the sample prints (Git LFS) | `git lfs pull`                                                     |
+| Sample prints ship boundary    | `pnpm --dir packages/sample-prints test`                             |
 | Slicer engine smoke test       | `pnpm --dir packages/slicer-engine test`                             || Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
 | Desktop Python deps           | `uv sync --project apps/desktop/backend`                              |
 | Desktop JS deps                | `pnpm install` (in `root`)                          |

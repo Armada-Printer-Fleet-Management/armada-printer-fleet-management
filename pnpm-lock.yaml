@@ -288,6 +288,21 @@ importers:
         specifier: ^6
         version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
 
+  packages/sample-prints:
+    devDependencies:
+      '@types/node':
+        specifier: ^26
+        version: 26.6.3
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vite:
+        specifier: ^6
+        version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
+      vitest:
+        specifier: ^5
+        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
+
   packages/slicer-engine:
     devDependencies:
       '@types/node':
