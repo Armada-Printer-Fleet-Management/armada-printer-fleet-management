@@ -27,6 +27,9 @@ jobs:
         env:
           BASE: origin/${{ github.event.pull_request.base.ref }}
           APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'proto-breaking-change') }}
+          # buf clones the repository to read the base branch; it only needs the .proto files, so
+          # the clone must not try to download Git LFS files.
+          GIT_LFS_SKIP_SMUDGE: "1"
         run: |
           if ! git cat-file -e "$BASE:buf.yaml" 2>/dev/null; then
             echo "No buf.yaml on $BASE yet -- nothing to compare against."

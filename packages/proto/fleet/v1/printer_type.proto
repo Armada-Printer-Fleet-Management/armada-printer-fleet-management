@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package fleet.v1;
+
+import "fleet/v1/printer_capabilities.proto";
+
+// A kind of printer in the fleet: what a student slices for. It names no printer and carries no
+// state, so it reveals neither how many printers there are nor whether any is free.
+message PrinterType {
+  // The printer model, such as a manufacturer's product name.
+  string model = 1;
+  // What printers of this type can print.
+  PrinterCapabilities capabilities = 2;
+}
