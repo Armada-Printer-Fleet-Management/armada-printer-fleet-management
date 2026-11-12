@@ -240,6 +240,22 @@ services:
       timeout: 5s
       retries: 10
 
+  # Development only: creates the admin, staff and student users once Keycloak is ready, then
+  # exits. Never part of the deploy stack.
+  keycloak-dev-users:
+    image: quay.io/keycloak/keycloak:26.8.1
+    entrypoint: ['bash', '/keycloak-dev-users.sh']
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+      KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?}
+      DEV_USER_PASSWORD: ${DEV_USER_PASSWORD:?}
+    volumes:
+      - ./keycloak-dev-users.sh:/keycloak-dev-users.sh:ro
+    restart: 'no'
+
 volumes:
   pgdata:
   garage_meta:

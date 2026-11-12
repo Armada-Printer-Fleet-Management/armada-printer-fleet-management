@@ -86,6 +86,7 @@ Pages carry large inline SVG, so read one only when the task needs its picture.
 | `docs/slicer-engine.html` | Working on slicing: the engine's build pipeline, or what runs in the browser versus Python |
 | `docs/desktop.html` | Working on `apps/desktop/`: IPC, codegen, packaging or the installer |
 | `docs/web.html` | Working on `apps/web/`: the layout, routes, sidebar or adding a page |
+| `docs/authentication.html` | Working on sign-in, roles or endpoint access; finding the development stack's sign-in users |
 | `docs/testing.html` | Choosing which size of server test to write; the rules are `apps/server/tests/AGENTS.md` |
 | `docs/git-hygiene.html` | Explaining the branch, rebase, release or PR-stack flow to a developer |
 | `docs/data-management-choices.html` | Planning across services; the text version is `data-management-choices.md` |

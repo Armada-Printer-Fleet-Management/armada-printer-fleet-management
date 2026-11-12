@@ -92,15 +92,12 @@ def merge_base() -> str:
 
 
 def pushed_ancestors() -> list[str]:
-    """Remote branches HEAD builds on, other than this branch's own."""
+    """Remote branches HEAD builds on, other than this branch's own. Matched by name, never by
+    upstream: a branch made from the one below it in a stack tracks that one as its upstream."""
     own = {"origin/HEAD", "origin"}
     branch = git("rev-parse", "--abbrev-ref", "HEAD")
     if branch != "HEAD":
         own.add(f"origin/{branch}")
-    try:
-        own.add(git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"))
-    except subprocess.CalledProcessError:
-        pass
     merged = git(
         "for-each-ref",
         "--merged",
