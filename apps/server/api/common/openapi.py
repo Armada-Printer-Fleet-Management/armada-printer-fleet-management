@@ -5,6 +5,7 @@ from typing import cast
 from fastapi import FastAPI
 
 from api.common.consts import API_PREFIX
+from api.common.mounted_services import mounted_services
 
 # Written by protoc-gen-connect-openapi during server codegen, one document per .proto file.
 CONNECT_OPENAPI_DIR = Path(__file__).resolve().parents[1] / "gen" / "openapi"
@@ -39,6 +40,13 @@ def _connect_documents() -> list[JsonObject]:
     ]
 
 
+# Codegen documents every service in the contract, including ones not implemented yet, so only
+# the services the app mounts are published. Each document describes one .proto file's service.
+def _serves(document: JsonObject, services: set[str]) -> bool:
+    paths = cast(JsonObject, document.get("paths", {}))
+    return any(path.split("/")[1] in services for path in paths)
+
+
 # ConnectRPC services are mounted ASGI apps, which FastAPI's own schema leaves out, so their
 # generated documents are merged into it.
 def openapi_schema(app: FastAPI) -> JsonObject:
@@ -49,8 +57,11 @@ def openapi_schema(app: FastAPI) -> JsonObject:
     paths = _object(schema, "paths")
     schemas = _object(_object(schema, "components"), "schemas")
     tags = cast(list[JsonObject], schema.setdefault("tags", []))
+    services = mounted_services(app)
 
     for document in _connect_documents():
+        if not _serves(document, services):
+            continue
         # The generated documents only know the proto paths, not the prefix they are mounted under.
         connect_paths = cast(JsonObject, document.get("paths", {}))
         _merge(paths, {API_PREFIX + path: item for path, item in connect_paths.items()}, "path")

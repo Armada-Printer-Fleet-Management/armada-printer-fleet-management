@@ -95,10 +95,12 @@ Connect.
 
 Reuse the `content_asset.v1` upload types and comment both calls as a pair.
 
-**Status transitions.** Staff-driven changes to one entity go through a single
-`Transition<Entity>` RPC with a `oneof action`, one nested message per action carrying exactly
-the fields that action needs. Add an action as a new oneof case. Statuses set by printers or
-other services are reported by those services, not requested through this RPC.
+**Status transitions.** Staff-driven changes to an entity go through a `Transition<Entity>` RPC
+with a `oneof action`, one nested message per action carrying exactly the fields that action
+needs. Add an action as a new oneof case. An entity whose state has independent parts, or whose
+parts need different permissions, gets one RPC per part, named `Transition<Entity><Part>`
+(`TransitionUserStatus`, `TransitionUserRole`). Statuses set by printers or other services are
+reported by those services, not requested through these RPCs.
 
 **Idempotent commands.** A command that causes a physical action carries an `id.v1.CommandId`
 chosen by the caller. A retry with the same ID returns the first result.

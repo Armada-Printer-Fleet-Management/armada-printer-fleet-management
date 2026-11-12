@@ -129,6 +129,24 @@ source_modules = [
 ]
 forbidden_modules = ["plugin_api", "s3_file_store", "auth_oidc"]
 
+# Everything else in the server builds on api/common, so it must not reach back up into them.
+[[tool.importlinter.contracts]]
+name = "Common imports nothing else from the server"
+type = "forbidden"
+source_modules = ["api.common"]
+forbidden_modules = [
+  "api.app",
+  "api.domains",
+  "api.infrastructure",
+  "api.lifespan",
+  "api.logging_config",
+  "api.main",
+  "api.middleware",
+  "api.plugins",
+  "api.routers",
+  "api.services",
+]
+
 [[tool.importlinter.contracts]]
 name = "Ports depend on no plugin or app"
 type = "forbidden"

@@ -2,6 +2,10 @@ syntax = "proto3";
 
 package auth.v1;
 
+import "common/v1/time_status.proto";
+import "google/protobuf/timestamp.proto";
+import "id/v1/user_id.proto";
+
 // What a user may do, from least to most access. Permissions are enforced by the server,
 // never by the client.
 enum UserRole {
@@ -15,4 +19,40 @@ enum UserRole {
   USER_ROLE_STAFF = 3;
   // Manages the system and its users.
   USER_ROLE_ADMIN = 4;
+}
+
+// Whether a user's account can be used.
+enum UserStatus {
+  // Not set. Never valid; treat as an error.
+  USER_STATUS_UNSPECIFIED = 0;
+  // Can sign in and use the system.
+  USER_STATUS_ACTIVE = 1;
+  // Blocked from signing in until set back to active.
+  USER_STATUS_SUSPENDED = 2;
+  // Soft deleted. Kept so their history still resolves; deleted_at says when.
+  USER_STATUS_DELETED = 3;
+}
+
+// A person who signs in to the system.
+message User {
+  // This user.
+  id.v1.UserId id = 1;
+  // Sign-in email address, unique and lower case.
+  string email = 2;
+  // Given name.
+  string first_name = 3;
+  // Family name.
+  string last_name = 4;
+  // What this user may do.
+  UserRole role = 5;
+  // Whether the account can be used.
+  UserStatus status = 6;
+  // When temporary access ends. Unset for accounts that do not expire.
+  google.protobuf.Timestamp expires_at = 7;
+  // When the user last signed in. Unset if they never have.
+  google.protobuf.Timestamp last_login_at = 8;
+  // When the user was deleted. Unset unless status is USER_STATUS_DELETED.
+  google.protobuf.Timestamp deleted_at = 9;
+  // When the user was created and last changed.
+  common.v1.TimeStatus time_status = 10;
 }

@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package server.v1;
+
+import "auth/v1/user.proto";
+import "common/v1/page.proto";
+import "google/protobuf/timestamp.proto";
+import "id/v1/user_id.proto";
+
+// Manages the users who can sign in to the system.
+service UserService {
+  // Gets a user by ID.
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+  // Creates a user.
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+
+  // Lists users, one page at a time.
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+
+  // Changes the details a user manages themselves.
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+
+  // Suspends, reactivates or deletes a user.
+  rpc TransitionUserStatus(TransitionUserStatusRequest) returns (TransitionUserStatusResponse);
+
+  // Changes what a user may do. Each action carries exactly the fields its role needs.
+  rpc TransitionUserRole(TransitionUserRoleRequest) returns (TransitionUserRoleResponse);
+}
+
+// Asks for one user.
+message GetUserRequest {
+  // The user to get.
+  id.v1.UserId user_id = 1;
+}
+
+// The requested user.
+message GetUserResponse {
+  // The user.
+  auth.v1.User user = 1;
+}
+
+// The details of a new user.
+message CreateUserRequest {
+  // Sign-in email address.
+  string email = 1;
+  // Given name.
+  string first_name = 2;
+  // Family name.
+  string last_name = 3;
+  // What the new user may do.
+  auth.v1.UserRole role = 4;
+  // When their access ends. Required for a guest; unset for accounts that do not expire.
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+// The user that was created.
+message CreateUserResponse {
+  // The new user.
+  auth.v1.User user = 1;
+}
+
+// Asks for a page of users.
+message ListUsersRequest {
+  // Which page to return.
+  common.v1.PageRequest page = 1;
+}
+
+// One page of users.
+message ListUsersResponse {
+  // The users on this page.
+  repeated auth.v1.User users = 1;
+  // How to fetch the next page.
+  common.v1.PageResponse page = 2;
+}
+
+// The changes to make to a user. Only the fields that are set are changed.
+message UpdateUserRequest {
+  // The user to change.
+  id.v1.UserId user_id = 1;
+  // New given name. Unset leaves it unchanged.
+  optional string first_name = 2;
+  // New family name. Unset leaves it unchanged.
+  optional string last_name = 3;
+  // New email address. Unset leaves it unchanged.
+  optional string email = 4;
+}
+
+// The user after the change.
+message UpdateUserResponse {
+  // The updated user.
+  auth.v1.User user = 1;
+}
+
+// Changes a user's status through one action.
+message TransitionUserStatusRequest {
+  // Blocks an ACTIVE user from signing in, moving them to SUSPENDED.
+  message Suspend {}
+  // Lets a SUSPENDED or DELETED user sign in again, moving them to ACTIVE.
+  message Reactivate {}
+  // Soft deletes an ACTIVE or SUSPENDED user, moving them to DELETED and setting deleted_at.
+  message Delete {}
+
+  // The user to change.
+  id.v1.UserId user_id = 1;
+  // What to do to them. Exactly one must be set.
+  oneof action {
+    // Suspend.
+    Suspend suspend = 2;
+    // Reactivate.
+    Reactivate reactivate = 3;
+    // Delete.
+    Delete delete = 4;
+  }
+}
+
+// The user after the change.
+message TransitionUserStatusResponse {
+  // The updated user.
+  auth.v1.User user = 1;
+}
+
+// Changes a user's role through one action.
+message TransitionUserRoleRequest {
+  // Makes the user a guest, whose access ends at a set time.
+  message MakeGuest {
+    // When their access ends. Required.
+    google.protobuf.Timestamp expires_at = 1;
+  }
+  // Makes the user a student.
+  message MakeStudent {}
+  // Makes the user a member of staff.
+  message MakeStaff {}
+  // Makes the user an admin.
+  message MakeAdmin {}
+
+  // The user to change.
+  id.v1.UserId user_id = 1;
+  // The role to give them. Exactly one must be set.
+  oneof action {
+    // Make a guest until a set time.
+    MakeGuest make_guest = 2;
+    // Make a student.
+    MakeStudent make_student = 3;
+    // Make staff.
+    MakeStaff make_staff = 4;
+    // Make an admin.
+    MakeAdmin make_admin = 5;
+  }
+}
+
+// The user after the change.
+message TransitionUserRoleResponse {
+  // The updated user.
+  auth.v1.User user = 1;
+}
