@@ -4,5 +4,8 @@ export { PrintJobUploadError, requestFailure } from './errors';
 export type { RequestFailure } from './errors';
 export { createAgreementApi } from './agreement';
 export { createPrintJobApi } from './print-job';
+export { createPrinterApi } from './printer';
+export type { PrinterType } from './gen/fleet/v1/printer_type_pb';
+export type { PrinterCapabilities } from './gen/fleet/v1/printer_capabilities_pb';
 export { PrintJobStatus } from './gen/print_job/v1/print_job_pb';
 export type { PrintJob } from './gen/print_job/v1/print_job_pb';

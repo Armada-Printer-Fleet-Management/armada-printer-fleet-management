@@ -8,10 +8,12 @@ from proto_utils.gen.server.v1.printer_service_pb2 import (
     GetPrinterResponse,
     ListPrintersRequest,
     ListPrintersResponse,
+    ListPrinterTypesRequest,
+    ListPrinterTypesResponse,
     TransitionPrinterRequest,
     TransitionPrinterResponse,
 )
-from proto_utils.mappers import PrinterMapper
+from proto_utils.mappers import PrinterMapper, PrinterTypeMapper
 
 from api.domains.fleet.service import PrinterService
 from api.services.domain_errors import domain_errors_as_connect, request_id
@@ -21,6 +23,7 @@ class PrinterServiceImplementation:
     """The Connect handler for server.v1.PrinterService."""
 
     _mapper = PrinterMapper()
+    _type_mapper = PrinterTypeMapper()
 
     def __init__(self, printers: PrinterService) -> None:
         self._printers = printers
@@ -48,6 +51,18 @@ class PrinterServiceImplementation:
         with domain_errors_as_connect():
             printer = await self._printers.get(printer_id)
         return GetPrinterResponse(printer=self._mapper.to_proto(printer))
+
+    async def list_printer_types(
+        self,
+        request: ListPrinterTypesRequest,
+        ctx: RequestContext[ListPrinterTypesRequest, ListPrinterTypesResponse],
+        /,
+    ) -> ListPrinterTypesResponse:
+        with domain_errors_as_connect():
+            printer_types = await self._printers.types()
+        return ListPrinterTypesResponse(
+            printer_types=[self._type_mapper.to_proto(each) for each in printer_types]
+        )
 
     async def transition_printer(
         self,
