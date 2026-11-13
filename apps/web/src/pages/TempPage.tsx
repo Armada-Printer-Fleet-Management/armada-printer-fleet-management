@@ -1,12 +1,10 @@
 import { read } from '@armada/organization-info';
-import { createApiClient } from '@armada/api-client';
 import { OrganizationInfoSchema } from '@armada/api-client/gen/common/v1/organization_info_pb';
 import { AboutBox } from '@armada/ui-kit';
 
 import { version } from '../lib/version';
 import { TempVerticalSlice } from '../temp/TempVerticalSlice';
-
-const apiClient = createApiClient();
+import { apiClient } from '../lib/api';
 
 export function TempPage() {
   return (

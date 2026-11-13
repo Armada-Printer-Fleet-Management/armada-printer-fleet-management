@@ -8,6 +8,7 @@ import { MyPrintsPage } from './pages/MyPrintsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { TrainingPage } from './pages/TrainingPage';
 import { routePaths } from './routes';
+import { SignInCallbackPage } from './pages/SignInCallbackPage';
 
 // Written as a literal DEV check so Vite removes the import, and with it the dev tools code,
 // from the production bundle.
@@ -21,6 +22,10 @@ export function WebRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route
+          path={routePaths.signInCallback.path}
+          element={<SignInCallbackPage />}
+        />
         <Route element={<AppLayout />}>
           <Route index element={<HomePage />} />
           <Route path={routePaths.myPrints.path} element={<MyPrintsPage />} />
