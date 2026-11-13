@@ -7,6 +7,30 @@ export {
   CardTitle,
 } from './components/card';
 export { AboutBox } from './components/about-box';
+export {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from './components/collapsible';
+export {
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  type DialogProps,
+} from './components/dialog';
+export {
+  LegalAgreementDialog,
+  type LegalAgreementDialogProps,
+  type LegalAgreementDocument,
+} from './components/legal-agreement-dialog';
+export {
+  LegalAgreementGate,
+  type LegalAgreementGateProps,
+  type LegalDocumentView,
+} from './components/legal-agreement-gate';
 export { Tooltip, type TooltipProps } from './components/tooltip';
 export { ActivityIcon } from './icons/activity-icon';
 export { BookOpenIcon } from './icons/book-open-icon';

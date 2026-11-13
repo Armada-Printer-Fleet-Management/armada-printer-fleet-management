@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package legal.v1;
+
+import "common/v1/legal_document.proto";
+import "common/v1/time_status.proto";
+import "id/v1/agreement_id.proto";
+import "id/v1/user_id.proto";
+
+// A user's acceptance of one version of a legal document.
+message Agreement {
+  // This agreement.
+  id.v1.AgreementId id = 1;
+  // The user who accepted.
+  id.v1.UserId user_id = 2;
+  // The document accepted.
+  common.v1.LegalDocumentKind kind = 3;
+  // The version accepted: the document's effective date, as YYYY-MM-DD.
+  string effective_date = 4;
+  // created_at is when the user accepted.
+  common.v1.TimeStatus time_status = 5;
+}

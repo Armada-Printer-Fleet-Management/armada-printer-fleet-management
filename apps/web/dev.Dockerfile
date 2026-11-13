@@ -28,7 +28,7 @@ RUN pnpm install --frozen-lockfile --filter apps-web...
 
 # The development image: Vite's dev server, reloading when compose syncs in an edit.
 FROM deps AS dev
-COPY tsconfig.base.json ./
+COPY tsconfig.base.json LICENSE ./
 COPY packages/organization-info packages/organization-info
 COPY packages/ui-kit packages/ui-kit
 COPY packages/api-client packages/api-client

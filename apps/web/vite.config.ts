@@ -3,8 +3,11 @@ import react from '@vitejs/plugin-react';
 import * as path from 'path';
 import tailwindcss from '@tailwindcss/vite';
 import { read } from '../../packages/organization-info/organization-info';
+import { legalDocuments } from '../../packages/organization-info/vite';
 import { slicerEngine } from '../../packages/slicer-engine/vite';
-import { OrganizationInfoSchema } from '@armada/api-client/gen/common/v1/organization_info_pb';
+// A relative path, so Vite bundles it with this config; Node cannot resolve its extensionless
+// imports from the package export.
+import { OrganizationInfoSchema } from '../../packages/api-client/src/gen/common/v1/organization_info_pb';
 import pkg from './package.json';
 
 const { title } = read(OrganizationInfoSchema);
@@ -14,6 +17,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     slicerEngine(),
+    legalDocuments(),
     {
       name: 'organization-title',
       transformIndexHtml: {

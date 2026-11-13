@@ -280,6 +280,13 @@ importers:
       '@bufbuild/protobuf':
         specifier: ^2
         version: 2.15.0
+    devDependencies:
+      '@types/node':
+        specifier: ^26
+        version: 26.6.3
+      vite:
+        specifier: ^6
+        version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
 
   packages/slicer-engine:
     devDependencies:

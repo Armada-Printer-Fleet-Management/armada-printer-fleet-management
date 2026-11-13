@@ -100,6 +100,57 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "common.v1.LegalDocument": {
+        "additionalProperties": false,
+        "description": "One version of a legal document users must accept, as organization.json lists it.",
+        "properties": {
+          "effectiveDate": {
+            "description": "The day this version took effect, as YYYY-MM-DD. A later date asks every user to accept again.",
+            "title": "effective_date",
+            "type": "string"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.LegalDocumentKind"
+              }
+            ],
+            "description": "What the document is.",
+            "title": "kind"
+          },
+          "path": {
+            "description": "Where the document's text is, relative to the repository root.",
+            "title": "path",
+            "type": "string"
+          },
+          "sha256": {
+            "description": "Lower-case hex SHA-256 of the text at path. Builds refuse to run when it does not match.",
+            "title": "sha256",
+            "type": "string"
+          },
+          "spdx": {
+            "description": "SPDX licence identifier, such as AGPL-3.0-only, when the document is a licence; else empty.",
+            "title": "spdx",
+            "type": "string"
+          },
+          "title": {
+            "description": "Display title.",
+            "title": "title",
+            "type": "string"
+          }
+        },
+        "title": "LegalDocument",
+        "type": "object"
+      },
+      "common.v1.LegalDocumentKind": {
+        "description": "What a legal document is. Users accept each kind separately.",
+        "enum": [
+          "LEGAL_DOCUMENT_KIND_UNSPECIFIED",
+          "LEGAL_DOCUMENT_KIND_LICENSE"
+        ],
+        "title": "LegalDocumentKind",
+        "type": "string"
+      },
       "common.v1.PageRequest": {
         "additionalProperties": false,
         "description": "Asks for one page of a list. Every List RPC request carries this as its page field.",
@@ -449,6 +500,19 @@
         "format": "date-time",
         "type": "string"
       },
+      "id.v1.AgreementId": {
+        "additionalProperties": false,
+        "description": "Identifies a legal.v1.Agreement.",
+        "properties": {
+          "value": {
+            "description": "UUID.",
+            "title": "value",
+            "type": "string"
+          }
+        },
+        "title": "AgreementId",
+        "type": "object"
+      },
       "id.v1.FileId": {
         "additionalProperties": false,
         "description": "Identifies a content_asset.v1.File.",
@@ -512,6 +576,55 @@
           }
         },
         "title": "UserId",
+        "type": "object"
+      },
+      "legal.v1.Agreement": {
+        "additionalProperties": false,
+        "description": "A user's acceptance of one version of a legal document.",
+        "properties": {
+          "effectiveDate": {
+            "description": "The version accepted: the document's effective date, as YYYY-MM-DD.",
+            "title": "effective_date",
+            "type": "string"
+          },
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.AgreementId"
+              }
+            ],
+            "description": "This agreement.",
+            "title": "id"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.LegalDocumentKind"
+              }
+            ],
+            "description": "The document accepted.",
+            "title": "kind"
+          },
+          "timeStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.TimeStatus"
+              }
+            ],
+            "description": "created_at is when the user accepted.",
+            "title": "time_status"
+          },
+          "userId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.UserId"
+              }
+            ],
+            "description": "The user who accepted.",
+            "title": "user_id"
+          }
+        },
+        "title": "Agreement",
         "type": "object"
       },
       "print_job.v1.PrintJob": {
@@ -653,6 +766,54 @@
         "title": "PrinterQueue",
         "type": "object"
       },
+      "server.v1.AcceptAgreementRequest": {
+        "additionalProperties": false,
+        "description": "Accepts one document version.",
+        "properties": {
+          "effectiveDate": {
+            "description": "The version shown to the user. Refused when it is no longer the current one.",
+            "title": "effective_date",
+            "type": "string"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.LegalDocumentKind"
+              }
+            ],
+            "description": "The document accepted.",
+            "title": "kind"
+          },
+          "userId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.UserId"
+              }
+            ],
+            "description": "The user accepting. TEMP: a client-chosen ID until sign-in exists.",
+            "title": "user_id"
+          }
+        },
+        "title": "AcceptAgreementRequest",
+        "type": "object"
+      },
+      "server.v1.AcceptAgreementResponse": {
+        "additionalProperties": false,
+        "description": "The recorded acceptance.",
+        "properties": {
+          "agreement": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/legal.v1.Agreement"
+              }
+            ],
+            "description": "The agreement. Accepting the same version again returns the first one.",
+            "title": "agreement"
+          }
+        },
+        "title": "AcceptAgreementResponse",
+        "type": "object"
+      },
       "server.v1.CreatePrintJobRequest": {
         "additionalProperties": false,
         "description": "Creates a DRAFT job.",
@@ -724,6 +885,40 @@
           }
         },
         "title": "CreatePrintJobUploadResponse",
+        "type": "object"
+      },
+      "server.v1.GetAgreementRequest": {
+        "additionalProperties": false,
+        "description": "Gets one agreement.",
+        "properties": {
+          "agreementId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.AgreementId"
+              }
+            ],
+            "description": "The agreement to get.",
+            "title": "agreement_id"
+          }
+        },
+        "title": "GetAgreementRequest",
+        "type": "object"
+      },
+      "server.v1.GetAgreementResponse": {
+        "additionalProperties": false,
+        "description": "One agreement.",
+        "properties": {
+          "agreement": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/legal.v1.Agreement"
+              }
+            ],
+            "description": "The agreement.",
+            "title": "agreement"
+          }
+        },
+        "title": "GetAgreementResponse",
         "type": "object"
       },
       "server.v1.GetFileRequest": {
@@ -964,6 +1159,61 @@
           }
         },
         "title": "ListFilesResponse",
+        "type": "object"
+      },
+      "server.v1.ListLegalDocumentsRequest": {
+        "additionalProperties": false,
+        "description": "Asks for the current legal documents.",
+        "title": "ListLegalDocumentsRequest",
+        "type": "object"
+      },
+      "server.v1.ListLegalDocumentsResponse": {
+        "additionalProperties": false,
+        "description": "The current legal documents.",
+        "properties": {
+          "legalDocuments": {
+            "description": "One per kind, at its current version.",
+            "items": {
+              "$ref": "#/components/schemas/common.v1.LegalDocument"
+            },
+            "title": "legal_documents",
+            "type": "array"
+          }
+        },
+        "title": "ListLegalDocumentsResponse",
+        "type": "object"
+      },
+      "server.v1.ListOutstandingLegalDocumentsRequest": {
+        "additionalProperties": false,
+        "description": "Asks which current documents a user still has to accept.",
+        "properties": {
+          "userId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.UserId"
+              }
+            ],
+            "description": "The user. TEMP: a client-chosen ID until sign-in exists.",
+            "title": "user_id"
+          }
+        },
+        "title": "ListOutstandingLegalDocumentsRequest",
+        "type": "object"
+      },
+      "server.v1.ListOutstandingLegalDocumentsResponse": {
+        "additionalProperties": false,
+        "description": "The documents a user still has to accept.",
+        "properties": {
+          "legalDocuments": {
+            "description": "Empty when the user has accepted every current document.",
+            "items": {
+              "$ref": "#/components/schemas/common.v1.LegalDocument"
+            },
+            "title": "legal_documents",
+            "type": "array"
+          }
+        },
+        "title": "ListOutstandingLegalDocumentsResponse",
         "type": "object"
       },
       "server.v1.ListPrintJobsRequest": {
@@ -1693,6 +1943,254 @@
         "summary": "Health",
         "tags": [
           "General"
+        ]
+      }
+    },
+    "/api/server.v1.AgreementService/AcceptAgreement": {
+      "post": {
+        "description": "Records that a user accepted the current version of a document.",
+        "operationId": "server.v1.AgreementService.AcceptAgreement",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.AcceptAgreementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.AcceptAgreementResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "AcceptAgreement",
+        "tags": [
+          "server.v1.AgreementService"
+        ]
+      }
+    },
+    "/api/server.v1.AgreementService/GetAgreement": {
+      "post": {
+        "description": "Gets one agreement.",
+        "operationId": "server.v1.AgreementService.GetAgreement",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.GetAgreementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.GetAgreementResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "GetAgreement",
+        "tags": [
+          "server.v1.AgreementService"
+        ]
+      }
+    },
+    "/api/server.v1.AgreementService/ListLegalDocuments": {
+      "post": {
+        "description": "The current version of every legal document.",
+        "operationId": "server.v1.AgreementService.ListLegalDocuments",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.ListLegalDocumentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.ListLegalDocumentsResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "ListLegalDocuments",
+        "tags": [
+          "server.v1.AgreementService"
+        ]
+      }
+    },
+    "/api/server.v1.AgreementService/ListOutstandingLegalDocuments": {
+      "post": {
+        "description": "The current documents a user has not accepted yet.",
+        "operationId": "server.v1.AgreementService.ListOutstandingLegalDocuments",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.ListOutstandingLegalDocumentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.ListOutstandingLegalDocumentsResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "ListOutstandingLegalDocuments",
+        "tags": [
+          "server.v1.AgreementService"
         ]
       }
     },
@@ -2566,6 +3064,10 @@
     }
   },
   "tags": [
+    {
+      "description": "Users' acceptance of the legal documents, served by the remote server.\n\n TEMP: until sign-in exists, each request names its user. Once it does, the user is the\n authenticated caller and the user_id fields are removed.",
+      "name": "server.v1.AgreementService"
+    },
     {
       "description": "File records, served by the remote server. The bytes are never sent through this service.",
       "name": "server.v1.FileService"

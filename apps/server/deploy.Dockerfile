@@ -69,12 +69,15 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --project packages/proto/utils
 COPY buf.yaml buf.gen.python.yaml buf.gen.server.yaml ./
 COPY packages/proto packages/proto
-COPY scripts/generate_proto.py scripts/
+COPY scripts/generate_proto.py scripts/check_legal_documents.py scripts/
+COPY LICENSE ./
 COPY apps/server apps/server
 
-# Writes the shared Python code into proto_utils/gen, then the server's OpenAPI data into
-# apps/server/api/gen. uv run puts the virtualenv's generator on PATH, where buf looks for it.
-RUN uv run --locked --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml \
+# Refuses to build if a legal document no longer matches organization.json. Then writes the shared
+# Python code into proto_utils/gen, and the server's OpenAPI data into apps/server/api/gen. uv run
+# puts the virtualenv's generator on PATH, where buf looks for it.
+RUN python scripts/check_legal_documents.py \
+ && uv run --locked --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml \
  && uv run --locked --project apps/server python scripts/generate_proto.py buf.gen.server.yaml
 
 # The image that ships. Built on deps rather than codegen, so the dev dependencies and codegen

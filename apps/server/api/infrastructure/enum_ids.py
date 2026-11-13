@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from uuid import UUID
 
 from core_domain.content_asset import FileType
+from core_domain.legal import LegalDocumentKind
 from core_domain.print_job import PrintJobStatus
 from proto_utils.gen.auth.v1 import user_pb2
 
@@ -26,6 +27,10 @@ PRINT_JOB_STATUS_IDS: dict[PrintJobStatus, UUID] = {
 FILE_TYPE_IDS: dict[FileType, UUID] = {
     FileType.GCODE: UUID("4565c182-f698-4e1a-a2a9-b33e92254dbe"),
     FileType.CGCODE: UUID("cb19af65-7390-4f2a-9282-b1dc656f3cf3"),
+}
+
+LEGAL_DOCUMENT_KIND_IDS: dict[LegalDocumentKind, UUID] = {
+    LegalDocumentKind.LICENSE: UUID("06735024-bbe8-426e-a56c-14797eea93bc"),
 }
 
 USER_ROLE_IDS: dict[user_pb2.UserRole, UUID] = {

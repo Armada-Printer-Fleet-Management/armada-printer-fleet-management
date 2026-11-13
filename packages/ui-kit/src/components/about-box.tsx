@@ -10,7 +10,7 @@ export interface AboutBoxProps {
   organization: {
     title: string;
     description: string;
-    license: string;
+    legalDocuments: { title: string; effectiveDate: string }[];
     repositoryUrl: string;
   };
   version?: {
@@ -40,10 +40,17 @@ export function AboutBox({ organization, version }: AboutBoxProps) {
             <dt className="font-medium text-foreground/70">Version</dt>
             <dd>{versionText}</dd>
           </div>
-          <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-4">
-            <dt className="font-medium text-foreground/70">License</dt>
-            <dd>{organization.license}</dd>
-          </div>
+          {organization.legalDocuments.map((document) => (
+            <div
+              key={document.title}
+              className="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-4"
+            >
+              <dt className="font-medium text-foreground/70">License</dt>
+              <dd>
+                {document.title}, effective {document.effectiveDate}
+              </dd>
+            </div>
+          ))}
           <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-4">
             <dt className="font-medium text-foreground/70">Source</dt>
             <dd className="min-w-0">

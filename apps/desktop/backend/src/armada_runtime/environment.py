@@ -39,3 +39,10 @@ class Environment:
             raise RuntimeError("APPDATA is not set, so there is nowhere to keep the settings file")
         name = "settings.dev.yaml" if Environment.is_dev else "settings.yaml"
         return Path(app_data) / executable_name() / name
+
+    @staticmethod
+    def temp_user_id_path() -> Path:
+        """Where the temporary user ID is kept, beside the settings file. It must outlive a
+        launch, and the renderer's own storage is wiped on every one."""
+        name = "temp-user-id.dev" if Environment.is_dev else "temp-user-id"
+        return Environment.settings_path().with_name(name)

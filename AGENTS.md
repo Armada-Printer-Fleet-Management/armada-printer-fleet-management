@@ -455,8 +455,7 @@ theme, so a hardcoded colour breaks someone else's brand.
 | DDD verdict for this commit   | `python scripts/ddd_verdict.py check` (also `scope`, `diff`, `show`)  |
 | Repository script tests       | `python -m unittest discover -s scripts/tests` (standard library only) |
 | Fetch the slicer engine        | `python scripts/fetch_slicer_engine.py` (`--check` offline; `--require-attestation` in CI) |
-| Slicer engine smoke test       | `pnpm --dir packages/slicer-engine test`                             |
-| Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
+| Slicer engine smoke test       | `pnpm --dir packages/slicer-engine test`                             || Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
 | Desktop Python deps           | `uv sync --project apps/desktop/backend`                              |
 | Desktop JS deps                | `pnpm install` (in `root`)                          |
 | Desktop backend tests          | `uv run --directory apps/desktop/backend pytest`                     |
@@ -515,7 +514,7 @@ Full environment setup is `/onboarding`.
 
 ## Shared organization identity: `packages/organization-info/organization.json`
 
-The title, description, license and source repository live in exactly one place:
+The title, description, legal documents and source repository live in exactly one place:
 `packages/organization-info/organization.json`, typed by `OrganizationInfo` in
 `packages/proto/common/v1/organization_info.proto`. **Never hardcode them** in an application —
 window and page titles, headings and executable names all read it.
@@ -531,6 +530,10 @@ this base information.
 
 `uv` installs path dependencies as built copies, so `packages/organization-info/pyproject.toml`
 lists `organization.json` in `cache-keys`. Keep that when editing the file.
+
+**Legal documents** such as `LICENSE` are pinned in `legalDocuments` by `effectiveDate` and
+`sha256`: changing one's text means bumping both in the same change, or every build refuses
+(`scripts/check_legal_documents.py` prints the new hash).
 
 ---
 

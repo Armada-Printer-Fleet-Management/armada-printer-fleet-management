@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package common.v1;
+
+// What a legal document is. Users accept each kind separately.
+enum LegalDocumentKind {
+  // Not set. Never valid; treat as an error.
+  LEGAL_DOCUMENT_KIND_UNSPECIFIED = 0;
+  // The software licence.
+  LEGAL_DOCUMENT_KIND_LICENSE = 1;
+}
+
+// One version of a legal document users must accept, as organization.json lists it.
+message LegalDocument {
+  // What the document is.
+  LegalDocumentKind kind = 1;
+  // Display title.
+  string title = 2;
+  // SPDX licence identifier, such as AGPL-3.0-only, when the document is a licence; else empty.
+  string spdx = 3;
+  // Where the document's text is, relative to the repository root.
+  string path = 4;
+  // The day this version took effect, as YYYY-MM-DD. A later date asks every user to accept again.
+  string effective_date = 5;
+  // Lower-case hex SHA-256 of the text at path. Builds refuse to run when it does not match.
+  string sha256 = 6;
+}

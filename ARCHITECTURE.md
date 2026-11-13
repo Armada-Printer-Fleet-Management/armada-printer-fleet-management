@@ -98,7 +98,7 @@ packages/                  shared code, used by more than one app
   proto/ †                 L0: the .proto contract; utils/ holds the generated Python and mappers
   core-domain/             L1: entities, their rules, typed IDs and DDD bases
   plugin-api/              L2: ports that plugins implement
-  organization-info/       the organization's title, description, licence and repository
+  organization-info/       the organization's title, description, legal documents and repository
   ui-kit/                  presentational React components shared by both frontends
   api-client/              generated ConnectRPC client and typed web API
   slicer-engine/ †         the WebAssembly slicer engine both frontends load, fetched from the sister
