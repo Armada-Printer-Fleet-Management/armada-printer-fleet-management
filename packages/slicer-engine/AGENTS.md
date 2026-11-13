@@ -29,18 +29,22 @@ The slicer engine (CuraEngine compiled to WebAssembly) as both frontends consume
 | --- | --- |
 | `engine.pin.json` | The engine release (sister repository and tag) and the SHA-256 of every file in it |
 | `gen/` | The fetched release. Gitignored; written only by `scripts/fetch_slicer_engine.py`, never edited |
-| `src/index.ts` | `slicerEngineUrl()` and `loadSlicerEngine()`, the only way an app reaches the engine |
+| `src/index.ts` | `slicerEngineUrl()`, `loadSlicerEngine()`, `instantiateSlicerEngine()` and `SLICER_DEFINITION_FILES`, the only way code reaches the engine |
 | `vite.ts` | The Vite plugin both apps use: serves `gen/` in development, copies it unhashed into a build |
 
 ## Rules
 
-- **One engine instance per URL, reused.** `loadSlicerEngine()` caches it; never instantiate the module
-  yourself.
+- **One engine per realm (the page, or one worker), never imported by hand.** `loadSlicerEngine()` caches
+  one per URL for reading `version()`. The engine runs its command line only once per instance, so a slice
+  calls `instantiateSlicerEngine()` inside its own worker, which is thrown away with it. Slicing goes
+  through `@armada/slicer`, never this package directly.
 - **Never bundle, inline or rename the engine.** Apps import `<base>/slicer-engine/CuraEngine.js` at run
   time, so a deployed build's engine can be replaced without rebuilding the app.
 - **Its JavaScript API is the sister repository's bindings** (`gen/CuraEngine.d.ts`). A new engine
   capability is added there and released, never patched in here.
-- **Memory is capped at 4 GB**, the WebAssembly maximum; a model needing more aborts the slice.
+- **The engine's memory is capped at 4 GB**, the WebAssembly maximum. That is memory, not a file limit:
+  its in-memory file system holds the input STL and the output G-code inside the same 4 GB, so the
+  largest model that slices is far smaller. `@armada/slicer` stops a job before it reaches the cap.
 - **A CSP with `script-src` must allow `'wasm-unsafe-eval'` and `'unsafe-eval'`.** The engine's progress
   callbacks are run through `eval`.
 
