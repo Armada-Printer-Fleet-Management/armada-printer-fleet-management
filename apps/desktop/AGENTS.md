@@ -16,6 +16,9 @@ application server, the printer server or any other service directly: every call
 to the backend, whose domain services and infrastructure do the work. The backend's domains
 follow the root `AGENTS.md` DDD section.
 
+**The currently on exception is the slicer engine**, which runs in the renderer: its toolpaths are drawn there and are
+too large for IPC. Rules about a slice still live in the backend. See `packages/slicer-engine/AGENTS.md`.
+
 Never import from `apps/web/`. Share UI through `packages/ui-kit/`.
 
 ## Tech stack

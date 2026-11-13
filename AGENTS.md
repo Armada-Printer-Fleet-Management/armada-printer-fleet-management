@@ -83,6 +83,7 @@ Pages carry large inline SVG, so read one only when the task needs its picture.
 | `docs/index.html` | Orienting in the repository for the first time |
 | `docs/domain-architecture.html` | Adding or changing a domain, entity, service or repository |
 | `docs/database-schema.html` | Adding or changing a domain, entity, table or column |
+| `docs/slicer-engine.html` | Working on slicing: the engine's build pipeline, or what runs in the browser versus Python |
 | `docs/desktop.html` | Working on `apps/desktop/`: IPC, codegen, packaging or the installer |
 | `docs/web.html` | Working on `apps/web/`: the layout, routes, sidebar or adding a page |
 | `docs/testing.html` | Choosing which size of server test to write; the rules are `apps/server/tests/AGENTS.md` |
@@ -200,6 +201,13 @@ each project enforce this shape. The wire contract's rules are in `packages/prot
 read it before changing anything under `packages/proto/`.
 
 Picture: `docs/domain-architecture.html`.
+
+---
+
+## Slicer engine
+
+Slicing uses CuraEngine compiled to WebAssembly, built in a sister repository. **Before any slicing work, read
+`packages/slicer-engine/AGENTS.md`**: it holds the repository split, and what runs in the browser versus Python.
 
 ---
 
@@ -446,6 +454,8 @@ theme, so a hardcoded colour breaks someone else's brand.
 | Push finished work as PRs     | `/pr-precheck` (runs `/pr-ddd`, the pre-push checks and `/pr-split`)  |
 | DDD verdict for this commit   | `python scripts/ddd_verdict.py check` (also `scope`, `diff`, `show`)  |
 | Repository script tests       | `python -m unittest discover -s scripts/tests` (standard library only) |
+| Fetch the slicer engine        | `python scripts/fetch_slicer_engine.py` (`--check` offline; `--require-attestation` in CI) |
+| Slicer engine smoke test       | `pnpm --dir packages/slicer-engine test`                             |
 | Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
 | Desktop Python deps           | `uv sync --project apps/desktop/backend`                              |
 | Desktop JS deps                | `pnpm install` (in `root`)                          |

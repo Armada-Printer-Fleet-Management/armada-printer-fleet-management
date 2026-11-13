@@ -9,6 +9,7 @@ import {
   type TempSlicePoll,
   type TempSliceSection,
 } from '@armada/ui-kit';
+import { loadSlicerEngine, slicerEngineUrl } from '@armada/slicer-engine';
 import type { File as StoredFile } from '../gen/content_asset/v1/file_pb';
 import { type Printer, PrinterStatus } from '../gen/fleet/v1/printer_pb';
 import {
@@ -290,6 +291,20 @@ export function TempVerticalSlice() {
               }),
             );
           },
+        },
+      ],
+    },
+    {
+      title: 'Slicer engine',
+      boundary: ['Desktop UI', 'Slicer engine (WASM)'],
+      actions: [
+        {
+          label: 'version',
+          run: async () => ({
+            version: (
+              await loadSlicerEngine(slicerEngineUrl(import.meta.env.BASE_URL))
+            ).version(),
+          }),
         },
       ],
     },

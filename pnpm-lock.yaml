@@ -136,6 +136,9 @@ importers:
       '@armada/organization-info':
         specifier: workspace:*
         version: link:../../../packages/organization-info
+      '@armada/slicer-engine':
+        specifier: workspace:*
+        version: link:../../../packages/slicer-engine
       '@armada/ui-kit':
         specifier: workspace:*
         version: link:../../../packages/ui-kit
@@ -200,6 +203,9 @@ importers:
       '@armada/organization-info':
         specifier: workspace:*
         version: link:../../packages/organization-info
+      '@armada/slicer-engine':
+        specifier: workspace:*
+        version: link:../../packages/slicer-engine
       '@armada/ui-kit':
         specifier: workspace:*
         version: link:../../packages/ui-kit
@@ -274,6 +280,21 @@ importers:
       '@bufbuild/protobuf':
         specifier: ^2
         version: 2.15.0
+
+  packages/slicer-engine:
+    devDependencies:
+      '@types/node':
+        specifier: ^26
+        version: 26.6.3
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vite:
+        specifier: ^6
+        version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
+      vitest:
+        specifier: ^5
+        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/ui-kit:
     dependencies:

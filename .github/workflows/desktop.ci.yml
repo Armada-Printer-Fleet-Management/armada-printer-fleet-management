@@ -51,6 +51,10 @@ jobs:
       - uses: ./.github/actions/setup-buf
       - name: Generate API code
         run: python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules
+      - name: Fetch the slicer engine (SHA-256 and attestation)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/fetch_slicer_engine.py --require-attestation
       - run: pnpm exec tsc --noEmit
         working-directory: apps/desktop/frontend
       - run: pnpm exec eslint .
@@ -92,6 +96,10 @@ jobs:
         run: |
           uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml
           python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules
+      - name: Fetch the slicer engine (SHA-256 and attestation)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/fetch_slicer_engine.py --require-attestation
       - name: Install NSIS
         run: python scripts/install_nsis.py
       - name: Build the desktop app and its installer

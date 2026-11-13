@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import * as path from 'path';
 import tailwindcss from '@tailwindcss/vite';
 import { read } from '../../packages/organization-info/organization-info';
+import { slicerEngine } from '../../packages/slicer-engine/vite';
 import { OrganizationInfoSchema } from '@armada/api-client/gen/common/v1/organization_info_pb';
 import pkg from './package.json';
 
@@ -12,6 +13,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    slicerEngine(),
     {
       name: 'organization-title',
       transformIndexHtml: {

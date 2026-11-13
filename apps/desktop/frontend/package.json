@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@armada/organization-info": "workspace:*",
+    "@armada/slicer-engine": "workspace:*",
     "@armada/ui-kit": "workspace:*",
     "@bufbuild/protobuf": "^2",
     "react": "^19",
