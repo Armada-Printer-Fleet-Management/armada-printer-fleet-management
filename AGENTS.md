@@ -491,7 +491,7 @@ theme, so a hardcoded colour breaks someone else's brand.
 | New migration                  | `uv run --directory apps/server alembic revision --rev-id <next number> -m "<change>"` |
 | Regenerate API docs (`docs/api/`) | `uv run --project apps/server python apps/server/export_openapi.py` (pre-commit runs it; never hand-edit `docs/api/`) |
 | Build desktop app (Windows)    | `python apps/desktop/build_run.py`                                   |
-| Build desktop installer        | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test]` |
+| Build desktop installer        | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test] [--dev-tools]` |
 | Install NSIS (Windows)         | `python scripts/install_nsis.py`                                     |
 | Run CI job locally             | `act -W .github/workflows/<file>.yml -j <job>` (Windows job: add `-P windows-latest=-self-hosted`) |
 | Lint deployment scripts        | `shellcheck infra/deploy/armada infra/deploy/*.sh`                   |

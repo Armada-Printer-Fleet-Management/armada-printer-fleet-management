@@ -41,6 +41,7 @@ export default tseslint.config(
       'apps/web/**/*.{ts,tsx}',
       'apps/desktop/frontend/**/*.{ts,tsx}',
       'packages/ui-kit/**/*.{ts,tsx}',
+      'packages/slicer/**/*.{ts,tsx}',
     ],
     languageOptions: {
       parserOptions: {

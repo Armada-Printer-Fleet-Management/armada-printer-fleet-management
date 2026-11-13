@@ -6,6 +6,7 @@ from armada_domains.content_asset.service import FileService
 from armada_domains.fleet.service import PrinterService
 from armada_domains.legal.service import AgreementService
 from armada_domains.print_job.service import PrintJobService
+from armada_domains.print_preparation.service import SlicerConfigurationService
 from armada_domains.queue.service import PrinterQueueService
 from armada_ipc.application_info import ApplicationInfo
 from armada_ipc.file import FileIpc
@@ -13,6 +14,7 @@ from armada_ipc.legal import LegalIpc
 from armada_ipc.print_job import PrintJobIpc
 from armada_ipc.printer import PrinterIpc
 from armada_ipc.printer_queue import PrinterQueueIpc
+from armada_ipc.slicer_configuration import SlicerConfigurationIpc
 
 
 class Ipc:
@@ -29,6 +31,7 @@ class Ipc:
         files: FileService,
         agreements: AgreementService,
         legal_documents: Iterable[LegalDocument],
+        slicer_configuration: SlicerConfigurationService,
     ) -> None:
         self.application_info = ApplicationInfo()
         self.print_job = PrintJobIpc(print_jobs)
@@ -36,3 +39,4 @@ class Ipc:
         self.printer_queue = PrinterQueueIpc(printer_queues)
         self.file = FileIpc(files)
         self.legal = LegalIpc(agreements, legal_documents)
+        self.slicer_configuration = SlicerConfigurationIpc(slicer_configuration)

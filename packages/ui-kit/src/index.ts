@@ -49,6 +49,11 @@ export { StatisticsIcon } from './icons/statistics-icon';
 export { UserIcon } from './icons/user-icon';
 export { UsersIcon } from './icons/users-icon';
 export { cn } from './lib/utils';
+export {
+  createFeatureGate,
+  type FeatureGateProps,
+  type FeatureProviderProps,
+} from './lib/feature-gate';
 export { TempRoutePage, type TempRoutePageProps } from './temp/TempRoutePage';
 export {
   TempVerticalSlicePage,

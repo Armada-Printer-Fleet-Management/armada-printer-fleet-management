@@ -1,0 +1,11 @@
+version: v2
+clean: true
+inputs:
+  - directory: packages/proto
+    paths:
+      - packages/proto/print_preparation
+      - packages/proto/common/v1/violation.proto
+plugins:
+  - local: protoc-gen-es
+    out: packages/slicer/src/gen
+    opt: target=ts

@@ -33,6 +33,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The web image ships the bundled sample prints, and its build refuses LFS pointer files.
+      - uses: ./.github/actions/lfs-pull
+        with:
+          include: packages/sample-prints/bundled/**
+
       - name: Name the images
         id: plan
         env:

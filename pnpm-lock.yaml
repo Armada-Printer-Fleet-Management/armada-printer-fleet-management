@@ -136,6 +136,12 @@ importers:
       '@armada/organization-info':
         specifier: workspace:*
         version: link:../../../packages/organization-info
+      '@armada/sample-prints':
+        specifier: workspace:*
+        version: link:../../../packages/sample-prints
+      '@armada/slicer':
+        specifier: workspace:*
+        version: link:../../../packages/slicer
       '@armada/slicer-engine':
         specifier: workspace:*
         version: link:../../../packages/slicer-engine
@@ -203,6 +209,12 @@ importers:
       '@armada/organization-info':
         specifier: workspace:*
         version: link:../../packages/organization-info
+      '@armada/sample-prints':
+        specifier: workspace:*
+        version: link:../../packages/sample-prints
+      '@armada/slicer':
+        specifier: workspace:*
+        version: link:../../packages/slicer
       '@armada/slicer-engine':
         specifier: workspace:*
         version: link:../../packages/slicer-engine
@@ -293,6 +305,40 @@ importers:
       '@types/node':
         specifier: ^26
         version: 26.6.3
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vite:
+        specifier: ^6
+        version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
+      vitest:
+        specifier: ^5
+        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
+
+  packages/slicer:
+    dependencies:
+      '@armada/slicer-engine':
+        specifier: workspace:*
+        version: link:../slicer-engine
+      '@armada/ui-kit':
+        specifier: workspace:*
+        version: link:../ui-kit
+      '@bufbuild/protobuf':
+        specifier: ^2
+        version: 2.15.0
+    devDependencies:
+      '@bufbuild/protoc-gen-es':
+        specifier: ^2
+        version: 2.15.0(@bufbuild/protobuf@2.15.0)(supports-color@7.2.0)
+      '@types/node':
+        specifier: ^26
+        version: 26.6.3
+      '@types/react':
+        specifier: ^19
+        version: 19.3.0
+      react:
+        specifier: ^19
+        version: 19.3.0
       typescript:
         specifier: ^5
         version: 5.9.3

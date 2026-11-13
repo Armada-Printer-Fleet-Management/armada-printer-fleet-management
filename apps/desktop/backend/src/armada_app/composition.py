@@ -8,6 +8,7 @@ from armada_domains.content_asset.service import FileService
 from armada_domains.fleet.service import PrinterService
 from armada_domains.legal.service import AgreementService
 from armada_domains.print_job.service import PrintJobService
+from armada_domains.print_preparation.service import SlicerConfigurationService
 from armada_domains.queue.service import PrinterQueueService
 from armada_infrastructure.application_server.agreement import ApplicationServerAgreements
 from armada_infrastructure.application_server.connection import ApplicationServerConnection
@@ -15,6 +16,9 @@ from armada_infrastructure.application_server.file import ApplicationServerFiles
 from armada_infrastructure.application_server.print_job import ApplicationServerPrintJobs
 from armada_infrastructure.application_server.printer import ApplicationServerPrinters
 from armada_infrastructure.application_server.printer_queue import ApplicationServerPrinterQueues
+from armada_infrastructure.application_server.slicer_configuration import (
+    ApplicationServerSlicerConfiguration,
+)
 from armada_infrastructure.temp_user import temp_user_id
 from armada_ipc import Ipc
 from armada_runtime.environment import Environment
@@ -37,4 +41,7 @@ def build_ipc() -> Ipc:
             ApplicationServerAgreements(server), temp_user_id(Environment.temp_user_id_path())
         ),
         legal_documents=read(organization_info_pb2.OrganizationInfo()).legal_documents,
+        slicer_configuration=SlicerConfigurationService(
+            ApplicationServerSlicerConfiguration(server)
+        ),
     )

@@ -50,7 +50,13 @@ jobs:
         working-directory: apps/desktop/frontend
       - uses: ./.github/actions/setup-buf
       - name: Generate API code
-        run: python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules
+        run: |
+          python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules
+          python scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules
+      # The frontend's Vite config serves the bundled sample prints, and refuses LFS pointer files.
+      - uses: ./.github/actions/lfs-pull
+        with:
+          include: packages/sample-prints/bundled/**
       - name: Fetch the slicer engine (SHA-256 and attestation)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -69,6 +75,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      # The frontend build ships the bundled sample prints, and refuses LFS pointer files.
+      - uses: ./.github/actions/lfs-pull
+        with:
+          include: packages/sample-prints/bundled/**
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -96,6 +106,7 @@ jobs:
         run: |
           uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml
           python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules
+          python scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules
       - name: Fetch the slicer engine (SHA-256 and attestation)
         env:
           GH_TOKEN: ${{ github.token }}

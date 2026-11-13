@@ -24,6 +24,8 @@ export interface TempSliceField {
   /** A select of these options; without them the field is a text input. */
   options?: TempSliceOption[];
   defaultValue?: string;
+  /** File types to accept, such as '.gcode'. Makes the field a file input, passed to run as a file. */
+  accept?: string;
 }
 
 export interface TempSliceAction {
@@ -31,7 +33,10 @@ export interface TempSliceAction {
   fields?: TempSliceField[];
   /** Changing it clears what was typed or chosen, e.g. when a different item is selected. */
   resetKey?: string;
-  run: (values: Record<string, string>) => Promise<unknown>;
+  run: (
+    values: Record<string, string>,
+    files: Record<string, File>,
+  ) => Promise<unknown>;
 }
 
 export interface TempSliceListItem {
@@ -190,6 +195,7 @@ function TempSliceListView({ list }: { list: TempSliceList }) {
 function TempSliceActionRow({ action }: { action: TempSliceAction }) {
   const [state, setState] = React.useState<TempActionState | undefined>();
   const [chosen, setChosen] = React.useState<Record<string, string>>({});
+  const [files, setFiles] = React.useState<Record<string, File>>({});
   const id = React.useId();
 
   function valueOf(field: TempSliceField) {
@@ -207,7 +213,7 @@ function TempSliceActionRow({ action }: { action: TempSliceAction }) {
     );
     setState({ status: 'running' });
     try {
-      setState({ status: 'done', result: await action.run(values) });
+      setState({ status: 'done', result: await action.run(values, files) });
     } catch (error: unknown) {
       setState({ status: 'failed', message: errorMessage(error) });
     }
@@ -227,7 +233,23 @@ function TempSliceActionRow({ action }: { action: TempSliceAction }) {
             className="grid gap-1 text-sm"
           >
             {field.label}
-            {field.options ? (
+            {field.accept !== undefined ? (
+              <input
+                id={fieldId}
+                type="file"
+                accept={field.accept}
+                className={inputClass}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  const rest = Object.fromEntries(
+                    Object.entries(files).filter(
+                      ([name]) => name !== field.name,
+                    ),
+                  );
+                  setFiles(file ? { ...rest, [field.name]: file } : rest);
+                }}
+              />
+            ) : field.options ? (
               <select
                 id={fieldId}
                 className={inputClass}

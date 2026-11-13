@@ -47,6 +47,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The web image ships the bundled sample prints, and its build refuses LFS pointer files.
+      - uses: ./.github/actions/lfs-pull
+        with:
+          include: packages/sample-prints/bundled/**
+
       # The runner's temporary directory is only known once a step runs, so later steps get the
       # release URL through GITHUB_ENV. Laid out like GitHub's: <base>/download/v<version>/<file>
       # and <base>/latest/download/<file>.
