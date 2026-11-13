@@ -42,6 +42,15 @@ _printer_queues = _table(
 _printers = _table(
     "printers", "id", "name", "fleet_section_id", "model", "external_printer_ref", "is_enabled"
 )
+_printer_capabilities = _table(
+    "printer_capabilities",
+    "printer_id",
+    "build_volume_x_mm",
+    "build_volume_y_mm",
+    "build_volume_z_mm",
+    "nozzle_diameter_mm",
+    "filament_diameter_mm",
+)
 _files = _table(
     "files",
     "id",
@@ -120,6 +129,13 @@ def _printer_rows() -> Rows:
     ]
 
 
+def _printer_capability_rows() -> Rows:
+    return [
+        {"printer_id": printer.id.value, **vars(printer.capabilities)}
+        for printer in stub_printers()
+    ]
+
+
 def _file_rows() -> Rows:
     return [
         {
@@ -162,6 +178,7 @@ SEED: list[tuple[sa.TableClause, Rows]] = [
     (_fleet_sections, _fleet_section_rows()),
     (_printer_queues, _printer_queue_rows()),
     (_printers, _printer_rows()),
+    (_printer_capabilities, _printer_capability_rows()),
     (_files, _file_rows()),
     (_print_jobs, _print_job_rows()),
 ]
@@ -172,8 +189,10 @@ def seed(engine: sa.Engine) -> int:
     inserted = 0
     with engine.begin() as connection:
         for table, rows in SEED:
-            # Counted from RETURNING, since a multi-row insert's rowcount is not reliable.
-            statement = insert(table).values(rows).on_conflict_do_nothing().returning(table.c.id)
+            # Counted from RETURNING, since a multi-row insert's rowcount is not reliable. Each
+            # table's key is its first column: id, or printer_id for a printer's capabilities.
+            key = table.c[0]
+            statement = insert(table).values(rows).on_conflict_do_nothing().returning(key)
             inserted += len(connection.execute(statement).all())
     return inserted
 

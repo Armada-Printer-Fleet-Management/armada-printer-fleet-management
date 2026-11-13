@@ -115,8 +115,8 @@
           table to trace its relationships, or a column for its notes.
         </p>
         <div class="er-stats">
-          <span><b id="s-t">22</b> tables</span><span><b id="s-d">7</b> domains</span>
-          <span><b id="s-r">19</b> relationships between tables</span>
+          <span><b id="s-t">23</b> tables</span><span><b id="s-d">7</b> domains</span>
+          <span><b id="s-r">20</b> relationships between tables</span>
           <span><b id="s-u">17</b> columns referencing User</span>
         </div>
 
@@ -308,11 +308,17 @@
             ['fleet_section_id', 'uuid', 'fk', 'FleetSection', 'Every printer belongs to exactly one section.'],
             ['model', 'text', '', ''],
             ['serial_number', 'text?', '', ''],
-            ['capabilities', 'json', '', '', 'Nozzle diameter, bed size, supported materials.'],
             ['external_printer_ref', 'text', 'ext', 'printer server', 'The printer server’s identifier. Connection details stay on the printer server.'],
             ['print_server_instance_id', 'uuid?', 'fk', 'PrintServerInstance', 'Only if there is more than one printer server.'],
             ['is_enabled', 'bool', '', ''],
             ['notes', 'text', '', '']] },
+          PrinterCapabilities: { d: 'fleet', b: ['1:1'], f: ['key (printer_id) · kept while the printer is unreachable'], c: [
+            ['printer_id', 'uuid', 'fk', 'Printer', 'One row per printer: what it can print, for slicing.'],
+            ['build_volume_x_mm', 'numeric', '', '', 'Printable width.'],
+            ['build_volume_y_mm', 'numeric', '', '', 'Printable depth.'],
+            ['build_volume_z_mm', 'numeric', '', '', 'Printable height.'],
+            ['nozzle_diameter_mm', 'numeric', '', '', 'The fitted nozzle; it changes when staff swap one.'],
+            ['filament_diameter_mm', 'numeric', '', '']] },
           Tag: { d: 'fleet', c: [
             ['id', 'uuid', 'pk', ''],
             ['name', 'text', '', '', 'Unique. Queue matching depends on consistent spelling.']] },
@@ -396,7 +402,7 @@
           [['auth', ['User', 'AuditLog']], ['legal', ['Agreement']], ['notification', ['Notification', 'Broadcast', 'NotificationPreference']]],
           [['content_asset', ['File']], ['filament', ['FilamentLedgerEntry', 'FilamentAllocation', 'Period', 'FilamentMaterial']]],
           [['print_job', ['PrintJob', 'PrintJobEvent']], ['queue', ['PrinterQueue', 'PrinterQueueTag', 'PrinterQueueMembership']]],
-          [['fleet', ['Printer', 'PrinterEvent', 'Tag']]],
+          [['fleet', ['Printer', 'PrinterCapabilities', 'PrinterEvent', 'Tag']]],
           [['fleet', ['FleetSection', 'StaffSectionAssignment', 'PrintServerInstance', 'PrinterTag']]],
         ];
         const W = 280, G = 124, PADX = 40, TOP = 64, HEAD = 39, ROW = 22, FOOT = 20, GAP = 22, GHEAD = 44, GPADB = 16, GGAP = 56, PPAD = 14;

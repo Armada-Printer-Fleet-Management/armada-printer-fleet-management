@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from core_domain.fleet import Printer, PrinterStatus
+from core_domain.fleet import Printer, PrinterCapabilities, PrinterStatus
 from core_domain.ids import PrinterId, PrintJobId
 
 from proto_utils.gen.fleet.v1 import printer_pb2
@@ -14,6 +14,7 @@ def every_field_set() -> Printer:
         id=PrinterId.new(),
         name="Printer 1",
         model="Model",
+        capabilities=PrinterCapabilities(250, 210, 220, 0.4, 1.75),
         status=PrinterStatus.PRINTING,
         created_at=TIME,
         updated_at=TIME,

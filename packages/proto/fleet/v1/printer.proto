@@ -3,6 +3,7 @@ syntax = "proto3";
 package fleet.v1;
 
 import "common/v1/time_status.proto";
+import "fleet/v1/printer_capabilities.proto";
 import "id/v1/print_job_id.proto";
 import "id/v1/printer_id.proto";
 
@@ -39,4 +40,7 @@ message Printer {
   // When the printer was added. updated_at is when its status was last observed, which
   // clients use to show stale data.
   common.v1.TimeStatus time_status = 7;
+  // What it can print. Kept by the application server, so it is known even while the printer
+  // server cannot reach the printer.
+  PrinterCapabilities capabilities = 8;
 }
