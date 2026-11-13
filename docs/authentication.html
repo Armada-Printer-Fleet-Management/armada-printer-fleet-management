@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Authentication and authorization</title>
+    <link rel="stylesheet" href="shared/docs.css" />
+  </head>
+  <body data-depth="0">
+    <div class="layout">
+      <nav></nav>
+      <main>
+        <h1>Authentication and authorization</h1>
+        <p class="lede">
+          How a person proves who they are, how the server decides what they may
+          do, and the accounts developers sign in with.
+        </p>
+
+        <h2 id="flow">From sign-in to an allowed request</h2>
+        <p>
+          Nobody signs in to the server itself. Keycloak, the identity provider,
+          checks the password and hands back an access token naming the person's
+          roles. Every request then carries that token, and the server only has
+          to check it, never a password. Keycloak's
+          <code>armada</code> realm is the source of truth for who has which
+          role.
+        </p>
+
+        <figure class="diagram">
+          <svg viewBox="0 0 760 250" width="100%" role="img"
+               aria-label="A person signs in through Keycloak from the web app or Bruno and receives an access token carrying their realm roles. Each request sends that token to the server. The server checks the token's signature, issuer, audience and expiry, then looks up the endpoint in its access table, where the most specific row wins, and allows the request or refuses it with 401 or 403.">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" class="arrowhead" />
+              </marker>
+              <marker id="arrow-muted" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" class="arrowhead-muted" />
+              </marker>
+            </defs>
+
+            <rect x="30" y="40" width="190" height="60" rx="8" class="box" />
+            <text x="125" y="64" text-anchor="middle" font-size="12">Web app or Bruno</text>
+            <text x="125" y="82" text-anchor="middle" class="label-muted">the person signs in</text>
+
+            <rect x="285" y="40" width="190" height="60" rx="8" class="external" />
+            <text x="380" y="64" text-anchor="middle" font-size="12">Keycloak</text>
+            <text x="380" y="82" text-anchor="middle" class="label-muted">armada realm: users, roles</text>
+
+            <path d="M220,62 L281,62" class="flow" />
+            <path d="M285,84 L224,84" class="flow-return" />
+            <text x="252" y="120" text-anchor="middle" class="label-muted">access token</text>
+            <text x="252" y="134" text-anchor="middle" class="label-muted">with realm roles</text>
+
+            <rect x="30" y="170" width="190" height="60" rx="8" class="box" />
+            <text x="125" y="194" text-anchor="middle" font-size="12">Request</text>
+            <text x="125" y="212" text-anchor="middle" class="label-muted">Authorization: Bearer token</text>
+            <path d="M125,100 L125,166" class="flow-muted" />
+
+            <rect x="285" y="170" width="190" height="60" rx="8" class="box-accent" />
+            <text x="380" y="194" text-anchor="middle" font-size="12">Check the token</text>
+            <text x="380" y="212" text-anchor="middle" class="label-muted">signature, issuer, audience, expiry</text>
+            <path d="M220,200 L281,200" class="flow" />
+
+            <rect x="540" y="170" width="190" height="60" rx="8" class="box-accent" />
+            <text x="635" y="194" text-anchor="middle" font-size="12">Check the role</text>
+            <text x="635" y="212" text-anchor="middle" class="label-muted">access table, most specific row</text>
+            <path d="M475,200 L536,200" class="flow" />
+
+            <text x="635" y="62" text-anchor="middle" font-size="12">Allowed: the handler runs</text>
+            <text x="635" y="82" text-anchor="middle" class="label-muted">refused: 401 no token, 403 wrong role</text>
+            <path d="M635,170 L635,96" class="flow" />
+          </svg>
+          <figcaption>
+            Two separate checks: the token says who is asking, and the access
+            table says whether that role may call this endpoint.
+          </figcaption>
+        </figure>
+
+        <h2 id="roles">Roles</h2>
+        <p>
+          Four realm roles, from least to most access: <strong>guest</strong>,
+          <strong>student</strong>, <strong>staff</strong> and
+          <strong>admin</strong>. Students submit and follow their own prints.
+          Staff and admins run the fleet: review jobs, dispatch, and see every
+          printer. Each endpoint lists the roles it allows, in one table on the
+          server, so what a role can reach is read in one place rather than
+          scattered through handlers.
+        </p>
+        <p>
+          Until enforcement is switched on, the server lets every request through
+          and logs the ones it would refuse as <code>access would be denied</code>.
+          That keeps development moving while sign-in is being built, and shows
+          exactly which calls would break.
+        </p>
+
+        <h2 id="dev-users">Signing in on the development stack</h2>
+        <p>
+          A fresh development stack comes with one user per role, so nobody has
+          to create accounts by hand. They are made in the <code>armada</code>
+          realm when the stack starts, and a user that already exists is left
+          alone.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Password</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>admin</code></td>
+                <td><code>123456</code></td>
+                <td>admin</td>
+              </tr>
+              <tr>
+                <td><code>staff</code></td>
+                <td><code>123456</code></td>
+                <td>staff</td>
+              </tr>
+              <tr>
+                <td><code>student</code></td>
+                <td><code>123456</code></td>
+                <td>student</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          Sign in at <code>http://localhost:5174/auth</code>, the web app's own
+          address, from the web app or Bruno. The password is
+          <code>DEV_USER_PASSWORD</code> in <code>config/compose.dev.env</code>;
+          if you change it there, the next new user gets the new one.
+        </p>
+
+        <div class="callout">
+          <p>
+            <strong>Development only.</strong> These users exist only in the
+            development stack, which is reachable from your own machine alone.
+            A deployment never creates them. The <code>admin</code> user here is
+            a person with the admin role in the app, not Keycloak's own
+            administrator, whose details are <code>KEYCLOAK_ADMIN_USERNAME</code>
+            and <code>KEYCLOAK_ADMIN_PASSWORD</code> in the same file.
+          </p>
+        </div>
+
+        <section class="ai-statement">
+          <h2>AI Use Statement</h2>
+          <dl>
+            <dt>Tool</dt>
+            <dd>Claude Code (Opus 5.5)</dd>
+            <dt>Mode</dt>
+            <dd>Local</dd>
+            <dt>Output</dt>
+            <dd>drafted this page from the server's access checks and the development stack's users</dd>
+            <dt>Data</dt>
+            <dd>none</dd>
+            <dt>Verified</dt>
+            <dd>Verified HTML matches what was requested for this page. Proof read and viewed in browser.</dd>
+          </dl>
+          <p>
+            Required by the project's
+            <a href="../.integrity/POLICY.md">AI use policy</a>. The
+            verification field is written by a developer, never by an agent.
+          </p>
+        </section>
+      </main>
+    </div>
+    <script src="shared/nav.js"></script>
+  </body>
+</html>
