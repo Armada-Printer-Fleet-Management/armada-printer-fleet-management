@@ -11,6 +11,7 @@ compliance with it.
 | [`POLICY.md`](POLICY.md) | **Required reading.** The course's AI-use rules, written as instructions an agent can act on. |
 | [`AI-USE-STATEMENT.md`](AI-USE-STATEMENT.md) | The declaration format used in commits, the README, and design documents. |
 | `transcripts/` | Gitignored. Drop a session record here and the exporter will pick it up. |
+| `excluded-sessions.local.txt` | Gitignored. Session IDs the exporter never copies, each with the developer's reason. Written by `export_ai_audit.py --exclude <id> --reason "<why>"`. |
 
 ## How the pieces fit
 

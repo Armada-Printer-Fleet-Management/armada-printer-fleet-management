@@ -13,7 +13,35 @@ developer for the one field no agent may write.
 Required by `.integrity/POLICY.md`. The log and the AI Use Statements in commit messages are
 together the evidence that this project's AI use was disclosed and checked.
 
-## 1. Run the export
+## 1. Exclude confidential sessions
+
+Sessions holding confidential Prusa Connect Local beta material are never exported; see the
+_Confidential beta_ section of `AGENTS.md`.
+
+Run `python scripts/export_ai_audit.py --dry-run`. Only the sessions it marks `exporting` are new
+or changed since the last export, so ask only about those. If none are marked, skip to step 2.
+Otherwise name just those sessions and ask the developer:
+
+> Did any of these sessions use or mention non-public Prusa Connect Local beta material?
+
+If they say yes, let them pick, and exclude each one:
+
+```
+python scripts/export_ai_audit.py --exclude <session-id> --reason "<their reason, in their words>"
+```
+
+A reason is required. The ID and reason are kept only in the git-ignored
+`.integrity/excluded-sessions.local.txt`, and any copy already in the shared log is deleted.
+`INDEX.md` then lists the session as excluded, without the reason or any content.
+
+**Never open a transcript to decide, and never write the reason yourself.** Whether a session
+held beta material, and why it is excluded, is the developer's answer.
+
+Nothing excludes a session automatically. Exclude it **before it ends**; otherwise the
+`SessionEnd` hook has already copied it to the shared log, and only the next run deletes it. When
+the script reports a removal, tell the developer to empty the OneDrive recycle bin as well.
+
+## 2. Run the export
 
 ```
 python scripts/export_ai_audit.py
@@ -30,7 +58,7 @@ export somewhere else, and do not carry on as though the session were logged. Te
 developer to run `/onboarding` to set `AI_AUDIT_LOG_DIR` and `AI_AUDIT_AUTHOR`. An unconfigured
 machine produces no evidence, which is the failure this whole system exists to prevent.
 
-## 2. Collect the verification answers
+## 3. Collect the verification answers
 
 The script reports how many sessions still need one. Each is a `SESSION.md` whose
 **Human verification** field holds an `UNFILLED` marker.
@@ -67,7 +95,7 @@ If they answer for some sessions and not others, fill in the ones they answered.
 Do not offer a draft answer for them to approve. The field is worthless if its content
 originated with the agent.
 
-## 3. Point the ticket at the log
+## 4. Point the ticket at the log
 
 If the branch names a ticket, add a comment to it saying where the session was exported. This is
 what ties a transcript to the work it belongs to.
@@ -90,12 +118,13 @@ nothing.
 Skip this step when the branch carries no ticket — `main`, a feature branch, or exploratory work.
 The export still happened and is still complete; there is simply nowhere to point.
 
-## 4. Report
+## 5. Report
 
 Tell the developer:
 
 - Where the log was written
 - How many sessions were exported, and how many were unchanged
+- How many were excluded, and any copies removed from the log
 - How many still need a verification answer, and which ones
 - Whether a ticket comment was added, or why it was skipped
 

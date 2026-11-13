@@ -54,6 +54,10 @@ config/**
 .env.*
 !.env.example
 
+# ─── Confidential beta software ──────────────────────────────────────────────
+# Prusa Connect Local beta material. Never committed; see AGENTS.md.
+/PCL/
+
 # ─── Editor / OS ─────────────────────────────────────────────────────────────
 .vscode/*
 !.vscode/extensions.json

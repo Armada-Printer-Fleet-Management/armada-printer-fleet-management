@@ -613,6 +613,27 @@ statement format is `.integrity/AI-USE-STATEMENT.md`. In summary:
 
 ---
 
+## Confidential beta: Prusa Connect Local
+
+The team has been given access to **Prusa Connect Local (PCL)**, closed beta software from Prusa.
+Everything about it that is not publicly available is **entirely confidential**.
+
+- **What counts as beta material:** all of its code, contracts, documentation, implementation,
+  releases, Docker images, screenshots and video recordings.
+- **Never publish beta material anywhere.** That includes, but is not limited to, OneDrive,
+  Discord, Slack, Jira, this repository and AI companies.
+- **AI sessions that use or mention beta material are never exported.** Their transcripts and
+  AI Use Statements stay out of the audit log. `/export-ai-integrity` lets the developer mark
+  those sessions with a reason (`python scripts/export_ai_audit.py --exclude <id> --reason "<why>"`).
+  Nothing is detected automatically, so exclude a session before it ends.
+- **Beta material found anywhere we control is deleted at once**, wherever it was published.
+- **All PCL work that touches this repository goes in the git-ignored `PCL/` folder** at the
+  root, and nowhere else. Agents have no access to `PCL/`; never read from it or write to it.
+- **When a developer says they are working with PCL, remind them of these rules before
+  continuing.**
+
+---
+
 ## References
 
 [1] J. Yablonski, _Laws of UX: Using Psychology to Design Better Products & Services_, 2nd ed.

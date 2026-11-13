@@ -37,7 +37,7 @@ Report the version of each, and stop with installation guidance if one is missin
 `bruno/` — not every developer needs it. Check whether it's installed (e.g. `bruno --version` if
 it's on PATH, or whether the desktop app is present) and report the result, but don't stop
 onboarding if it's missing. Point them at <https://www.usebruno.com/downloads> if they want it
-later; the collections are set up for them regardless in step 6e.
+later; the collections are set up for them regardless in step 6f.
 
 ## 2. Install the toolchain
 
@@ -221,7 +221,72 @@ summarise the parts that change their daily work:
 Copilot sessions are not exported automatically. If they use Copilot, they run
 `/export-ai-integrity` themselves.
 
-## 6d. Connect Jira
+## 6d. Protect the confidential beta folder
+
+`PCL/` holds confidential Prusa Connect Local beta material. Read the _Confidential beta_
+section of `AGENTS.md` before this step. **Never list, open or read anything inside `PCL/`**,
+including while checking it here.
+
+1. **Confirm git ignores it.** `git check-ignore -q PCL/` must exit 0. If `PCL/` exists,
+   `git ls-files PCL | wc -l` must print `0`; count the files, never list them. Either check
+   failing is a failure: stop and tell the developer, because their beta material could be
+   committed.
+2. **Confirm Claude Code is denied it.** `.claude/settings.json` must contain the deny rules
+   `Read(/PCL/**)` and `Edit(/PCL/**)` under `permissions`. If they are missing, stop: the
+   checkout is out of date or the rules were removed.
+3. **Have the developer turn off their own agents' access, and wait.** The repository's rules
+   cover only Claude Code's own tools, and only when the project settings load. Tell them:
+
+   > Turn off your AI assistants' access to `PCL/` in each tool you use, then tell me when it's
+   > done.
+   >
+   > - **Claude Code:** add the same rules to your user settings so they hold in every checkout
+   >   and worktree. In `~/.claude/settings.json`, add `"Read(PCL/**)"` and `"Edit(PCL/**)"`
+   >   to `permissions.deny`, without a leading `/`, which in user settings would mean
+   >   `~/.claude/PCL`. Run `/permissions` to check they are listed. These rules don't stop
+   >   a script that opens files itself; the sandbox (`/sandbox`) adds OS-level blocking. See
+   >   <https://code.claude.com/docs/en/permissions>.
+   > - **GitHub Copilot: there is no setting that blocks `PCL/` for you.** The team uses personal
+   >   Copilot plans, and content exclusion exists only on Business and Enterprise plans. Copilot
+   >   can read anything in this checkout, `PCL/` included. These are your only options, and
+   >   only the first one keeps Copilot out completely:
+   >
+   >   1. **Turn Copilot off for this workspace whenever `PCL/` exists.** In VS Code, open
+   >      Extensions, select **GitHub Copilot** and **GitHub Copilot Chat**, and choose
+   >      **Disable (Workspace)** for each. Copilot keeps working in your other projects.
+   >   2. **Keep `PCL/` out of search.** Add `"PCL/**": true` to `search.exclude` in your VS Code
+   >      user settings. Copilot's codebase search then skips it, but Copilot can still open a
+   >      file in `PCL/` directly, so this lowers the risk without removing it.
+   >   3. **Never open a `PCL/` file while Copilot is on.** Open files are what Copilot reads
+   >      most.
+   >
+   >   If you use only options 2 and 3, treat every Copilot session in this checkout as one that
+   >   could have read beta material, and be extra careful with anything you ask it. See
+   >   <https://docs.github.com/en/copilot/concepts/context/content-exclusion>.
+   > - **Any other assistant:** use its own ignore or exclusion setting for `PCL/`.
+
+   Do not continue until they confirm.
+4. **Have the developer turn off training on their sessions, and wait.** Tell them:
+
+   > Turn off each AI company's use of your sessions for model training, then tell me when it's
+   > done.
+   >
+   > - **Claude (Free, Pro, Max or Ultra plans):** open
+   >   <https://claude.ai/settings/data-privacy-controls> and turn off the setting that lets
+   >   Anthropic use your chats and coding sessions to improve Claude. It covers Claude Code
+   >   sessions signed in with that account. Team, Enterprise and API accounts are not trained on
+   >   by default. See <https://code.claude.com/docs/en/data-usage>.
+   > - **GitHub Copilot (personal plans):** click your avatar at the top right of GitHub, choose
+   >   **Copilot settings**, and set **Allow GitHub to use my data for AI model training** to
+   >   **Disabled**. See <https://docs.github.com/en/copilot/how-tos/manage-your-account/manage-policies>.
+   > - **Any other assistant:** find its data or privacy settings and turn off training.
+
+   Do not continue until they confirm.
+5. **Remind them of the beta's rules, and wait.** Summarise every rule in the _Confidential
+   beta_ section of `AGENTS.md` in plain language, then ask them to confirm they understand and
+   will follow them. Do not continue until they confirm.
+
+## 6e. Connect Jira
 
 Decisions are tracked in Jira. Agents read them through the official Atlassian MCP server.
 
@@ -248,7 +313,7 @@ complain later.
 
 Neither value is ever committed. The repository holds only the generic endpoint.
 
-## 6e. Set up Bruno collections
+## 6f. Set up Bruno collections
 
 Not applicable if `bruno/` doesn't exist in the repository. Otherwise, run this regardless of
 whether Bruno itself is installed (see step 1) — it's cheap, and it leaves the collections ready
