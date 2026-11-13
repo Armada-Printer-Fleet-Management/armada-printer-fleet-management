@@ -11,7 +11,7 @@ export interface SliceSettingsInput {
   extruderSettings: Readonly<Settings>;
 }
 
-/** One model on the bed: an STL, its footprint centred this far from the bed centre. */
+/** One model on the bed: an STL or OBJ, its footprint centred this far from the bed centre. */
 export interface PlacedModel {
   model: Blob | Uint8Array;
   xMm?: number;

@@ -1,0 +1,17 @@
+{
+  "title": "Overhang test shape (OBJ)",
+  "description": "A small block with an unsupported overhang, from PrusaSlicer's own slicer tests. An OBJ model, which the engine loads directly, and an overhang for validation to find.",
+  "license": {
+    "spdx": "AGPL-3.0-only",
+    "source": "https://github.com/prusa3d/PrusaSlicer/blob/e6c85c50dcc56f9968a61dfdd7a3b695e1004037/tests/data/overhang.obj",
+    "attribution": "PrusaSlicer test data by Prusa Research"
+  },
+  "files": [
+    {
+      "name": "overhang.obj",
+      "kind": "model",
+      "sizeBytes": 3371,
+      "sha256": "66b0b2409dc5479c603b12ffe451cbac8e8796580d2161ac336d9ec356652723"
+    }
+  ]
+}

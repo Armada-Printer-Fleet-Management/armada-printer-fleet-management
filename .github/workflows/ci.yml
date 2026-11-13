@@ -116,6 +116,10 @@ jobs:
       - name: Generate slicer code
         if: needs.detect.outputs.proto == 'true'
         run: python scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules
+      # The slicer tests read the test prints; the sample prints test reads the bundled ones.
+      - uses: ./.github/actions/lfs-pull
+        with:
+          include: packages/sample-prints/**
       - name: Fetch the slicer engine (SHA-256 and attestation)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -127,6 +131,8 @@ jobs:
         run: pnpm --dir packages/slicer-engine test
       - name: Sample prints ship only bundled/
         run: pnpm --dir packages/sample-prints test
+      - name: Slicer tests
+        run: pnpm --dir packages/slicer test
 
   desktop:
     needs: detect

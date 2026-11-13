@@ -70,7 +70,7 @@ export function stlBounds(data: Uint8Array): MeshBounds {
     throw new SlicerJobError([
       slicerViolation(
         SlicerViolationCode.UNREADABLE_MODEL,
-        'This file is not a readable STL model. Export it again as STL and try once more.',
+        'This file is not a readable STL or OBJ model. Export it again as STL or OBJ and try once more.',
       ),
     ]);
   }

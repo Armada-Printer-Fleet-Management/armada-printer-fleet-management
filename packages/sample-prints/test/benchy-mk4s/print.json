@@ -1,0 +1,25 @@
+{
+  "title": "Benchy sliced for the Original Prusa MK4S",
+  "description": "One #3DBenchy at the bed centre and its G-code. The happy path for slicing and parsing tests.",
+  "license": {
+    "spdx": "CC0-1.0",
+    "source": "https://github.com/CreativeTools/3DBenchy",
+    "attribution": "#3DBenchy by CreativeTools, 3DBenchy.com"
+  },
+  "files": [
+    {
+      "name": "3DBenchy.stl",
+      "kind": "model",
+      "sizeBytes": 11285384,
+      "sha256": "6ab57f1c3f8e86bc3cbd302c6fa6270acf06277c6335454e922419c25d42e97e"
+    },
+    {
+      "name": "3DBenchy_MK4S.gcode",
+      "kind": "gcode",
+      "sizeBytes": 6100833,
+      "sha256": "ce71a33da619084bc762b337d342aecdd1ce95e8ea1e39fd13d32141df5a6e11",
+      "printer": "Original Prusa MK4S",
+      "generator": "Cura_SteamEngine 5.13.0, the development server's slice profile, by packages/slicer/scripts/generate-test-gcode.ts"
+    }
+  ]
+}

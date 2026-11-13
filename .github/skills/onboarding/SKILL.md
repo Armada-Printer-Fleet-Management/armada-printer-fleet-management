@@ -155,6 +155,7 @@ Each template covers one language and is invoked through the shared script rathe
 | `buf.gen.desktop_ts.yaml` exists and `apps/desktop/frontend/node_modules` exists | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` |
 | `buf.gen.server.yaml` exists | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` |
 | `buf.gen.web_ts.yaml` exists and `apps/web/node_modules` exists | `python scripts/generate_proto.py buf.gen.web_ts.yaml --node-modules apps/web/node_modules` |
+| `buf.gen.slicer_ts.yaml` exists and `packages/slicer/node_modules` exists | `python scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules` (both frontends import `@armada/slicer`, so they type-check only after it) |
 
 (Step 4 installs dependencies before this step generates code, so the local plugins are already
 present: the frontends' `protoc-gen-es` for the TypeScript rows. The Python row runs through

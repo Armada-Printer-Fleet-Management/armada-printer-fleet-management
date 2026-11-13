@@ -12,7 +12,8 @@
  *        │                    it runs once           │
  *        ▼                                          │
  *   read definitions, place each model:             │
- *   stlBounds ─▶ mesh_position, measured from the   │
+ *   STL or OBJ, by content                          │
+ *   meshBounds ─▶ mesh_position, measured from the  │
  *   bed centre, centres its footprint on its spot   │
  *   and stands it on z = 0                          │
  *        │                                          │
@@ -33,7 +34,7 @@
  */
 import { instantiateSlicerEngine } from '@armada/slicer-engine';
 import { parseGcodeText } from '../gcode/parse';
-import { stlBounds } from '../stl';
+import { meshBounds, meshFormat } from '../mesh';
 import type { Settings, SliceProgress, SliceResult } from '../types';
 import { runCuraCli } from './cura-cli';
 
@@ -98,9 +99,11 @@ async function slice(
   const meshes = await Promise.all(
     request.models.map(async (model) => {
       const data = await bytes(model.data);
-      const { min, max } = stlBounds(data);
+      const format = meshFormat(data);
+      const { min, max } = meshBounds(data, format);
       return {
         data,
+        format,
         settings: {
           mesh_position_x: String(model.xMm - (min[0] + max[0]) / 2),
           mesh_position_y: String(model.yMm - (min[1] + max[1]) / 2),
