@@ -209,6 +209,7 @@ Picture: `docs/domain-architecture.html`.
 
 Slicing uses CuraEngine compiled to WebAssembly, built in a sister repository. **Before any slicing work, read
 `packages/slicer-engine/AGENTS.md`**: it holds the repository split, and what runs in the browser versus Python.
+Both clients slice through `@armada/slicer`; **read `packages/slicer/AGENTS.md` before building on it.**
 
 ## Sample and test prints
 
@@ -464,7 +465,11 @@ theme, so a hardcoded colour breaks someone else's brand.
 | Fetch the slicer engine        | `python scripts/fetch_slicer_engine.py` (`--check` offline; `--require-attestation` in CI) |
 | Fetch the sample prints (Git LFS) | `git lfs pull`                                                     |
 | Sample prints ship boundary    | `pnpm --dir packages/sample-prints test`                             |
-| Slicer engine smoke test       | `pnpm --dir packages/slicer-engine test`                             || Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
+| Slicer engine smoke test       | `pnpm --dir packages/slicer-engine test`                             |
+| Generate slicer TS proto       | `python scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules` |
+| Slicer tests                   | `pnpm --dir packages/slicer test`                                    |
+| Regenerate the test G-code     | `pnpm --dir packages/slicer generate:test-gcode` (dev stack up)      |
+| Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
 | Desktop Python deps           | `uv sync --project apps/desktop/backend`                              |
 | Desktop JS deps                | `pnpm install` (in `root`)                          |
 | Desktop backend tests          | `uv run --directory apps/desktop/backend pytest`                     |

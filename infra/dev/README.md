@@ -25,7 +25,9 @@ on your machine already holds 5432, set `DB_PORT` there.
 
 Both images copy in the generated API code from your machine, so run codegen before the first
 start and after changing a `.proto` file. With the stack running, the regenerated code is synced
-in automatically so you should only need to regenerate it, not re compose.
+in automatically so you should only need to regenerate it, not re compose. The web image also
+copies in the fetched slicer engine and the sample prints, so run
+`python scripts/fetch_slicer_engine.py` and `git lfs pull` first too.
 
 **Belongs here:** the development compose file, and any seed or init scripts it mounts. The
 deployment stack is `infra/deploy/`.

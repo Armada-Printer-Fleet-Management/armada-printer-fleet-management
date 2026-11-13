@@ -1,0 +1,50 @@
+{
+  "slicer": "Cura_SteamEngine 5.13.0",
+  "layerCount": 478,
+  "printTime": "7424.079345847s",
+  "filamentLengthMm": 4405.90473999999,
+  "bounds": {
+    "min": {
+      "x": 94.96,
+      "y": 89.688,
+      "z": 0.3
+    },
+    "max": {
+      "x": 154.787,
+      "y": 120.307,
+      "z": 48
+    }
+  },
+  "featureStats": [
+    {
+      "feature": "TOOLPATH_FEATURE_TRAVEL",
+      "distanceMm": 80734.24435772603,
+      "time": "685.325649496s"
+    },
+    {
+      "feature": "TOOLPATH_FEATURE_SKIRT_BRIM",
+      "distanceMm": 597.9563360234705,
+      "time": "19.931877867s"
+    },
+    {
+      "feature": "TOOLPATH_FEATURE_INNER_WALL",
+      "distanceMm": 60387.37377146285,
+      "time": "1213.720046944s"
+    },
+    {
+      "feature": "TOOLPATH_FEATURE_OUTER_WALL",
+      "distanceMm": 65131.03278155306,
+      "time": "2302.908930716s"
+    },
+    {
+      "feature": "TOOLPATH_FEATURE_SKIN",
+      "distanceMm": 45437.684289483506,
+      "time": "1526.642057116s"
+    },
+    {
+      "feature": "TOOLPATH_FEATURE_INFILL",
+      "distanceMm": 89848.25353641996,
+      "time": "1675.550783707s"
+    }
+  ]
+}

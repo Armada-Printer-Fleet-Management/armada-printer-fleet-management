@@ -9,9 +9,10 @@
     "./temp": "./src/temp/index.ts"
   },
   "scripts": {
-    "lint": "eslint src --max-warnings=0",
+    "lint": "eslint src scripts --max-warnings=0",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "generate:test-gcode": "node scripts/generate-test-gcode.mjs"
   },
   "dependencies": {
     "@armada/slicer-engine": "workspace:*",

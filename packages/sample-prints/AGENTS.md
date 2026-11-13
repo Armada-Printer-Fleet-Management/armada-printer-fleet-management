@@ -23,6 +23,8 @@ packages/sample-prints/
   can enforce. Never let `test/` into an app build, an image or the installer.
 - **`bundled/`** is for prints a user may see or start from: demos, training pieces and calibration
   models. Keep it small, because every app build carries it.
+- **G-code never ships; only models do.** Clients slice a bundled model themselves, so G-code lives
+  in `test/` only, beside the model it was sliced from.
 - **`test/`** is for what tests and developers need:
   - happy-path prints;
   - prints that must fail validation (overhangs, models too large for the bed, broken meshes);
@@ -45,7 +47,12 @@ Every print is one folder holding its files and a `print.json`:
 The folder name is the print's `id`. `parsePrint()` in `src/manifest.ts` defines the shape; change it
 there, not here.
 
-- **A model and its G-code live side by side** in the same folder, as reviewers see them.
+- **A model and its G-code live side by side** in the same folder, as reviewers see them. A test
+  print may copy a bundled model; Git LFS stores identical files once.
+- **G-code made by our own engine is generated, never sliced by hand.** The prints listed in
+  `packages/slicer/scripts/generate-test-gcode.ts` are written by it; its rules are in
+  `packages/slicer/AGENTS.md`. Other files in a folder, such as `expected-summary.json`, are test
+  data and are not listed in `print.json`.
 - **`sizeBytes` and `sha256` are the file's real values**, so a client can build an upload request
   from them without reading the file.
 - **A bundled print is also listed in `BUNDLED` in `src/index.ts`**, which is what the apps import.
@@ -55,7 +62,7 @@ there, not here.
 ## Adding a print
 
 1. Create the folder under `bundled/` or `test/`.
-2. Add the files. `.stl`, `.3mf`, `.gcode` and `.bgcode` here are stored in Git LFS by
+2. Add the files. `.stl`, `.obj`, `.3mf`, `.gcode` and `.bgcode` here are stored in Git LFS by
    `.gitattributes`; never commit them as ordinary blobs.
 3. Write `print.json`. `python scripts/upload_metadata.py <file>` prints a file's size and SHA-256.
 4. For a bundled print, add it to `BUNDLED` in `src/index.ts`.
@@ -65,7 +72,8 @@ there, not here.
 ## Licences
 
 - **Only add a print whose licence allows redistribution in a public AGPL-3.0 repository**: CC0,
-  CC BY or CC BY-SA, or our own work. Never a no-derivatives or non-commercial licence, and never a
+  CC BY or CC BY-SA, GPL-3.0 or AGPL-3.0 (a model from an open-source project's repository), or
+  our own work. Record the upstream file's path and commit in `license.source`. Never a no-derivatives or non-commercial licence, and never a
   file whose licence you cannot find.
 - **Credit the source even when the licence doesn't require it.** CC0 waives attribution, but
   `license.attribution` is still filled in.
@@ -80,7 +88,8 @@ there, not here.
   hook, so the repository's hook calls `git lfs pre-push` itself.
 - **The free plan's LFS bandwidth is limited.** It is 10 GiB a month for the repository owner, and
   every clone, fork and CI checkout counts against it. Only CI jobs and image builds that read these
-  files check them out with `lfs: true`.
+  files fetch them, through `.github/actions/lfs-pull`, which caches them and pulls only the paths
+  given. A build needs `packages/sample-prints/bundled/**` only.
 
 ## Commands
 

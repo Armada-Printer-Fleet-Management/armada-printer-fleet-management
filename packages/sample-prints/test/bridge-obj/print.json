@@ -1,0 +1,17 @@
+{
+  "title": "Bridge test shape (OBJ)",
+  "description": "Two pillars joined by a bridge, from PrusaSlicer's own slicer tests. An OBJ model the engine loads directly; small enough to slice in a few seconds, so it is the slicer's smoke test.",
+  "license": {
+    "spdx": "AGPL-3.0-only",
+    "source": "https://github.com/prusa3d/PrusaSlicer/blob/e6c85c50dcc56f9968a61dfdd7a3b695e1004037/tests/data/bridge.obj",
+    "attribution": "PrusaSlicer test data by Prusa Research"
+  },
+  "files": [
+    {
+      "name": "bridge.obj",
+      "kind": "model",
+      "sizeBytes": 761,
+      "sha256": "379e726104004fc5632d86c02b5242769162dc02057096899ee520f74ef8e8f3"
+    }
+  ]
+}
