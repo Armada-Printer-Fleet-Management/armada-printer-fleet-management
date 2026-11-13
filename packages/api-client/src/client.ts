@@ -4,8 +4,10 @@ import { createAgreementApi } from './agreement';
 import { AgreementService } from './gen/server/v1/agreement_service_pb';
 import { PrintJobService } from './gen/server/v1/print_job_service_pb';
 import { PrinterService } from './gen/server/v1/printer_service_pb';
+import { SlicerConfigurationService } from './gen/server/v1/slicer_configuration_service_pb';
 import { createPrintJobApi } from './print-job';
 import { createPrinterApi } from './printer';
+import { createSlicerConfigurationApi } from './slicer-configuration';
 
 // Called before every request, so a token renewed in the background is picked up.
 export type AccessToken = () => Promise<string | undefined>;
@@ -56,6 +58,10 @@ export function createApiClient(options: ApiClientOptions = {}) {
   const printJobClient = createClient(PrintJobService, transport);
   const agreementClient = createClient(AgreementService, transport);
   const printerClient = createClient(PrinterService, transport);
+  const slicerConfigurationClient = createClient(
+    SlicerConfigurationService,
+    transport,
+  );
 
   return {
     printJobs: createPrintJobApi(
@@ -64,5 +70,8 @@ export function createApiClient(options: ApiClientOptions = {}) {
     ),
     agreements: createAgreementApi(agreementClient),
     printers: createPrinterApi(printerClient),
+    slicerConfiguration: createSlicerConfigurationApi(
+      slicerConfigurationClient,
+    ),
   };
 }

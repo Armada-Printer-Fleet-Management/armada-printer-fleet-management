@@ -147,7 +147,7 @@ Picture: `docs/desktop.html#ipc`.
 | Run (built frontend)         | `python apps/desktop/dev_run.py`: runs `pnpm build` and loads `dist/index.html` over `file://`, with no dev server, as the packaged app does |
 | Run (hot reload, `:5173`)    | `python apps/desktop/dev_run.py --dev`: the window points at a Vite dev server; frontend edits reload without restarting Python |
 | Package exe                  | `python apps/desktop/build_run.py`                                            |
-| Build installer              | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test]`           |
+| Build installer              | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test] [--dev-tools]` |
 
 CI is `.github/workflows/desktop.ci.yml`; the pre-push check is
 `.githooks/pre-push.d/desktop/check.sh`. Both run the checks above; codegen runs first, once, for
@@ -161,7 +161,9 @@ defines read from `armada_runtime.packaging.installer_info()`. `install_nsis.py`
 official NSIS setup from SourceForge and installs it silently, with one administrator prompt on a
 developer's machine; CI uses it too. `--skip-build` reuses a
 bundle; `--smoke-test` installs silently for the current user, checks the app landed, and
-uninstalls.
+uninstalls. `--dev-tools` (local testing only, never CI or a release) builds the frontend with
+`VITE_ARMADA_DEV_TOOLS=1`, so the installed app shows the development-only UI, and names the setup
+`<title>-Setup-<version>-dev.exe`; it cannot be combined with `--skip-build`.
 
 Getting a build without your own machine's setup:
 

@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package print_preparation.slicing.v1;
+
+import "id/v1/slice_profile_id.proto";
+
+// What a print may be sliced with: settings the profile always sets, and the only settings a
+// student may change.
+message SliceProfile {
+  // This profile.
+  id.v1.SliceProfileId id = 1;
+  // Display name.
+  string name = 2;
+  // Engine settings the profile always sets, which no override can change.
+  map<string, string> fixed = 3;
+  // The engine settings a student may change, each with the values it may take.
+  map<string, SettingRange> adjustable = 4;
+}
+
+// The values one adjustable setting may take. With no limits and no choices, any value is allowed.
+message SettingRange {
+  // The lowest number allowed, when set.
+  optional double minimum = 1;
+  // The highest number allowed, when set.
+  optional double maximum = 2;
+  // The only values allowed, such as true and false, or an enumeration's names. Empty allows any.
+  repeated string choices = 3;
+}

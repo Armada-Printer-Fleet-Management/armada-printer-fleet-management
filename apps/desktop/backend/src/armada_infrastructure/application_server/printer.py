@@ -1,7 +1,7 @@
 from functools import cached_property
 
 from core_domain.ddd import Page
-from core_domain.fleet import Printer
+from core_domain.fleet import Printer, PrinterType
 from core_domain.ids import PrinterId
 from proto_utils.gen.common.v1.page_pb2 import PageRequest
 from proto_utils.gen.id.v1 import printer_id_pb2
@@ -9,9 +9,10 @@ from proto_utils.gen.server.v1.printer_service_connect import PrinterServiceClie
 from proto_utils.gen.server.v1.printer_service_pb2 import (
     GetPrinterRequest,
     ListPrintersRequest,
+    ListPrinterTypesRequest,
     TransitionPrinterRequest,
 )
-from proto_utils.mappers import PrinterMapper
+from proto_utils.mappers import PrinterMapper, PrinterTypeMapper
 
 from armada_domains.fleet.repository import PrinterRepository
 from armada_infrastructure.application_server.client import ApplicationServerClient
@@ -25,6 +26,7 @@ class ApplicationServerPrinters(
 
     _id_message_type = printer_id_pb2.PrinterId
     _mapper = PrinterMapper()
+    _type_mapper = PrinterTypeMapper()
 
     def __init__(self, server: ApplicationServerConnection) -> None:
         self._server = server
@@ -58,3 +60,8 @@ class ApplicationServerPrinters(
         with self._server_errors_as_domain(printer_id):
             response = self._client.transition_printer(request)
         return self._mapper.to_entity(response.printer)
+
+    def types(self) -> list[PrinterType]:
+        with self._server_errors_as_domain():
+            response = self._client.list_printer_types(ListPrinterTypesRequest())
+        return [self._type_mapper.to_entity(each) for each in response.printer_types]

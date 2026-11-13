@@ -23,6 +23,7 @@ from api.domains.legal.repository import AgreementRepository
 from api.domains.legal.service import AgreementService
 from api.domains.print_job.repository import PrintJobRepository
 from api.domains.print_job.service import PrintJobService
+from api.domains.print_preparation.service import SlicerConfigurationService
 from api.domains.queue.repository import PrinterQueueRepository
 from api.domains.queue.service import PrinterQueueService
 from api.infrastructure.agreement_memory import InMemoryAgreementRepository
@@ -37,6 +38,7 @@ from api.infrastructure.file_store_files import FileStoreFiles
 from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
 from api.infrastructure.printer_server_mock import MockPrinterServer
+from api.infrastructure.slice_profile_stub import StubSliceProfiles
 from tests.fakes import MemoryFileStore
 from tests.samples import NOW
 
@@ -83,6 +85,7 @@ def fake_services(
         printers=PrinterService(printer_server),
         printer_queues=PrinterQueueService(printer_queues),
         agreements=AgreementService(agreements, documents, clock),
+        slicer_configuration=SlicerConfigurationService(StubSliceProfiles()),
     )
     return FakeServices(services, [storage])
 

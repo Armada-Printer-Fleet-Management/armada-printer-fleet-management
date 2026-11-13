@@ -54,6 +54,11 @@ export {
   requestFailureMessage,
   type RequestFailure,
 } from './lib/request-failure';
+export {
+  createFeatureGate,
+  type FeatureGateProps,
+  type FeatureProviderProps,
+} from './lib/feature-gate';
 export { TempRoutePage, type TempRoutePageProps } from './temp/TempRoutePage';
 export {
   TempVerticalSlicePage,
