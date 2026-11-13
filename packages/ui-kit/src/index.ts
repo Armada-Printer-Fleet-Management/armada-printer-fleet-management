@@ -17,6 +17,7 @@ export { DevToolsIcon } from './icons/dev-tools-icon';
 export { FleetIcon } from './icons/fleet-icon';
 export { HelpCircleIcon } from './icons/help-circle-icon';
 export { HomeIcon } from './icons/home-icon';
+export { LogInIcon } from './icons/log-in-icon';
 export { LogOutIcon } from './icons/log-out-icon';
 export { PrinterIcon } from './icons/printer-icon';
 export { QueuesIcon } from './icons/queues-icon';

@@ -1,9 +1,16 @@
 import { read } from '@armada/organization-info';
 import { OrganizationInfoSchema } from '@armada/api-client/gen/common/v1/organization_info_pb';
-import { cn, DevToolsIcon, LogOutIcon, type IconProps } from '@armada/ui-kit';
-import { type ComponentType } from 'react';
+import {
+  cn,
+  DevToolsIcon,
+  LogInIcon,
+  LogOutIcon,
+  type IconProps,
+} from '@armada/ui-kit';
+import { type ComponentType, useState } from 'react';
 import { Link, NavLink } from 'react-router';
 
+import { useAuth } from '../lib/auth-context';
 import { devToolsEnabled } from '../lib/dev-tools';
 import { navRoutes, routePaths } from '../routes';
 
@@ -47,6 +54,59 @@ function SidebarLink({ path, label, icon: Icon, className }: SidebarLinkProps) {
         <Icon className="size-[18px]" />
         {label}
       </NavLink>
+    </li>
+  );
+}
+
+function AccountItem() {
+  const { user, loading, signIn, signOut } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  // Holds the space until the stored session is read, so a signed-in user never sees "Sign in".
+  if (loading) {
+    return <li aria-hidden="true" className="h-10" />;
+  }
+
+  const signedIn = user !== null;
+  const Icon = signedIn ? LogOutIcon : LogInIcon;
+  const label = busy
+    ? signedIn
+      ? 'Signing out…'
+      : 'Signing in…'
+    : signedIn
+      ? 'Sign out'
+      : 'Sign in';
+
+  // Success leaves the page for the sign-in server, so only a failure returns here.
+  function start() {
+    setBusy(true);
+    setFailed(false);
+    (signedIn ? signOut() : signIn()).catch(() => {
+      setBusy(false);
+      setFailed(true);
+    });
+  }
+
+  return (
+    <li>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={start}
+        className={cn(
+          itemClass,
+          'w-full cursor-pointer text-foreground/80 hover:bg-foreground/5 hover:text-foreground disabled:cursor-wait',
+        )}
+      >
+        <Icon className="size-[18px]" />
+        {label}
+      </button>
+      {failed && (
+        <p role="alert" className="px-3.5 pt-1 text-xs text-foreground">
+          Couldn’t reach the sign-in service. Try again in a moment.
+        </p>
+      )}
     </li>
   );
 }
@@ -100,20 +160,7 @@ export function Sidebar() {
             className={devItem}
           />
         )}
-        <li>
-          {/* STUB: renders the Sign out entry from the design. Wire it to the sign-in flow once authentication exists. */}
-          <button
-            type="button"
-            disabled
-            className={cn(
-              itemClass,
-              'w-full text-foreground/70 disabled:cursor-not-allowed',
-            )}
-          >
-            <LogOutIcon className="size-[18px]" />
-            Sign out
-          </button>
-        </li>
+        <AccountItem />
       </ul>
     </nav>
   );
