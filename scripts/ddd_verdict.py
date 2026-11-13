@@ -3,7 +3,8 @@
 The review itself is an agent's judgement; everything around it is deterministic so the
 pre-push hook can rely on it without spending tokens:
 
-    scope    the source files changed since the branch left main, as JSON
+    scope    the source files changed since the branch's base, as JSON: the nearest pushed
+             branch it builds on (the PR below it in a stack), else where it left main
     diff     the unified diff of only those files, which is all the reviewer reads
              (both take --worktree to preview uncommitted work, which is never recorded)
     record   validate a review on stdin and store it as the verdict for HEAD's tree
@@ -70,12 +71,48 @@ def git(*args: str) -> str:
 
 
 def merge_base() -> str:
+    """Where this branch's own changes start: the nearest pushed branch it builds on, such as the
+    pull request below it in a stack, or else where it left main."""
+    head = git("rev-parse", "HEAD")
+    bases = [
+        commit
+        for commit in (git("rev-parse", ref) for ref in pushed_ancestors())
+        # A branch already at HEAD holds this work, so measuring from it would hide every change.
+        if commit != head
+    ]
     for ref in ("origin/main", "main"):
         try:
-            return git("merge-base", "HEAD", ref)
+            bases.append(git("merge-base", "HEAD", ref))
+            break
         except subprocess.CalledProcessError:
             continue
-    raise SystemExit("Cannot find main or origin/main to compare against.")
+    if not bases:
+        raise SystemExit("Cannot find main or origin/main to compare against.")
+    return min(sorted(set(bases)), key=commits_since)
+
+
+def pushed_ancestors() -> list[str]:
+    """Remote branches HEAD builds on, other than this branch's own."""
+    own = {"origin/HEAD", "origin"}
+    branch = git("rev-parse", "--abbrev-ref", "HEAD")
+    if branch != "HEAD":
+        own.add(f"origin/{branch}")
+    try:
+        own.add(git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"))
+    except subprocess.CalledProcessError:
+        pass
+    merged = git(
+        "for-each-ref",
+        "--merged",
+        "HEAD",
+        "--format=%(refname:short)",
+        "refs/remotes/origin",
+    ).splitlines()
+    return [ref for ref in merged if ref not in own]
+
+
+def commits_since(commit: str) -> int:
+    return int(git("rev-list", "--count", f"{commit}..HEAD"))
 
 
 def head_tree() -> str:

@@ -32,10 +32,12 @@ read tests, or run the test suite.
 python scripts/ddd_verdict.py scope
 ```
 
-It prints the merge base, HEAD's tree, every source file changed since the branch left `main`
-(tests and generated code excluded), and any of those files with uncommitted edits. Every layer is
+It prints the base, HEAD's tree, every source file changed since the base (tests and generated
+code excluded), and any of those files with uncommitted edits. Every layer is
 in scope on purpose: domain logic in the wrong place, such as a React component or a handler, is
-the violation most worth catching.
+the violation most worth catching. The base is the nearest pushed branch HEAD builds on, such as
+the pull request below it in a stack, or else where the branch left `main`, so a stacked branch is
+reviewed only for its own changes.
 
 - **No files:** report "nothing to review" and stop. The hook treats this as not applicable.
 - **Uncommitted edits in scoped files:** report that the review covers commits only, name the
