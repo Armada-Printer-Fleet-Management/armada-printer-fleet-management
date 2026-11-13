@@ -122,6 +122,19 @@ services:
           target: /repo/packages/slicer-engine
           ignore:
             - package.json
+        # Includes src/gen, so rerunning the slicer codegen on the host reaches the dev server.
+        - action: sync
+          path: ../../packages/slicer
+          target: /repo/packages/slicer
+          ignore:
+            - package.json
+        # Bundled prints only: test prints never enter the image.
+        - action: sync
+          path: ../../packages/sample-prints/bundled
+          target: /repo/packages/sample-prints/bundled
+        - action: sync
+          path: ../../packages/sample-prints/src
+          target: /repo/packages/sample-prints/src
         # Read once when the dev server starts, so a change needs a restart.
         - action: sync+restart
           path: ../../apps/web/vite.config.ts
@@ -157,6 +170,14 @@ services:
           path: ../../packages/api-client/package.json
         - action: rebuild
           path: ../../packages/slicer-engine/package.json
+        - action: rebuild
+          path: ../../packages/slicer/package.json
+        - action: rebuild
+          path: ../../packages/sample-prints/package.json
+        # The sample prints' Vite plugin is read when the dev server starts.
+        - action: sync+restart
+          path: ../../packages/sample-prints/vite.ts
+          target: /repo/packages/sample-prints/vite.ts
 
   db:
     image: postgres:17-alpine

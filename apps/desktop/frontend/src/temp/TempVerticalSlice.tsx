@@ -9,9 +9,12 @@ import {
   type TempSlicePoll,
   type TempSliceSection,
 } from '@armada/ui-kit';
+import { bundledPrint, samplePrintUrl } from '@armada/sample-prints';
+import { tempSlicerActions, type TempPrinterType } from '@armada/slicer/temp';
 import { loadSlicerEngine, slicerEngineUrl } from '@armada/slicer-engine';
 import type { File as StoredFile } from '../gen/content_asset/v1/file_pb';
 import { type Printer, PrinterStatus } from '../gen/fleet/v1/printer_pb';
+import type { PrinterType } from '../gen/fleet/v1/printer_type_pb';
 import {
   type PrintJob,
   PrintJobStatus,
@@ -30,8 +33,13 @@ import {
 } from '../gen/server/v1/printer_service_pb';
 import { listFiles } from '../ipc/file';
 import { listPrintJobs, transitionPrintJob } from '../ipc/print-job';
-import { listPrinters, transitionPrinter } from '../ipc/printer';
+import {
+  listPrinterTypes,
+  listPrinters,
+  transitionPrinter,
+} from '../ipc/printer';
 import { listPrinterQueues } from '../ipc/printer-queue';
+import { getSliceSettings } from '../ipc/slicer-configuration';
 
 type Action = MessageInitShape<
   typeof TransitionPrintJobRequestSchema
@@ -82,6 +90,13 @@ async function transition(printJobId: string | undefined, action: Action) {
 export function TempVerticalSlice() {
   const [snapshot, setSnapshot] = React.useState<Snapshot>(EMPTY);
   const [selected, setSelected] = React.useState<string>();
+  const [printerTypes, setPrinterTypes] = React.useState<PrinterType[]>([]);
+
+  React.useEffect(() => {
+    listPrinterTypes()
+      .then((response) => setPrinterTypes(response.printerTypes))
+      .catch(console.error);
+  }, []);
 
   // One poll per live status, as the final UI will have; each also feeds the workflow below.
   const printerPoll = React.useMemo<TempSlicePoll>(
@@ -308,6 +323,31 @@ export function TempVerticalSlice() {
         },
       ],
     },
+    {
+      title: 'Slicer',
+      boundary: [
+        'Desktop UI',
+        'IPC',
+        'Desktop backend',
+        'Connect',
+        'Server (settings)',
+        'Worker',
+        'Slicer engine (WASM)',
+      ],
+      actions: tempSlicerActions({
+        engineBase: import.meta.env.BASE_URL,
+        printerTypes: printerTypes.map(tempPrinterType),
+        sliceSettings: async ({ model }) => {
+          const printerType = printerTypes.find((type) => type.model === model);
+          const { sliceSettings } = await getSliceSettings({ printerType });
+          if (!sliceSettings) throw new Error('The server sent no settings.');
+          return sliceSettings;
+        },
+        armada: bundledPrint('benchy-armada'),
+        fileUrl: (print, file) =>
+          samplePrintUrl(import.meta.env.BASE_URL, print, file),
+      }),
+    },
   ];
 
   return (
@@ -317,4 +357,12 @@ export function TempVerticalSlice() {
       sections={sections}
     />
   );
+}
+
+function tempPrinterType(type: PrinterType): TempPrinterType {
+  return {
+    model: type.model,
+    bedWidthMm: type.capabilities?.buildVolumeXMm ?? 0,
+    bedDepthMm: type.capabilities?.buildVolumeYMm ?? 0,
+  };
 }

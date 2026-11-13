@@ -5,17 +5,19 @@ from proto_utils.gen.common.v1.page_pb2 import PageResponse
 from proto_utils.gen.server.v1.printer_service_pb2 import (
     ListPrintersRequest,
     ListPrintersResponse,
+    ListPrinterTypesResponse,
     TransitionPrinterRequest,
     TransitionPrinterResponse,
 )
-from proto_utils.mappers import PrinterMapper
+from proto_utils.mappers import PrinterMapper, PrinterTypeMapper
 
 from armada_domains.fleet.service import PrinterService
-from armada_ipc._base import IpcModule, proto_call
+from armada_ipc._base import IpcModule, proto_call, proto_response
 
 
 class PrinterIpc(IpcModule):
     _mapper = PrinterMapper()
+    _type_mapper = PrinterTypeMapper()
 
     def __init__(self, printers: PrinterService) -> None:
         self._printers = printers
@@ -26,6 +28,12 @@ class PrinterIpc(IpcModule):
         return ListPrintersResponse(
             printers=[self._mapper.to_proto(printer) for printer in page.items],
             page=PageResponse(next_page_token=page.next_page_token),
+        )
+
+    @proto_response
+    def list_printer_types(self) -> ListPrinterTypesResponse:
+        return ListPrinterTypesResponse(
+            printer_types=[self._type_mapper.to_proto(each) for each in self._printers.types()]
         )
 
     @proto_call(TransitionPrinterRequest)

@@ -4,7 +4,8 @@ bundle in a setup program with NSIS. Windows only.
 Output: installer/dist/<name>-Setup-<version>.exe. NSIS comes from scripts/install_nsis.py.
 
 --skip-build reuses the existing bundle. --smoke-test then installs the result silently for the
-current user, checks the app landed, and uninstalls it again."""
+current user, checks the app landed, and uninstalls it again. --dev-tools builds the app with its
+development-only UI and names the setup <name>-Setup-<version>-dev.exe; never ship one."""
 from __future__ import annotations
 
 import argparse
@@ -69,22 +70,28 @@ def main() -> None:
                         help="reuse the existing PyInstaller bundle")
     parser.add_argument("--smoke-test", action="store_true",
                         help="install silently for the current user, check, then uninstall")
+    parser.add_argument("--dev-tools", action="store_true",
+                        help="include the development-only UI; for local testing only")
     args = parser.parse_args()
 
     if sys.platform != "win32":
         fail("the desktop installer is Windows only")
+    # A reused bundle may be a release build, which the -dev name would then mislabel.
+    if args.skip_build and args.dev_tools:
+        fail("--dev-tools rebuilds the bundle, so it cannot be combined with --skip-build")
 
     if args.skip_build:
         build_run.check_legal_documents()
     else:
-        build_run.main()
+        build_run.main(dev_tools=args.dev_tools)
 
     info = installer_info()
     bundle = BACKEND / "dist" / info["app_name"]
     if not (bundle / f"{info['app_name']}.exe").exists():
         fail(f"{bundle} has no {info['app_name']}.exe. Run without --skip-build.")
 
-    setup = INSTALLER / "dist" / f"{info['app_name']}-Setup-{info['version']}.exe"
+    suffix = "-dev" if args.dev_tools else ""
+    setup = INSTALLER / "dist" / f"{info['app_name']}-Setup-{info['version']}{suffix}.exe"
     with step("Building installer"):
         setup.parent.mkdir(parents=True, exist_ok=True)
         defines = {

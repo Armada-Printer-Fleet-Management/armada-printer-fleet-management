@@ -15,7 +15,11 @@ export function TempPage() {
         legalDocuments={aboutLegalDocuments}
         version={version()}
       />
-      <TempVerticalSlice printJobs={apiClient.printJobs} />
+      <TempVerticalSlice
+        printJobs={apiClient.printJobs}
+        printers={apiClient.printers}
+        slicerConfiguration={apiClient.slicerConfiguration}
+      />
     </div>
   );
 }

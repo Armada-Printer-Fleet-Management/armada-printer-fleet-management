@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package print_preparation.slicing.v1;
+
+// The engine settings for one slice, as the server builds them from a printer type and its slice
+// profile. Keys are the engine's own setting names; values are as the engine reads them.
+message SliceSettings {
+  // Settings for the whole machine, such as its build volume and the profile's fixed values.
+  map<string, string> machine_settings = 1;
+  // Settings for the extruder, such as its nozzle size and the line widths that follow it.
+  map<string, string> extruder_settings = 2;
+}

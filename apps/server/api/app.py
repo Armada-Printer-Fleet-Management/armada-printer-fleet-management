@@ -17,6 +17,9 @@ from proto_utils.gen.server.v1.printer_queue_service_connect import (
     PrinterQueueServiceASGIApplication,
 )
 from proto_utils.gen.server.v1.printer_service_connect import PrinterServiceASGIApplication
+from proto_utils.gen.server.v1.slicer_configuration_service_connect import (
+    SlicerConfigurationServiceASGIApplication,
+)
 
 from api.common.access_policy import ACCESS, AccessPolicy
 from api.common.authentication import Caller
@@ -28,6 +31,7 @@ from api.domains.content_asset.service import FileService
 from api.domains.fleet.service import PrinterService
 from api.domains.legal.service import AgreementService
 from api.domains.print_job.service import PrintJobService
+from api.domains.print_preparation.service import SlicerConfigurationService
 from api.domains.queue.service import PrinterQueueService
 from api.lifespan import lifespan
 from api.middleware.authentication import AuthenticationMiddleware
@@ -41,6 +45,7 @@ from api.services.mount import mount_rpc
 from api.services.print_job_service import PrintJobServiceImplementation
 from api.services.printer_queue_service import PrinterQueueServiceImplementation
 from api.services.printer_service import PrinterServiceImplementation
+from api.services.slicer_configuration_service import SlicerConfigurationServiceImplementation
 
 
 @dataclass(frozen=True)
@@ -50,6 +55,7 @@ class AppServices:
     printers: PrinterService
     printer_queues: PrinterQueueService
     agreements: AgreementService
+    slicer_configuration: SlicerConfigurationService
 
 
 @dataclass(frozen=True)
@@ -115,6 +121,14 @@ def build_app(parts: AppParts) -> FastAPI:
         app,
         AgreementServiceASGIApplication(
             AgreementServiceImplementation(services.agreements, organization.legal_documents)
+        ),
+    )
+    mount_rpc(
+        app,
+        SlicerConfigurationServiceASGIApplication(
+            SlicerConfigurationServiceImplementation(
+                services.printers, services.slicer_configuration
+            )
         ),
     )
     return app
