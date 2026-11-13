@@ -66,6 +66,8 @@ const HEADER_LINES = 300;
 const MM_PER_INCH = 25.4;
 const DEFAULT_FEED_MM_PER_MIN = 1500;
 const SECONDS_PER_MINUTE = 60;
+/** One G-code word: a letter, then a signed number such as 10, -0.5 or .25. */
+const WORD = /([A-Z])\s*([+-]?(?:\d+\.?\d*|\.\d+))/g;
 // Z moves smaller than this are noise, not a new layer.
 const LAYER_EPSILON_MM = 1e-4;
 
@@ -118,6 +120,9 @@ class GcodeState {
   private readonly builder: ToolpathBuilder;
   private position: Vector = [0, 0, 0];
   private extruder = 0;
+  // The furthest the extruder has pushed. Filament counts only past it, so a purge counts while a
+  // retraction, its unretraction and a final retraction change nothing.
+  private extruderPeak = 0;
   private absolutePositions = true;
   private absoluteExtrusion = true;
   private unitScale = 1;
@@ -152,11 +157,20 @@ class GcodeState {
     if (!code) {
       return;
     }
-    const [command = '', ...words] = code.toUpperCase().split(/\s+/);
+    // Words are a letter and a number, with or without spaces between them: G1X10Y10E1 reads
+    // the same as G1 X10 Y10 E1.
+    const [first, ...words] = [...code.toUpperCase().matchAll(WORD)].map(
+      ([, letter = '', number = '']) => ({ letter, number: Number(number) }),
+    );
+    if (first === undefined) {
+      return;
+    }
+    const command = `${first.letter}${first.number}`;
     const value = (letter: string): number | undefined => {
-      const word = words.find((each) => each.startsWith(letter));
-      const number = word === undefined ? NaN : Number(word.slice(1));
-      return Number.isFinite(number) ? number : undefined;
+      const number = words.find((word) => word.letter === letter)?.number;
+      return number !== undefined && Number.isFinite(number)
+        ? number
+        : undefined;
     };
 
     switch (command) {
@@ -270,6 +284,10 @@ class GcodeState {
         : this.extruder + e * this.unitScale;
       extruded = next - this.extruder;
       this.extruder = next;
+      if (next > this.extruderPeak) {
+        this.filamentMm += next - this.extruderPeak;
+        this.extruderPeak = next;
+      }
     }
     this.position = to;
     const length = Math.hypot(
@@ -283,7 +301,6 @@ class GcodeState {
     this.moves++;
     const extruding = extruded > 0;
     if (extruding) {
-      this.filamentMm += extruded;
       this.startLayerIfNeeded(to[2]);
       for (const point of [from, to]) {
         for (let axis = 0; axis < 3; axis++) {
@@ -338,6 +355,8 @@ class GcodeState {
       z === undefined ? this.position[2] : z * scale,
     ];
     if (e !== undefined) {
+      // The peak moves with the reset, so an unretraction after it still adds nothing.
+      this.extruderPeak += e * scale - this.extruder;
       this.extruder = e * scale;
     }
   }

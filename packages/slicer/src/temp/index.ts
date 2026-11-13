@@ -39,12 +39,9 @@ export function tempSlicerActions<P extends TempSamplePrint>(
 ): TempSliceAction[] {
   const { armada } = sources;
   const placements = armada?.arrangement ?? [{ xMm: 0, yMm: 0 }];
-  const fileUrl = (kind: string) => {
-    const file = armada?.files.find((candidate) => candidate.kind === kind);
-    return armada && file ? sources.fileUrl(armada, file).href : undefined;
-  };
-  const modelUrl = fileUrl('model');
-  const gcodeUrl = fileUrl('gcode');
+  const model = armada?.files.find((candidate) => candidate.kind === 'model');
+  const modelUrl =
+    armada && model ? sources.fileUrl(armada, model).href : undefined;
   const printerOptions: TempSliceOption[] = sources.printerTypes.map(
     (type) => ({
       value: type.model,
@@ -63,8 +60,8 @@ export function tempSlicerActions<P extends TempSamplePrint>(
         );
         if (!type) throw new Error('No printer type is available.');
         if (!modelUrl) throw new Error('The Benchy Armada is not bundled.');
-        const model = await readBytes(modelUrl);
-        const fitted = fitToBed(model, placements, type);
+        const stl = await readBytes(modelUrl);
+        const fitted = fitToBed(stl, placements, type);
         if (fitted.length === 0) {
           throw new Error(`Not one Benchy fits the ${type.model}'s bed.`);
         }
@@ -73,7 +70,7 @@ export function tempSlicerActions<P extends TempSamplePrint>(
         const started = performance.now();
         const result = await sliceModel(
           {
-            models: fitted.map((placement) => ({ model, ...placement })),
+            models: fitted.map((placement) => ({ model: stl, ...placement })),
             settings,
             engineBase: sources.engineBase,
           },
@@ -89,13 +86,6 @@ export function tempSlicerActions<P extends TempSamplePrint>(
           peakEngineMemoryMiB: Math.round(peakHeapBytes / 1024 ** 2),
           ...describe(result),
         };
-      },
-    },
-    {
-      label: 'Parse sample G-code',
-      run: async () => {
-        if (!gcodeUrl) throw new Error('No sample G-code is bundled yet.');
-        return describe(await parseGcode(await readBytes(gcodeUrl)));
       },
     },
     {

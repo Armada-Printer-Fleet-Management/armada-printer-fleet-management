@@ -1,7 +1,8 @@
 # @armada/sample-prints
 
 Real 3D print files, as models and G-code, for demos, training, tests and trying the API by hand.
-Prints in `bundled/` ship inside the apps; prints in `test/` are for development and CI only.
+Prints in `bundled/` ship inside the apps as models only; prints in `test/`, and all G-code, are for
+development and CI only.
 
 The files are stored in Git LFS:
 

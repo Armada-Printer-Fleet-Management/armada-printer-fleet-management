@@ -14,7 +14,7 @@
  *        ▼
  *   write into the engine's in-memory file system (it shares the engine's 4 GB memory):
  *        /defs/fdmprinter.def.json, /defs/fdmextruder.def.json
- *        /in/model_<i>.stl
+ *        /in/model_<i>.stl or .obj   (the engine picks its reader by the extension)
  *        │
  *        ▼
  *   callMain([ 'slice', '-j', definition,     machine settings:   -s key=value ...
@@ -34,6 +34,7 @@
 import type { SlicerEngine } from '@armada/slicer-engine';
 import { SlicerViolationCode } from '../../gen/print_preparation/validation/v1/violation_pb';
 import { SlicerJobError, slicerViolation } from '../../validation/violations';
+import type { MeshFormat } from '../mesh';
 import type { Settings } from '../types';
 
 /** The parts of the engine module used here. Its generated types call them `any`. */
@@ -53,7 +54,7 @@ export interface CuraJob {
   printerDefinition: string;
   global: Settings;
   extruder0: Settings;
-  meshes: { data: Uint8Array; settings: Settings }[];
+  meshes: { data: Uint8Array; format: MeshFormat; settings: Settings }[];
 }
 
 export interface CuraOutput {
@@ -110,7 +111,7 @@ export function runCuraCli(
       cura.FS.writeFile(`/defs/${name}`, text);
     }
     const meshArgs = job.meshes.flatMap((mesh, index) => {
-      const path = `/in/model_${index}.stl`;
+      const path = `/in/model_${index}.${mesh.format}`;
       cura.FS.writeFile(path, mesh.data);
       return ['-l', path, ...settingArgs(mesh.settings)];
     });

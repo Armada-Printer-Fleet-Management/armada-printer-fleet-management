@@ -15,6 +15,7 @@ infra/deploy/systemd/* text eol=lf
 
 # Sample and test prints are large binaries, kept in Git LFS so clones stay small. print.json stays in git.
 packages/sample-prints/**/*.stl   filter=lfs diff=lfs merge=lfs -text
+packages/sample-prints/**/*.obj   filter=lfs diff=lfs merge=lfs -text
 packages/sample-prints/**/*.3mf   filter=lfs diff=lfs merge=lfs -text
 packages/sample-prints/**/*.gcode filter=lfs diff=lfs merge=lfs -text
 packages/sample-prints/**/*.bgcode filter=lfs diff=lfs merge=lfs -text
