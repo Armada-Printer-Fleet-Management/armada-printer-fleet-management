@@ -113,6 +113,9 @@ jobs:
       - name: Generate desktop API code
         if: needs.detect.outputs.proto == 'true'
         run: python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules
+      - name: Generate slicer code
+        if: needs.detect.outputs.proto == 'true'
+        run: python scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules
       - name: Fetch the slicer engine (SHA-256 and attestation)
         env:
           GH_TOKEN: ${{ github.token }}

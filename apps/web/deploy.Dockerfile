@@ -25,6 +25,8 @@ COPY packages/organization-info/package.json packages/organization-info/
 COPY packages/ui-kit/package.json packages/ui-kit/
 COPY packages/api-client/package.json packages/api-client/
 COPY packages/slicer-engine/package.json packages/slicer-engine/
+COPY packages/slicer/package.json packages/slicer/
+COPY packages/sample-prints/package.json packages/sample-prints/
 # The exact versions in pnpm-lock.yaml, for the web app and the workspace packages it depends on
 # only; fails rather than updating the lock file if a package.json disagrees.
 RUN pnpm install --frozen-lockfile --filter apps-web...
@@ -44,19 +46,24 @@ RUN set -eu; cd /tmp \
  && echo "${BUF_SHA256}  buf" | sha256sum -c - \
  && install -m 0755 buf /usr/local/bin/buf \
  && rm -f buf
-COPY buf.yaml buf.gen.web_ts.yaml tsconfig.base.json LICENSE ./
+COPY buf.yaml buf.gen.web_ts.yaml buf.gen.slicer_ts.yaml tsconfig.base.json LICENSE ./
 COPY packages/proto packages/proto
 COPY packages/organization-info packages/organization-info
 COPY packages/ui-kit packages/ui-kit
 COPY packages/api-client packages/api-client
 COPY packages/slicer-engine packages/slicer-engine
+COPY packages/slicer packages/slicer
+# Real files only when the build context was checked out with Git LFS; the sample prints' Vite
+# plugin refuses to build from pointer files.
+COPY packages/sample-prints packages/sample-prints
 COPY scripts/generate_proto.py scripts/fetch_slicer_engine.py scripts/
 COPY apps/web apps/web
-# Writes packages/api-client/src/gen from packages/proto using the web's buf template, with
-# node_modules/.bin on PATH so buf finds protoc-gen-es. Fetches the pinned slicer engine, checked
-# against its SHA-256s (its attestation is checked in CI). Then vite build writes the static site,
-# refusing if a legal document no longer matches organization.json.
+# Writes packages/api-client/src/gen and packages/slicer/src/gen from packages/proto using their buf
+# templates, with node_modules/.bin on PATH so buf finds protoc-gen-es. Fetches the pinned slicer
+# engine, checked against its SHA-256s (its attestation is checked in CI). Then vite build writes
+# the static site, refusing if a legal document no longer matches organization.json.
 RUN python3 scripts/generate_proto.py buf.gen.web_ts.yaml --node-modules apps/web/node_modules \
+ && python3 scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules \
  && python3 scripts/fetch_slicer_engine.py \
  && cd apps/web && pnpm build
 

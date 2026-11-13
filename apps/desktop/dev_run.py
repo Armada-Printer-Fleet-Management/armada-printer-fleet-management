@@ -22,7 +22,7 @@ def main() -> None:
     parser.add_argument("--dev", action="store_true")
     args = parser.parse_args()
 
-    # Shows development-only UI in both run modes; build_run.py never sets it.
+    # Shows development-only UI in both run modes; a packaged build has it only with --dev-tools.
     os.environ["VITE_ARMADA_DEV_TOOLS"] = "1"
 
     if args.dev:

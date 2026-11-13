@@ -9,6 +9,8 @@ import {
   type TempSlicePoll,
   type TempSliceSection,
 } from '@armada/ui-kit';
+import { bundledPrint, samplePrintUrl } from '@armada/sample-prints';
+import { tempSlicerActions, type TempPrinterType } from '@armada/slicer/temp';
 import { loadSlicerEngine, slicerEngineUrl } from '@armada/slicer-engine';
 import type { File as StoredFile } from '../gen/content_asset/v1/file_pb';
 import { type Printer, PrinterStatus } from '../gen/fleet/v1/printer_pb';
@@ -32,6 +34,7 @@ import { listFiles } from '../ipc/file';
 import { listPrintJobs, transitionPrintJob } from '../ipc/print-job';
 import { listPrinters, transitionPrinter } from '../ipc/printer';
 import { listPrinterQueues } from '../ipc/printer-queue';
+import { getSliceSettings } from '../ipc/slicer-configuration';
 
 type Action = MessageInitShape<
   typeof TransitionPrintJobRequestSchema
@@ -308,6 +311,35 @@ export function TempVerticalSlice() {
         },
       ],
     },
+    {
+      title: 'Slicer',
+      boundary: [
+        'Desktop UI',
+        'IPC',
+        'Desktop backend',
+        'Connect',
+        'Server (settings)',
+        'Worker',
+        'Slicer engine (WASM)',
+      ],
+      actions: tempSlicerActions({
+        engineBase: import.meta.env.BASE_URL,
+        printerTypes: printerTypes(printers),
+        sliceSettings: async ({ model }) => {
+          const printer = printers.find(
+            (candidate) => candidate.model === model,
+          );
+          const { sliceSettings } = await getSliceSettings({
+            printerType: { model, capabilities: printer?.capabilities },
+          });
+          if (!sliceSettings) throw new Error('The server sent no settings.');
+          return sliceSettings;
+        },
+        armada: bundledPrint('benchy-armada'),
+        fileUrl: (print, file) =>
+          samplePrintUrl(import.meta.env.BASE_URL, print, file),
+      }),
+    },
   ];
 
   return (
@@ -317,4 +349,17 @@ export function TempVerticalSlice() {
       sections={sections}
     />
   );
+}
+
+/** One entry per printer model in the fleet, as the server's printer types list them. */
+function printerTypes(printers: Printer[]): TempPrinterType[] {
+  const byModel = new Map<string, TempPrinterType>();
+  for (const { model, capabilities } of printers) {
+    byModel.set(model, {
+      model,
+      bedWidthMm: capabilities?.buildVolumeXMm ?? 0,
+      bedDepthMm: capabilities?.buildVolumeYMm ?? 0,
+    });
+  }
+  return [...byModel.values()];
 }

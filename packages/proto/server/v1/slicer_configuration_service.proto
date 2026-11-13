@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package server.v1;
+
+import "fleet/v1/printer_type.proto";
+import "print_preparation/slicing/v1/slice_settings.proto";
+
+// How the slicer is configured for a print, decided by the server so its slice profiles are enforced
+// in one place.
+service SlicerConfigurationService {
+  // Builds the engine settings for slicing on a printer type. Refuses a type that is not in the
+  // fleet, and an override the slice profile does not allow.
+  rpc GetSliceSettings(GetSliceSettingsRequest) returns (GetSliceSettingsResponse);
+}
+
+// The printer type to slice for, and the settings the student wants to change.
+message GetSliceSettingsRequest {
+  // One of the types ListPrinterTypes returns. Its capabilities are checked against the fleet.
+  fleet.v1.PrinterType printer_type = 1;
+  // Engine setting names and the values asked for. Only the profile's adjustable settings may
+  // appear, within their ranges.
+  map<string, string> overrides = 2;
+}
+
+// The settings to slice with.
+message GetSliceSettingsResponse {
+  // Machine and extruder settings for the engine.
+  print_preparation.slicing.v1.SliceSettings slice_settings = 1;
+}

@@ -15,7 +15,11 @@ export function TempPage() {
         organization={read(OrganizationInfoSchema)}
         version={version()}
       />
-      <TempVerticalSlice printJobs={apiClient.printJobs} />
+      <TempVerticalSlice
+        printJobs={apiClient.printJobs}
+        printers={apiClient.printers}
+        slicerConfiguration={apiClient.slicerConfiguration}
+      />
     </div>
   );
 }

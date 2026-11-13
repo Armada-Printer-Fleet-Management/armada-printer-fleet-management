@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package print_preparation.v1;
+
+// A slicer capability a client may offer. Each client says which it supports, and the parts of the
+// slicer for a feature it does not support are hidden there.
+enum SlicerFeature {
+  // Not set. Never valid; treat as an error.
+  SLICER_FEATURE_UNSPECIFIED = 0;
+  // Teaching a student what makes a print succeed or fail.
+  SLICER_FEATURE_EDUCATION = 1;
+  // A student checking their own print before submitting it.
+  SLICER_FEATURE_PRE_SUBMISSION_REVIEW = 2;
+  // Staff only. Staff reviewing a submitted print.
+  SLICER_FEATURE_REVIEW = 3;
+  // Staff only. Staff working out why a print failed.
+  SLICER_FEATURE_FAILURE_DIAGNOSIS = 4;
+}

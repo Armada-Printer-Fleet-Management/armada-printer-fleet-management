@@ -4,6 +4,7 @@ which bundles the frontend build. Windows only. Works the same on a dev machine 
 Output: backend/dist/<name>/<name>.exe, where <name> is the organization title in Train-Case."""
 from __future__ import annotations
 
+import os
 import pathlib
 import subprocess
 import sys
@@ -32,9 +33,16 @@ def check_legal_documents() -> None:
         run([sys.executable, str(repository / "scripts" / "check_legal_documents.py")], repository)
 
 
-def main() -> None:
+def main(dev_tools: bool = False) -> None:
+    """dev_tools builds the frontend with its development-only UI, as dev_run.py runs it."""
     if sys.platform != "win32":
         fail("the desktop build is Windows only")
+
+    # Set or cleared explicitly, so a value left in the shell cannot reach a release build.
+    if dev_tools:
+        os.environ["VITE_ARMADA_DEV_TOOLS"] = "1"
+    else:
+        os.environ.pop("VITE_ARMADA_DEV_TOOLS", None)
 
     check_legal_documents()
 

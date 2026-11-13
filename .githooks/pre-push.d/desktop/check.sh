@@ -18,6 +18,9 @@ if [ -f apps/desktop/frontend/package.json ]; then
   else
     require "frontend: generate" buf bash -c \
       'PATH="$(pwd)/apps/desktop/frontend/node_modules/.bin:$PATH" python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules'
+    # The frontend imports @armada/slicer, whose generated code the slicer check would make later.
+    require "frontend: slicer gen" buf bash -c \
+      'PATH="$(pwd)/packages/slicer/node_modules/.bin:$PATH" python scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules'
     require "frontend: tsc" pnpm pnpm --dir apps/desktop/frontend exec tsc --noEmit
     require "frontend: eslint" pnpm pnpm --dir apps/desktop/frontend exec eslint .
     require "frontend: vitest" pnpm pnpm --dir apps/desktop/frontend exec vitest run

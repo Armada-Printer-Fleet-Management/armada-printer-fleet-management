@@ -4,6 +4,7 @@ import * as path from 'path';
 import tailwindcss from '@tailwindcss/vite';
 import { read } from '../../packages/organization-info/organization-info';
 import { legalDocuments } from '../../packages/organization-info/vite';
+import { samplePrints } from '../../packages/sample-prints/vite';
 import { slicerEngine } from '../../packages/slicer-engine/vite';
 // A relative path, so Vite bundles it with this config; Node cannot resolve its extensionless
 // imports from the package export.
@@ -17,6 +18,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     slicerEngine(),
+    samplePrints(),
     legalDocuments(),
     {
       name: 'organization-title',
@@ -29,6 +31,8 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
+  // The slicer's job worker is a module, since it imports the engine.
+  worker: { format: 'es' },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

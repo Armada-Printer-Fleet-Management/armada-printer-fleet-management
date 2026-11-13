@@ -799,6 +799,32 @@ window.OPENAPI_SPEC = {
         "title": "PrintJobStatus",
         "type": "string"
       },
+      "print_preparation.slicing.v1.SliceSettings": {
+        "additionalProperties": false,
+        "description": "The engine settings for one slice, as the server builds them from a printer type and its slice\n profile. Keys are the engine's own setting names; values are as the engine reads them.",
+        "properties": {
+          "extruderSettings": {
+            "additionalProperties": {
+              "title": "value",
+              "type": "string"
+            },
+            "description": "Settings for the extruder, such as its nozzle size and the line widths that follow it.",
+            "title": "extruder_settings",
+            "type": "object"
+          },
+          "machineSettings": {
+            "additionalProperties": {
+              "title": "value",
+              "type": "string"
+            },
+            "description": "Settings for the whole machine, such as its build volume and the profile's fixed values.",
+            "title": "machine_settings",
+            "type": "object"
+          }
+        },
+        "title": "SliceSettings",
+        "type": "object"
+      },
       "queue.v1.PrinterQueue": {
         "additionalProperties": false,
         "description": "A line of print jobs waiting for a printer.",
@@ -1133,6 +1159,49 @@ window.OPENAPI_SPEC = {
           }
         },
         "title": "GetPrinterResponse",
+        "type": "object"
+      },
+      "server.v1.GetSliceSettingsRequest": {
+        "additionalProperties": false,
+        "description": "The printer type to slice for, and the settings the student wants to change.",
+        "properties": {
+          "overrides": {
+            "additionalProperties": {
+              "title": "value",
+              "type": "string"
+            },
+            "description": "Engine setting names and the values asked for. Only the profile's adjustable settings may\n appear, within their ranges.",
+            "title": "overrides",
+            "type": "object"
+          },
+          "printerType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/fleet.v1.PrinterType"
+              }
+            ],
+            "description": "One of the types ListPrinterTypes returns. Its capabilities are checked against the fleet.",
+            "title": "printer_type"
+          }
+        },
+        "title": "GetSliceSettingsRequest",
+        "type": "object"
+      },
+      "server.v1.GetSliceSettingsResponse": {
+        "additionalProperties": false,
+        "description": "The settings to slice with.",
+        "properties": {
+          "sliceSettings": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/print_preparation.slicing.v1.SliceSettings"
+              }
+            ],
+            "description": "Machine and extruder settings for the engine.",
+            "title": "slice_settings"
+          }
+        },
+        "title": "GetSliceSettingsResponse",
         "type": "object"
       },
       "server.v1.HealthCheckRequest": {
@@ -3214,6 +3283,68 @@ window.OPENAPI_SPEC = {
           "server.v1.PrinterService"
         ]
       }
+    },
+    "/api/server.v1.SlicerConfigurationService/GetSliceSettings": {
+      "post": {
+        "description": "Builds the engine settings for slicing on a printer type. Refuses a type that is not in the\n fleet, and an override the slice profile does not allow.",
+        "operationId": "server.v1.SlicerConfigurationService.GetSliceSettings",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.GetSliceSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.GetSliceSettingsResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "GetSliceSettings",
+        "tags": [
+          "server.v1.SlicerConfigurationService"
+        ]
+      }
     }
   },
   "tags": [
@@ -3240,6 +3371,10 @@ window.OPENAPI_SPEC = {
     {
       "description": "The printers the remote server knows of, with their latest reported state.",
       "name": "server.v1.PrinterService"
+    },
+    {
+      "description": "How the slicer is configured for a print, decided by the server so its slice profiles are enforced\n in one place.",
+      "name": "server.v1.SlicerConfigurationService"
     }
   ]
 };

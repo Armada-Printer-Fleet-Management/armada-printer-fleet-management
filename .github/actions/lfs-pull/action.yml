@@ -1,0 +1,31 @@
+name: Pull Git LFS files
+description: >-
+  Fetch the Git LFS files a job reads, from a cache when they have not changed. Every LFS download
+  counts against the repository owner's monthly bandwidth, so pull only the paths the job needs.
+  Run it after actions/checkout, which leaves LFS files as pointers.
+
+inputs:
+  include:
+    description: Comma-separated paths to pull, as git lfs pull --include takes them.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # The cache key is the set of objects these paths point at, so a changed file misses the cache.
+    - id: objects
+      shell: bash
+      env:
+        INCLUDE: ${{ inputs.include }}
+      run: |
+        set -euo pipefail
+        git lfs ls-files --long --include "$INCLUDE" | cut -d ' ' -f1 | sort > "$RUNNER_TEMP/lfs-objects"
+        echo "hash=$(sha256sum "$RUNNER_TEMP/lfs-objects" | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v4
+      with:
+        path: .git/lfs/objects
+        key: lfs-${{ steps.objects.outputs.hash }}
+    - shell: bash
+      env:
+        INCLUDE: ${{ inputs.include }}
+      run: git lfs pull --include "$INCLUDE"

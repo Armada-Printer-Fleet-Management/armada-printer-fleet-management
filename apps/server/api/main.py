@@ -11,6 +11,9 @@ from proto_utils.gen.server.v1.printer_queue_service_connect import (
     PrinterQueueServiceASGIApplication,
 )
 from proto_utils.gen.server.v1.printer_service_connect import PrinterServiceASGIApplication
+from proto_utils.gen.server.v1.slicer_configuration_service_connect import (
+    SlicerConfigurationServiceASGIApplication,
+)
 from proto_utils.mappers import AgreementMapper
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -26,6 +29,7 @@ from api.domains.content_asset.service import FileService
 from api.domains.fleet.service import PrinterService
 from api.domains.legal.service import AgreementService
 from api.domains.print_job.service import PrintJobService
+from api.domains.print_preparation.service import SlicerConfigurationService
 from api.domains.queue.service import PrinterQueueService
 from api.infrastructure.agreement_sql import SqlAgreementRepository
 from api.infrastructure.dev_data import (
@@ -41,6 +45,7 @@ from api.infrastructure.postgres_database import PostgresDatabase
 from api.infrastructure.print_job_sql import SqlPrintJobRepository
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
 from api.infrastructure.printer_server_mock import MockPrinterServer
+from api.infrastructure.slice_profile_stub import StubSliceProfiles
 from api.lifespan import lifespan
 from api.middleware.authentication import AuthenticationMiddleware
 from api.middleware.request_context import RequestContextMiddleware
@@ -55,6 +60,7 @@ from api.services.print_job_service import PrintJobServiceImplementation
 from api.services.printer_poller import PrinterPoller
 from api.services.printer_queue_service import PrinterQueueServiceImplementation
 from api.services.printer_service import PrinterServiceImplementation
+from api.services.slicer_configuration_service import SlicerConfigurationServiceImplementation
 
 organization = read(organization_info_pb2.OrganizationInfo())
 
@@ -79,6 +85,7 @@ printer_service = PrinterService(
     MockPrinterServer(stub_printers(), clock, faulty_printer_ids=[STUB_FAULTY_PRINTER_ID])
 )
 printer_queue_service = PrinterQueueService(InMemoryPrinterQueueRepository(stub_printer_queues()))
+slicer_configuration_service = SlicerConfigurationService(StubSliceProfiles())
 printer_poller = PrinterPoller(printer_service, print_job_service, timedelta(seconds=1))
 
 # App
@@ -135,6 +142,12 @@ mount_rpc(
     PrinterQueueServiceASGIApplication(PrinterQueueServiceImplementation(printer_queue_service)),
 )
 mount_rpc(app, FileServiceASGIApplication(FileServiceImplementation(file_service)))
+mount_rpc(
+    app,
+    SlicerConfigurationServiceASGIApplication(
+        SlicerConfigurationServiceImplementation(printer_service, slicer_configuration_service)
+    ),
+)
 mount_rpc(
     app,
     AgreementServiceASGIApplication(

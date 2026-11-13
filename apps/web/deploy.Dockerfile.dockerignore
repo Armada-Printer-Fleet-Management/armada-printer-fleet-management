@@ -18,8 +18,11 @@
 !packages/ui-kit/
 !packages/api-client/
 !packages/slicer-engine/
+!packages/slicer/
+!packages/sample-prints/
 !buf.yaml
 !buf.gen.web_ts.yaml
+!buf.gen.slicer_ts.yaml
 !scripts/generate_proto.py
 !scripts/fetch_slicer_engine.py
 !infra/deploy/Caddyfile
@@ -29,6 +32,8 @@
 **/node_modules
 **/dist
 **/gen
+# Test prints are never distributed; only bundled/ ships.
+packages/sample-prints/test/
 # packages/organization-info and packages/proto/utils are Python packages too, so they can hold
 # Python's local state.
 **/.venv

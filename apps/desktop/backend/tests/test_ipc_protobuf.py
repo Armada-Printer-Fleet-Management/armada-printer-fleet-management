@@ -15,6 +15,7 @@ from armada_domains.content_asset.service import FileService
 from armada_domains.fleet.service import PrinterService
 from armada_domains.legal.service import AgreementService
 from armada_domains.print_job.service import PrintJobService
+from armada_domains.print_preparation.service import SlicerConfigurationService
 from armada_domains.queue.service import PrinterQueueService
 from armada_ipc import Ipc
 from armada_ipc._base import PROTO_CALL_MARKER, PROTO_RESPONSE_MARKER, IpcModule
@@ -80,6 +81,7 @@ EXPOSED_METHODS, EXPOSED_OBJECTS = exposed(
         files=create_autospec(FileService, instance=True),
         agreements=create_autospec(AgreementService, instance=True),
         legal_documents=[],
+        slicer_configuration=create_autospec(SlicerConfigurationService, instance=True),
     )
 )
 SWEPT_METHODS = swept_methods()
