@@ -1,6 +1,6 @@
 ---
 name: shadcn-components
-description: "Create and update shadcn-inspired React components in the shared @armada/ui-kit package, following its TypeScript, Tailwind CSS, semantic-token, accessibility, and cross-app conventions."
+description: "Create and update shadcn-inspired React components in the shared @armada/ui-kit package, following its TypeScript, Tailwind CSS, semantic-token, accessibility, and cross-app conventions. Use when creating, changing, or reviewing shared components, including dialogs, modals, and primitives."
 ---
 <!-- GENERATED FILE - DO NOT EDIT
      Source:    .claude/skills/shadcn-components/SKILL.md
