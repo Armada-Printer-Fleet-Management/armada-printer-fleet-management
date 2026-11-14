@@ -47,6 +47,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@armada/ui-kit";
 </Card>;
 ```
 
+For a modal, control `Dialog` with state and give it an accessible name:
+
+```tsx
+import { useState } from 'react';
+import { Dialog, DialogHeader, DialogTitle } from '@armada/ui-kit';
+
+function Example() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Open</button>
+      <Dialog open={open} onOpenChange={setOpen} aria-labelledby="example-title">
+        <DialogHeader>
+          <DialogTitle id="example-title">Example</DialogTitle>
+        </DialogHeader>
+        <button onClick={() => setOpen(false)}>Close</button>
+      </Dialog>
+    </>
+  );
+}
+```
+
 The applications import `@armada/ui-kit/styles.css` after Tailwind and declare the workspace
 dependency as `"@armada/ui-kit": "workspace:*"`.
 

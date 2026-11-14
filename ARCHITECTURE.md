@@ -92,7 +92,7 @@ Each directory below has a `README.md` with its contents, and the ones marked �
 ```text
 apps/                      L4: the delivered applications
   server/ †                the application server: Python ASGI + ConnectRPC, remote
-  web/                     React + TypeScript browser app for students
+  web/ †                   React + TypeScript browser app for students
   desktop/ †               pywebview backend/ around a React frontend/, plus installer/
 packages/                  shared code, used by more than one app
   proto/ †                 L0: the .proto contract; utils/ holds the generated Python and mappers

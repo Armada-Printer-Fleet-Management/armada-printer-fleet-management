@@ -8,7 +8,7 @@ import {
   type IconProps,
 } from '@armada/ui-kit';
 import { type ComponentType, useState } from 'react';
-import { Link, NavLink } from 'react-router';
+import { NavLink } from 'react-router';
 
 import { useAuth } from '../lib/auth-context';
 import { devToolsEnabled } from '../lib/dev-tools';
@@ -118,7 +118,7 @@ function devItem(isActive: boolean) {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ onNewPrint }: { onNewPrint?: () => void }) {
   const { name, tagline } = wordmarkParts(read(OrganizationInfoSchema).title);
 
   return (
@@ -134,18 +134,21 @@ export function Sidebar() {
           <p className="mt-1 text-xs text-foreground/70">{tagline}</p>
         )}
       </div>
-      <Link
-        to={routePaths.myPrints.path}
-        className={cn(
-          'flex h-10 items-center justify-center gap-1.5 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:opacity-90',
-          focusRing,
-        )}
-      >
-        <span aria-hidden="true" className="text-lg font-normal">
-          +
-        </span>
-        New print
-      </Link>
+      {onNewPrint && (
+        <button
+          type="button"
+          onClick={onNewPrint}
+          className={cn(
+            'flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:opacity-90',
+            focusRing,
+          )}
+        >
+          <span aria-hidden="true" className="text-lg font-normal">
+            +
+          </span>
+          New print
+        </button>
+      )}
       <ul className="flex flex-col gap-1">
         {navRoutes.map((route) => (
           <SidebarLink key={route.path} {...route} />
