@@ -63,8 +63,10 @@ const Dialog = React.forwardRef<HTMLDialogElement, DialogProps>(
           aria-describedby={descriptionId}
           onCancel={(event) => {
             onCancel?.(event);
-            event.preventDefault();
-            onDismiss?.();
+            if (!event.defaultPrevented) {
+              event.preventDefault();
+              onDismiss?.();
+            }
           }}
           className={cn(
             'm-auto flex max-h-[90vh] w-[min(42rem,calc(100vw-2rem))] flex-col gap-4 rounded-lg border bg-card p-6 text-card-foreground shadow-sm backdrop:bg-foreground/40 [&:not([open])]:hidden',

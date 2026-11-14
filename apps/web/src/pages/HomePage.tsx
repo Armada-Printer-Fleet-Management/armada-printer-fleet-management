@@ -1,5 +1,4 @@
 import { Card, CardHeader, CardTitle, cn } from '@armada/ui-kit';
-
 import { routePaths } from '../routes';
 
 // STUB: the frames from the design with their titles only. Each card's content belongs to the
