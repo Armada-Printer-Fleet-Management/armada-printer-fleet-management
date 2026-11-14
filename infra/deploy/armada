@@ -646,6 +646,8 @@ cmd_reconfigure() {
     if $interactive; then
       if [ -z "$domain" ]; then
         say ""
+        say "The domain's DNS record must point straight at this machine and must not be proxied"
+        say "in any way. HTTPS certificates cannot be issued through a proxy."
         domain=$(ask_valid domain "Domain name for this server" "$(setting DOMAIN)")
       fi
       check_dns "$domain"
