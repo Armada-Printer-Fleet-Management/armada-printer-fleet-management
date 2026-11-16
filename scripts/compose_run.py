@@ -60,6 +60,9 @@ GENERATED: dict[str, Callable[[], str]] = {
 }
 DEFAULTS = {"GARAGE_DEFAULT_BUCKET": "armada", "KEYCLOAK_ADMIN_USERNAME": "admin"}
 DEPLOY_DEFAULTS = {"GHCR_OWNER": "local", "VERSION": "dev"}
+# The password of the dev stack's admin, staff and student users. Simple on purpose: those users
+# exist only in the development stack, bound to localhost, to make signing in quick.
+DEV_DEFAULTS = {"DEV_USER_PASSWORD": "123456"}
 
 
 def resolve(tool: str) -> str:
@@ -104,7 +107,7 @@ def prepare_env(
         return current.get(key, "") in ("", PLACEHOLDER)
 
     updates = {key: make() for key, make in GENERATED.items() if unset(key)}
-    defaults = DEFAULTS | (DEPLOY_DEFAULTS if stack == "deploy" else {})
+    defaults = DEFAULTS | (DEPLOY_DEFAULTS if stack == "deploy" else DEV_DEFAULTS)
     updates |= {key: value for key, value in defaults.items() if unset(key)}
     if domain is not None:
         updates["DOMAIN"] = domain

@@ -57,11 +57,9 @@ The server collection signs in with OAuth 2.0 (authorization code with PKCE) as 
 client, `armada-web`, through Keycloak at `{{webAppUrl}}/auth`. Every request inherits the
 collection's auth, so it carries `Authorization: Bearer <token>`.
 
-1. Create a user once: open `http://localhost:5174/auth/admin`, sign in with
-   `KEYCLOAK_ADMIN_USERNAME` and `KEYCLOAK_ADMIN_PASSWORD` from `config/compose.dev.env`, switch to
-   the **armada** realm, add a user, set a password with **Temporary** off, and assign a realm
-   role: `student`, `staff` or `admin`.
-2. In the collection's **Auth** tab, choose **Get new access token** and sign in as that user.
+1. The development stack already has a user per role, `admin`, `staff` and `student`; their
+   password is in [`docs/authentication.html`](../docs/authentication.html#dev-users).
+2. In the collection's **Auth** tab, choose **Get new access token** and sign in as one of them.
    The callback URL never loads; Bruno reads the code from it.
 
 Sign in as another user to compare roles. The server logs `access would be denied` for a
