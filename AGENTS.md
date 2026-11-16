@@ -473,6 +473,7 @@ theme, so a hardcoded colour breaks someone else's brand.
 | Slicer engine smoke test       | `pnpm --dir packages/slicer-engine test`                             |
 | Generate slicer TS proto       | `python scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules` |
 | Slicer tests                   | `pnpm --dir packages/slicer test`                                    |
+| UI kit tests                   | `pnpm --dir packages/ui-kit test`                                    |
 | Regenerate the test G-code     | `pnpm --dir packages/slicer generate:test-gcode` (dev stack up)      |
 | Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
 | Desktop Python deps           | `uv sync --project apps/desktop/backend`                              |
@@ -480,6 +481,7 @@ theme, so a hardcoded colour breaks someone else's brand.
 | Desktop backend tests          | `uv run --directory apps/desktop/backend pytest`                     |
 | Desktop frontend tests         | `pnpm --dir apps/desktop/frontend exec vitest run`                   |
 | Generate proto code            | `python scripts/generate_proto.py <template> [--node-modules <dir>]` |
+| Generate all proto code        | `python scripts/generate_proto.py --all` (each template in its own environment; skips a TS app without `node_modules`) |
 | Generate Python proto (shared) | `uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml` |
 | Generate server API docs data  | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` |
 | Generate desktop TS proto      | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` |

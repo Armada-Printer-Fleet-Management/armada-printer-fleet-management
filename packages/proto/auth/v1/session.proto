@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package auth.v1;
+
+import "id/v1/session_id.proto";
+
+// A person's sign-in at the identity provider, as a client knows it. Display state only: the
+// tokens behind it never leave the process that holds them.
+message Session {
+  // The identity provider's session.
+  id.v1.SessionId id = 1;
+  // The person's email address, lower-cased.
+  string email = 2;
+  // Given name. May be empty.
+  string first_name = 3;
+  // Family name. May be empty.
+  string last_name = 4;
+}

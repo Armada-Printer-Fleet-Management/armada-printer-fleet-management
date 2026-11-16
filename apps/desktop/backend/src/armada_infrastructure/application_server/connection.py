@@ -2,6 +2,12 @@ from pathlib import Path
 
 from pyqwest import SyncClient
 
+from armada_infrastructure.application_server.bearer_token import (
+    AccessToken,
+    BearerToken,
+    no_access_token,
+)
+
 
 class ServerNotConfigured(Exception):
     def __init__(self, settings_path: Path) -> None:
@@ -13,12 +19,15 @@ class ServerNotConfigured(Exception):
 
 class ApplicationServerConnection:
     """The desktop's one connection to the application server. Every Connect service client is
-    built on it, so they all share one HTTP connection pool instead of opening their own."""
+    built on it, so they all share one HTTP connection pool and send the same credentials."""
 
-    def __init__(self, address: str, settings_path: Path) -> None:
+    def __init__(
+        self, address: str, settings_path: Path, access_token: AccessToken = no_access_token
+    ) -> None:
         self._address = address
         self._settings_path = settings_path
         self.http_client = SyncClient()
+        self.interceptors = (BearerToken(access_token),)
 
     def is_configured(self) -> bool:
         return bool(self._address)

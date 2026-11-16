@@ -13,6 +13,8 @@ dependencies = [
   "core-domain",        # packages/core-domain -- shared entities, typed IDs and the DDD bases
   "connectrpc>=0.12.1,<0.13",  # https://github.com/connectrpc/connect-py, Apache-2.0 -- client to the remote server; pinned as on the server
   "pyyaml>=6.0.3,<7",   # https://github.com/yaml/pyyaml, MIT -- reads the per-user settings file
+  "authlib>=1.9.5,<2",  # https://github.com/authlib/authlib, BSD-3-Clause -- OAuth 2 / OpenID Connect client: PKCE, code exchange, refresh
+  "requests>=2.34.2,<3",  # https://github.com/psf/requests, Apache-2.0 -- HTTP client under Authlib's requests_client integration
 ]
 
 [tool.uv.sources]

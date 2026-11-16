@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+// Strongly typed DDD domain ID for the auth domain. A distinct type per entity makes
+// passing one entity's ID where another's belongs a type error. See packages/proto/AGENTS.md.
+package id.v1;
+
+// Identifies a sign-in session at the identity provider.
+message SessionId {
+  // UUID, derived from the identity provider's own session ID.
+  string value = 1;
+}

@@ -28,7 +28,7 @@ Versions are in the manifests, `backend/pyproject.toml` and `frontend/package.js
 
 | Layer     | Stack                                                                                 |
 | --------- | ------------------------------------------------------------------------------------- |
-| Backend   | Python, pywebview, protobuf (runtime for the generated classes), connectrpc (pinned in the root rules), packaging (parses the backend's own PEP 440 version), PyYAML (reads the settings file); uv + hatchling (wheel build of the `armada_*` packages) |
+| Backend   | Python, pywebview, protobuf (runtime for the generated classes), connectrpc (pinned in the root rules), packaging (parses the backend's own PEP 440 version), PyYAML (reads the settings file), Authlib over requests (OpenID Connect sign-in); uv + hatchling (wheel build of the `armada_*` packages) |
 | Frontend  | React, TypeScript (strict, `noUncheckedIndexedAccess`), Vite (dev server on `:5173`), @bufbuild/protobuf (`fromJson` decodes bridge replies); pnpm, pinned in `packageManager` |
 | Contract  | `packages/proto/` via buf. Python uses `protoc_builtin`, the locally installed `protoc` (an onboarding prerequisite, on protobuf's release line); TypeScript uses `local: protoc-gen-es` from `node_modules/.bin`. Both templates run fully offline |
 | Shared    | `proto_utils` supplies `message_to_dict`; `@armada/ui-kit` supplies `AboutBox` and the other shared components |
@@ -59,8 +59,8 @@ Picture: `docs/desktop.html#overview` and `docs/desktop.html#codegen`.
 | `backend/src/armada_app/`         | Entry point `desktop-backend` (`--target`), window lifecycle         |
 | `backend/src/armada_app/composition.py` | Composition root: builds infrastructure and hands it to domain services |
 | `backend/src/armada_ipc/`         | `Ipc` root object, `IpcModule` base, one module per capability       |
-| `backend/src/armada_domains/`     | Domains: a repository port (reads, requests changes; never saves shared entities. Can save desktop specific entities) and a service per domain. Ports extend a `core_domain.ddd` `Abstract*Repository` base, and infrastructure inherits the port |
-| `backend/src/armada_infrastructure/` | The backend's own I/O clients implementing those ports, e.g. `application_server/` over Connect |
+| `backend/src/armada_domains/`     | Domains: a repository port (reads, requests changes; never saves shared entities. Can save desktop specific entities) and a service per domain. Every port extends the matching `core_domain.ddd` `Abstract*Repository` base, and infrastructure inherits the port. A shared entity lives in `core_domain`, as `auth`'s `Session` does; a desktop-only one lives in the domain's own `entities.py` |
+| `backend/src/armada_infrastructure/` | The backend's own I/O clients implementing those ports, e.g. `application_server/` over Connect and `identity_provider/` over OpenID Connect |
 | `backend/src/armada_runtime/`     | `Environment` (dev vs packaged paths), packaging names, the settings file loader |
 | `packages/proto/utils/` (shared)  | Generated Python protobuf (`proto_utils.gen`) and entity mappers     |
 | `frontend/src/ipc/`               | One TS module per backend capability, plus `pywebview.ts` and `global.d.ts` |
@@ -122,6 +122,31 @@ Picture: `docs/desktop.html#ipc`.
   rather than failing at startup: each `application_server/` adapter builds its Connect client on
   first use. `DEV_SERVER_URL` must match `infra/dev/compose.yaml`; `tests/test_settings.py` checks
   it.
+- **Sign-in settings live in the same file:** `auth_issuer` and `auth_client_id`. A key missing
+  from an older file takes its default, so existing files keep working. `DEV_AUTH_ISSUER` must
+  equal the dev server's `AUTH_ISSUER` in `infra/dev/compose.yaml`, not Keycloak's own port:
+  Keycloak names the issuer after the address it was reached on, and the server rejects any other.
+  The client is `armada-desktop` in `infra/deploy/armada-realm.json`: public, PKCE, redirect
+  `http://127.0.0.1/*` on any port, and the `armada-server` audience mapper.
+- **The signed-in operator is a `core_domain.auth.Session`** behind `armada_domains/auth`'s
+  `SessionRepository`, an `AbstractReadRepository` the desktop never saves through. Its
+  `SessionId` is derived from the provider's `sid` claim by `Session.from_provider()`, because
+  Keycloak's `sid` is not a UUID. A new session gets its ID only that way; `SessionMapper` just
+  carries an existing one across the wire.
+- **Tokens never cross IPC.** `OidcSessions` keeps them in memory and hands the access token only
+  to `ApplicationServerConnection`, whose `BearerToken` interceptor adds it to every Connect call.
+  Every `application_server/` adapter passes `interceptors=self._server.interceptors` when it
+  builds its client; one that does not sends its calls unauthenticated. The frontend sees only
+  `desktop.v1.CurrentSession`, which wraps an `auth.v1.Session`.
+- **`SignInRequired` is the one error that means "ask the operator to sign in".** `OidcSessions`
+  raises it once the provider refuses a renewal, until the next sign-in or sign-out, and
+  `ApplicationServerClient` maps the server's `UNAUTHENTICATED` to it. The frontend matches it by
+  class name (`error.name`), so keep it one class with no subclasses. `waitForPywebviewIpc()`
+  returns the IPC root wrapped to announce it, which opens `SignInPrompt` (ui-kit's `SignInDialog`
+  with the desktop's wording): reach the backend only
+  through that root, never through `window.pywebview.api` directly.
+- **Authlib ships no types.** `backend/typings/authlib/` stubs only the calls the backend makes;
+  widen it when using a new one.
 - **Names come from `packages/organization-info/organization.json`.** Window title, page
   `<title>`, exe name, and installer names all read it. Never hardcode them.
 - **The uninstaller deletes only the exe, `_internal/` and itself.** If the bundle gains another
@@ -176,4 +201,5 @@ Getting a build without your own machine's setup:
 - **Automatically:** every push to `main` or `release/**` uploads `desktop-windows` and, built
   with `--smoke-test`, `desktop-windows-installer`.
 
-Picture: `docs/desktop.html#packaging` and `docs/desktop.html#installer`.
+Picture: `docs/desktop.html#packaging` and `docs/desktop.html#installer`; sign-in is
+`docs/desktop.html#sign-in`.

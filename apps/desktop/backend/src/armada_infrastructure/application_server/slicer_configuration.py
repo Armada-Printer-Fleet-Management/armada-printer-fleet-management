@@ -36,7 +36,9 @@ class ApplicationServerSlicerConfiguration(
     def _client(self) -> SlicerConfigurationServiceClientSync:
         # Built on first use, so a missing server address fails the call rather than startup.
         return SlicerConfigurationServiceClientSync(
-            self._server.address(), http_client=self._server.http_client
+            self._server.address(),
+            http_client=self._server.http_client,
+            interceptors=self._server.interceptors,
         )
 
     def get(self, entity_id: SliceProfileId) -> SliceProfile:

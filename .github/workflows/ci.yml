@@ -147,6 +147,8 @@ jobs:
         run: pnpm --dir packages/sample-prints test
       - name: Slicer tests
         run: pnpm --dir packages/slicer test
+      - name: UI kit tests
+        run: pnpm --dir packages/ui-kit test
 
   desktop:
     needs: detect

@@ -1,5 +1,5 @@
 """Every desktop domain has the same shape: a repository port and a service, over an entity that
-lives once in core_domain."""
+lives once in core_domain, or in the domain itself when only the desktop uses it."""
 
 import importlib
 import importlib.util
@@ -26,9 +26,11 @@ def test_domain_has_a_repository_and_a_service(domain: str) -> None:
 
 
 @pytest.mark.parametrize("domain", NAMES)
-def test_domain_entity_lives_in_core_domain(domain: str) -> None:
-    assert importlib.util.find_spec(f"core_domain.{domain}.entities"), (
-        f"core_domain/{domain}/entities.py"
+def test_domain_entity_is_shared_or_desktop_only(domain: str) -> None:
+    # A shared entity lives once in core_domain; one only the desktop uses lives in its domain.
+    desktop_only = (DOMAINS / domain / "entities.py").is_file()
+    assert desktop_only or importlib.util.find_spec(f"core_domain.{domain}.entities"), (
+        f"core_domain/{domain}/entities.py or armada_domains/{domain}/entities.py"
     )
 
 

@@ -7,7 +7,7 @@ from pathlib import PurePosixPath
 from google.protobuf.descriptor_pb2 import FileDescriptorProto
 
 # The non-domain kinds in packages/proto/AGENTS.md. Every other package is a domain.
-NOT_DOMAINS = {"id.v1", "common.v1", "server.v1", "printer_server.v1"}
+NOT_DOMAINS = {"id.v1", "common.v1", "server.v1", "printer_server.v1", "desktop.v1"}
 
 
 def _snake(camel: str) -> str:

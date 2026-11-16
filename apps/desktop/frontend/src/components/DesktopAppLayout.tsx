@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router';
 
 import { DesktopNavRail } from './DesktopNavRail';
+import { SignInPrompt } from './SignInPrompt';
 
 export function DesktopAppLayout() {
   return (
@@ -9,6 +10,7 @@ export function DesktopAppLayout() {
       <main className="relative min-w-0 flex-1 overflow-y-auto p-8">
         <Outlet />
       </main>
+      <SignInPrompt />
     </div>
   );
 }
