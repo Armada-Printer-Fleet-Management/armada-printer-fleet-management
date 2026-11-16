@@ -1,7 +1,8 @@
 import { cn, UserIcon } from '@armada/ui-kit';
-import { useId, useRef } from 'react';
-import { Link } from 'react-router';
+import { type ToggleEvent, useId, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 
+import { session, signOut } from '../ipc/session';
 import { routePaths } from '../routes';
 import { RailLabel, railItemClass } from './RailLabel';
 
@@ -14,7 +15,24 @@ const menuRoutes = [routePaths.account, routePaths.about];
 export function ProfileMenu({ expanded }: { expanded: boolean }) {
   const menuId = useId();
   const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const [signedIn, setSignedIn] = useState(false);
   const close = () => menuRef.current?.hidePopover();
+  // Read on every open, so the menu matches a sign-in or sign-out made anywhere since.
+  const refreshSession = (event: ToggleEvent<HTMLDivElement>) => {
+    if (event.newState !== 'open') return;
+    session()
+      .then((current) => setSignedIn(current.session !== undefined))
+      .catch(() => setSignedIn(false));
+  };
+  const logOut = () => {
+    close();
+    setSignedIn(false);
+    // The backend clears the session even when the provider is unreachable, so always leave.
+    void signOut()
+      .catch(() => undefined)
+      .finally(() => navigate(routePaths.login.path));
+  };
 
   return (
     <>
@@ -39,6 +57,7 @@ export function ProfileMenu({ expanded }: { expanded: boolean }) {
         id={menuId}
         ref={menuRef}
         popover="auto"
+        onToggle={refreshSession}
         className="inset-auto bottom-20 left-2 m-0 w-48 rounded-lg border border-border bg-card p-1 text-card-foreground shadow-lg"
       >
         <ul className="grid gap-1">
@@ -50,13 +69,23 @@ export function ProfileMenu({ expanded }: { expanded: boolean }) {
             </li>
           ))}
           <li className="border-t border-border pt-1">
-            <Link
-              to={routePaths.login.path}
-              onClick={close}
-              className={menuItem}
-            >
-              Log out
-            </Link>
+            {signedIn ? (
+              <button
+                type="button"
+                onClick={logOut}
+                className={`${menuItem} w-full text-left`}
+              >
+                Log out
+              </button>
+            ) : (
+              <Link
+                to={routePaths.login.path}
+                onClick={close}
+                className={menuItem}
+              >
+                {routePaths.login.label}
+              </Link>
+            )}
           </li>
         </ul>
       </div>

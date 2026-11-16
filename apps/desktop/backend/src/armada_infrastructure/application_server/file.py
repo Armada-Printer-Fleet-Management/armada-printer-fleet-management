@@ -25,7 +25,11 @@ class ApplicationServerFiles(ApplicationServerClient[FileId, file_id_pb2.FileId]
     @cached_property
     def _client(self) -> FileServiceClientSync:
         # Built on first use, so a missing server address fails the call rather than startup.
-        return FileServiceClientSync(self._server.address(), http_client=self._server.http_client)
+        return FileServiceClientSync(
+            self._server.address(),
+            http_client=self._server.http_client,
+            interceptors=self._server.interceptors,
+        )
 
     def get(self, entity_id: FileId) -> File:
         request = GetFileRequest(file_id=self._id(entity_id))

@@ -33,7 +33,9 @@ class ApplicationServerPrinterQueues(
     def _client(self) -> PrinterQueueServiceClientSync:
         # Built on first use, so a missing server address fails the call rather than startup.
         return PrinterQueueServiceClientSync(
-            self._server.address(), http_client=self._server.http_client
+            self._server.address(),
+            http_client=self._server.http_client,
+            interceptors=self._server.interceptors,
         )
 
     def get(self, entity_id: PrinterQueueId) -> PrinterQueue:

@@ -155,6 +155,10 @@ Each template covers one language and is invoked through the shared script rathe
 | `buf.gen.web_ts.yaml` exists and `apps/web/node_modules` exists | `python scripts/generate_proto.py buf.gen.web_ts.yaml --node-modules apps/web/node_modules` |
 | `buf.gen.slicer_ts.yaml` exists and `packages/slicer/node_modules` exists | `python scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules` (both frontends import `@armada/slicer`, so they type-check only after it) |
 
+`python scripts/generate_proto.py --all` runs every row above in its own environment and skips a
+TypeScript row whose `node_modules` is missing. Use it to regenerate everything later; run the
+rows one at a time here when a failure needs to be pinned to one template.
+
 (Step 4 installs dependencies before this step generates code, so the local plugins are already
 present: the frontends' `protoc-gen-es` for the TypeScript rows. The Python row runs through
 `uv run` because `protoc-gen-connectrpc` is a dev dependency of `packages/proto/utils`, and
@@ -385,9 +389,15 @@ this verification run; the dev stack from step 7 already reloads the server and 
 server and web URLs; the desktop app opens its own native window. Leave everything running.
 
 The desktop's first launch creates `%APPDATA%\<exe name>\settings.dev.yaml`, pointing at the dev
-stack's server. To use another server, edit `server_url` there and restart the app. An installed
-build reads `settings.yaml` in the same folder, which starts empty and must be set before the app
-can reach a server.
+stack's server and, for sign-in, at its Keycloak through `http://localhost:5174` with the
+`armada-desktop` client. To use another server, edit `server_url` (and `auth_issuer`) there and
+restart the app. An installed build reads `settings.yaml` in the same folder, which starts empty
+and must be set before the app can reach a server or sign in.
+
+Signing in from the desktop's Log in page opens the default browser at Keycloak. If Keycloak
+answers "Client not found", its `armada` realm predates the `armada-desktop` client: reload the
+realm as `infra/dev/README.md` describes, or add the client in the admin console with the
+settings in `infra/deploy/armada-realm.json`.
 
 ## 10. Open the documentation
 

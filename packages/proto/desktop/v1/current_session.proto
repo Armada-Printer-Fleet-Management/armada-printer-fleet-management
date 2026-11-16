@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package desktop.v1;
+
+import "auth/v1/session.proto";
+
+// The operator's sign-in, as the desktop backend reports it to its own frontend over IPC.
+message CurrentSession {
+  // The operator's session. Unset when nobody is signed in.
+  auth.v1.Session session = 1;
+}

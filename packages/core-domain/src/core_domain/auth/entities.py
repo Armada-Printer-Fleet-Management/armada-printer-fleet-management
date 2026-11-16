@@ -3,9 +3,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, auto
 from typing import Self
+from uuid import NAMESPACE_URL, uuid5
 
 from core_domain.ddd import Entity, RuleViolation
-from core_domain.ids import UserId
+from core_domain.ids import SessionId, UserId
 
 MAX_NAME_LENGTH = 255
 # The longest address the email standards allow.
@@ -105,6 +106,38 @@ class User(Entity[UserId]):
             now,
             expires_at,
         )
+
+
+@dataclass(eq=False)
+class Session(Entity[SessionId]):
+    """A person's sign-in at the identity provider, as a client knows it. The tokens behind it
+    stay with the infrastructure that holds them and are never part of the entity."""
+
+    id: SessionId
+    email: str
+    first_name: str
+    last_name: str
+
+    @classmethod
+    def from_provider(
+        cls,
+        issuer: str,
+        provider_session: str,
+        email: str,
+        first_name: str,
+        last_name: str,
+    ) -> Self:
+        """The session the provider reported, with its email and names held to the same rules as
+        a User's. The provider's own session ID need not be a UUID, so the ID is derived from it
+        with the issuer: the same provider session always gets the same ID, and two providers'
+        sessions never share one."""
+        if not provider_session.strip():
+            raise RuleViolation("A session cannot be created without the provider's session ID")
+        email = _valid_email(email)
+        _require_name_length("first name", first_name)
+        _require_name_length("last name", last_name)
+        session_id = SessionId(uuid5(NAMESPACE_URL, f"{issuer}#{provider_session}"))
+        return cls(session_id, email, first_name, last_name)
 
 
 def _valid_email(email: str) -> str:
