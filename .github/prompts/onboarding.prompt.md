@@ -325,6 +325,7 @@ pnpm -r test --run
 
 The server and desktop each have their own project, which the root-level `uv run pytest` does not
 reach. The desktop tests import generated code, so step 5 must have run.
+The web package declares Vitest for its own tests; the workspace install supplies it.
 
 The server's command runs two suites, which the pre-push hook and CI run as separate steps:
 `tests/unit`, which needs no Docker, and `tests/integration`. Run one alone with

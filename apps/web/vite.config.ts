@@ -36,7 +36,11 @@ export default defineConfig({
     // Same-origin /api and /auth in development, as Caddy provides in deployment. The dev
     // compose stack points these at its containers.
     proxy: {
-      '/api': process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000',
+      // The server builds upload URLs from Host, which must be the browser's origin.
+      '/api': {
+        target: process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000',
+        changeOrigin: false,
+      },
       '/auth': {
         target: process.env.KEYCLOAK_PROXY_TARGET ?? 'http://127.0.0.1:8080',
         xfwd: true,

@@ -1,5 +1,8 @@
 import { Card, CardHeader, CardTitle, cn } from '@armada/ui-kit';
+import { useEffect } from 'react';
+import { useOutletContext } from 'react-router';
 
+import { NewPrintDialog } from '../components/NewPrintDialog';
 import { routePaths } from '../routes';
 
 // STUB: the frames from the design with their titles only. Each card's content belongs to the
@@ -21,6 +24,13 @@ function PlaceholderCard({
 }
 
 export function HomePage() {
+  const { dialogOpen, closeDialog } = useOutletContext<{
+    dialogOpen: boolean;
+    closeDialog: () => void;
+  }>();
+  useEffect(() => {
+    closeDialog();
+  }, [closeDialog]);
   return (
     <>
       <div aria-hidden="true">
@@ -34,6 +44,7 @@ export function HomePage() {
           <PlaceholderCard title="Start a new print" className="min-h-64" />
           <PlaceholderCard title="Recent updates" className="min-h-48" />
         </div>
+        <NewPrintDialog open={dialogOpen} onClose={closeDialog} />
         <PlaceholderCard title="Your print jobs" className="min-h-96" />
       </div>
     </>

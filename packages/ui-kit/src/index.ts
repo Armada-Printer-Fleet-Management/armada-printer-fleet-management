@@ -7,6 +7,13 @@ export {
   CardTitle,
 } from './components/card';
 export { AboutBox } from './components/about-box';
+export {
+  Dialog,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  type DialogProps,
+} from './components/dialog';
 export { Tooltip, type TooltipProps } from './components/tooltip';
 export { ActivityIcon } from './icons/activity-icon';
 export { BookOpenIcon } from './icons/book-open-icon';
