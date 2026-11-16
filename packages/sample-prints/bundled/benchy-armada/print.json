@@ -1,0 +1,24 @@
+{
+  "title": "Armada fleet of Benchies",
+  "description": "The original #3DBenchy, sailed in an arrowhead formation of five. One Benchy is the classic printer calibration test; the fleet exercises a multi-object plate.",
+  "license": {
+    "spdx": "CC0-1.0",
+    "source": "https://github.com/CreativeTools/3DBenchy",
+    "attribution": "#3DBenchy by CreativeTools, 3DBenchy.com"
+  },
+  "files": [
+    {
+      "name": "3DBenchy.stl",
+      "kind": "model",
+      "sizeBytes": 11285384,
+      "sha256": "6ab57f1c3f8e86bc3cbd302c6fa6270acf06277c6335454e922419c25d42e97e"
+    }
+  ],
+  "arrangement": [
+    { "file": "3DBenchy.stl", "xMm": 70, "yMm": 0 },
+    { "file": "3DBenchy.stl", "xMm": 0, "yMm": 40 },
+    { "file": "3DBenchy.stl", "xMm": 0, "yMm": -40 },
+    { "file": "3DBenchy.stl", "xMm": -70, "yMm": 80 },
+    { "file": "3DBenchy.stl", "xMm": -70, "yMm": -80 }
+  ]
+}
