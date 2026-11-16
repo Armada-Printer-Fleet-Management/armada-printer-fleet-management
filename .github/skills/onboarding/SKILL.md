@@ -30,6 +30,7 @@ Report the version of each, and stop with installation guidance if one is missin
 | Tool | Check |
 |---|---|
 | Git | `git --version` |
+| Git LFS | `git lfs version` (bundled with Git for Windows; otherwise apt `git-lfs`, brew `git-lfs`) |
 | Node | `node --version` (22.22 or newer) |
 | Python | `python --version` (3.13; newer versions are not supported until every dependency ships wheels for them) |
 | Docker | `docker --version` |
@@ -115,6 +116,17 @@ git config core.hooksPath .githooks
 
 This is per-clone and is not inherited, so a fresh clone always needs it. Verify with
 `git config core.hooksPath`, then confirm the hooks are executable.
+
+Then set up Git LFS for this clone and fetch its files (the sample prints in `packages/sample-prints/`):
+
+```
+git lfs install --local --skip-repo
+git lfs pull
+```
+
+`--skip-repo` sets up the LFS filters without trying to install LFS's own hooks, which
+`core.hooksPath` replaces; `.githooks/pre-push` uploads LFS files itself. Without `git lfs pull` the
+sample prints are small pointer files, and the checks that read them stop with that command.
 
 The current expected layout: `.githooks/pre-push` is a thin dispatcher; shared helpers live in
 `.githooks/pre-push.d/_lib.sh`, and each service's own checks live in
