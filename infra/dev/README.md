@@ -41,6 +41,10 @@ builds its URLs and token issuer from the address it is reached on, so going thr
 - **Admin console:** `http://localhost:5174/auth/admin`, signing in with `KEYCLOAK_ADMIN_USERNAME`
   and `KEYCLOAK_ADMIN_PASSWORD` from `config/compose.dev.env`. This is the `master` realm, for
   operating Keycloak itself; switch to the `armada` realm with the dropdown at the top left.
+- **Users:** `keycloak-dev-users` runs `keycloak-dev-users.sh` once Keycloak is ready and exits.
+  It creates `admin`, `staff` and `student` in the `armada` realm, each with its realm role and
+  `DEV_USER_PASSWORD` from `config/compose.dev.env`, and skips any that already exist. It is part
+  of this stack only. Sign-in details: `docs/authentication.html#dev-users`.
 - **Realm:** `infra/deploy/armada-realm.json` is imported on Keycloak's first start, and skipped
   once the `armada` realm exists. To load a changed file, delete only Keycloak's data and start
   again:

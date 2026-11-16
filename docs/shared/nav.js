@@ -23,6 +23,7 @@ const SECTIONS = [
   {
     title: "Application server",
     links: [
+      { href: "authentication.html", text: "Authentication and authorization" },
       { href: "testing.html", text: "Testing" },
       { href: "api.html", text: "API reference" },
     ],
