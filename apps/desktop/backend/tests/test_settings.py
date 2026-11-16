@@ -20,6 +20,8 @@ from armada_infrastructure.application_server.printer import ApplicationServerPr
 from armada_infrastructure.application_server.printer_queue import ApplicationServerPrinterQueues
 from armada_runtime.environment import Environment
 from armada_runtime.settings import (
+    DEFAULT_AUTH_CLIENT_ID,
+    DEV_AUTH_ISSUER,
     DEV_SERVER_URL,
     InvalidSettings,
     load_settings,
@@ -44,7 +46,7 @@ def test_packaged_default_is_empty(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("url", ['https://host/a"b', "https://host/a\\b", "https://host/#x: y"])
 def test_the_template_keeps_any_url_intact(url: str) -> None:
-    assert yaml.safe_load(settings_template(url)) == {"server_url": url}
+    assert yaml.safe_load(settings_template(url))["server_url"] == url
 
 
 def test_an_existing_file_is_read_and_never_overwritten(tmp_path: Path) -> None:
@@ -63,6 +65,48 @@ def test_invalid_content_raises_invalid_settings(tmp_path: Path, content: str) -
     path.write_text(content, encoding="utf-8")
 
     with pytest.raises(InvalidSettings, match=re.escape(str(path))):
+        load_settings(path, DEV_SERVER_URL)
+
+
+def test_first_launch_writes_the_sign_in_settings_with_their_defaults(tmp_path: Path) -> None:
+    path = tmp_path / "settings.yaml"
+
+    settings = load_settings(path, DEV_SERVER_URL, DEV_AUTH_ISSUER)
+
+    assert (settings.auth_issuer, settings.auth_client_id) == (
+        DEV_AUTH_ISSUER,
+        DEFAULT_AUTH_CLIENT_ID,
+    )
+    written = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert written["auth_issuer"] == DEV_AUTH_ISSUER
+    assert written["auth_client_id"] == DEFAULT_AUTH_CLIENT_ID
+
+
+def test_a_file_from_before_sign_in_takes_the_sign_in_defaults(tmp_path: Path) -> None:
+    path = tmp_path / "settings.yaml"
+    path.write_text('server_url: "https://edited.example/api"\n', encoding="utf-8")
+
+    settings = load_settings(path, DEV_SERVER_URL, DEV_AUTH_ISSUER)
+
+    assert settings.server_url == "https://edited.example/api"
+    assert (settings.auth_issuer, settings.auth_client_id) == (
+        DEV_AUTH_ISSUER,
+        DEFAULT_AUTH_CLIENT_ID,
+    )
+
+
+def test_an_empty_sign_in_setting_reads_as_empty_text(tmp_path: Path) -> None:
+    path = tmp_path / "settings.yaml"
+    path.write_text('server_url: ""\nauth_issuer:\n', encoding="utf-8")
+
+    assert load_settings(path, DEV_SERVER_URL, DEV_AUTH_ISSUER).auth_issuer == ""
+
+
+def test_a_sign_in_setting_that_is_not_text_raises_invalid_settings(tmp_path: Path) -> None:
+    path = tmp_path / "settings.yaml"
+    path.write_text("auth_client_id: [1, 2]\n", encoding="utf-8")
+
+    with pytest.raises(InvalidSettings, match="auth_client_id"):
         load_settings(path, DEV_SERVER_URL)
 
 

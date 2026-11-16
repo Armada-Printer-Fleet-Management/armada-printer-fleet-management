@@ -31,6 +31,15 @@ export {
   type LegalAgreementGateProps,
   type LegalDocumentView,
 } from './components/legal-agreement-gate';
+export {
+  SignInControls,
+  type SignInControlsProps,
+  type SignInStatus,
+} from './components/sign-in-controls';
+export {
+  SignInDialog,
+  type SignInDialogProps,
+} from './components/sign-in-dialog';
 export { Tooltip, type TooltipProps } from './components/tooltip';
 export { ActivityIcon } from './icons/activity-icon';
 export { BookOpenIcon } from './icons/book-open-icon';

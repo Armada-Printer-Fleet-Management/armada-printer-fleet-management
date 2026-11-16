@@ -7,6 +7,7 @@ from organization_info import read
 from proto_utils.gen.organization.v1 import organization_info_pb2
 from proto_utils.mappers import AgreementMapper
 
+from armada_domains.auth.service import SessionService
 from armada_domains.content_asset.service import FileService
 from armada_domains.fleet.service import PrinterService
 from armada_domains.legal.service import AgreementService
@@ -21,19 +22,25 @@ from armada_infrastructure.application_server.printer_queue import ApplicationSe
 from armada_infrastructure.application_server.slicer_configuration import (
     ApplicationServerSlicerConfiguration,
 )
+from armada_infrastructure.identity_provider.oidc_sessions import OidcSessions
 from armada_infrastructure.local_agreements import LocalAgreements
 from armada_infrastructure.temp_user import temp_user_id
 from armada_ipc import Ipc
 from armada_runtime.environment import Environment
-from armada_runtime.settings import DEV_SERVER_URL, load_settings
+from armada_runtime.settings import DEV_AUTH_ISSUER, DEV_SERVER_URL, load_settings
 
 
 def build_ipc() -> Ipc:
     settings_path = Environment.settings_path()
     settings = load_settings(
-        settings_path, default_server_url=DEV_SERVER_URL if Environment.is_dev else ""
+        settings_path,
+        default_server_url=DEV_SERVER_URL if Environment.is_dev else "",
+        default_auth_issuer=DEV_AUTH_ISSUER if Environment.is_dev else "",
     )
-    server = ApplicationServerConnection(settings.server_url, settings_path)
+    sessions = OidcSessions(settings.auth_issuer, settings.auth_client_id, settings_path)
+    server = ApplicationServerConnection(
+        settings.server_url, settings_path, access_token=sessions.access_token
+    )
     legal_documents = read(organization_info_pb2.OrganizationInfo()).legal_documents
     return Ipc(
         print_jobs=PrintJobService(ApplicationServerPrintJobs(server)),
@@ -53,4 +60,5 @@ def build_ipc() -> Ipc:
         slicer_configuration=SlicerConfigurationService(
             ApplicationServerSlicerConfiguration(server)
         ),
+        sessions=SessionService(sessions),
     )

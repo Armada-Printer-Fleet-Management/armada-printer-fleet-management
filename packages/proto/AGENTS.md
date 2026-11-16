@@ -16,6 +16,7 @@ are five kinds:
 | Application identity | `organization.v1` | `OrganizationInfo`, the identity every application shares, read from `organization.json` | domains, `common.v1`, `google.protobuf.*` |
 | Domain | `auth.v1`, `content_asset.v1`, `print_job.v1`, `fleet.v1`, `queue.v1`, `legal.v1`, `print_preparation.v1` (with `print_preparation.slicing.v1` and `print_preparation.validation.v1`) | One bounded context's entities, value types and enums | `id.v1`, `common.v1`, `google.protobuf.*`, and its own sub-domains |
 | Server (API layer) | `server.v1` (remote server), `printer_server.v1` (on-premise printer server) | Services, RPCs and their request/response messages | domains, `id.v1`, `common.v1`, `google.protobuf.*` |
+| Desktop IPC | `desktop.v1` | Messages only the desktop's IPC bridge carries, between its backend and its frontend. Never tokens | domains, `id.v1`, `common.v1`, `google.protobuf.*` |
 
 Never put domain types in `common.v1`. It holds only units with no domain meaning. Something the
 whole application needs from a domain, such as its legal documents, goes in `organization.v1`,

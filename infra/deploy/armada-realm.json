@@ -35,6 +35,29 @@
                     }
                 }
             ]
+        },
+        {
+            "clientId": "armada-desktop",
+            "publicClient": true,
+            "standardFlowEnabled": true,
+            "directAccessGrantsEnabled": false,
+            "redirectUris": ["http://127.0.0.1/*"],
+            "attributes": {
+                "pkce.code.challenge.method": "S256",
+                "post.logout.redirect.uris": "+"
+            },
+            "protocolMappers": [
+                {
+                    "name": "armada-server audience",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-audience-mapper",
+                    "config": {
+                        "included.custom.audience": "armada-server",
+                        "access.token.claim": "true",
+                        "id.token.claim": "false"
+                    }
+                }
+            ]
         }
     ]
 }
