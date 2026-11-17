@@ -80,7 +80,8 @@ Add `--file-type cgcode` for compressed or binary G-code, such as `.bgcode`.
 1. Paste the printed JSON into the body of **Create Print Job Upload** and send it. It attaches
    the file to `{{printJobId}}`, a DRAFT job, and saves the returned `fileId` for the requests in
    `file/`.
-2. In **Upload File**, set the body to **File** and pick the same file, then send it.
+2. In **Upload Print Job File**, set the body to **File** and pick the same file, then send it.
+   It uploads to `{{printJobId}}`'s file, so the job must still be a DRAFT.
 
 Keep that edit to your private copy: the public request's default body matches its small
 built-in example.

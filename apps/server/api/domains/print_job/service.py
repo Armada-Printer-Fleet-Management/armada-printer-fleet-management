@@ -41,6 +41,15 @@ class PrintJobService(Service[PrintJobRepository]):
 
         return await change_async(self._repository, print_job_id, rule)
 
+    async def draft_file(self, print_job_id: PrintJobId) -> FileId:
+        return (await self._repository.get(print_job_id)).draft_file()
+
+    async def detach_file(self, print_job_id: PrintJobId) -> PrintJob:
+        now = self._clock()
+        return await change_async(
+            self._repository, print_job_id, lambda print_job: print_job.detach_file(now)
+        )
+
     async def submit(
         self,
         print_job_id: PrintJobId,

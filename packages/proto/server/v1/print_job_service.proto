@@ -18,6 +18,8 @@ service PrintJobService {
   // Step 2, and upload pair call 1 of 2. Creates the job's file record, links it to the job,
   // and returns where to PUT the bytes (call 2 of 2). Calling it again replaces the file.
   rpc CreatePrintJobUpload(CreatePrintJobUploadRequest) returns (CreatePrintJobUploadResponse);
+  // Deletes a DRAFT job's file, leaving the job with no file. Refused once the job is past DRAFT.
+  rpc DeletePrintJobFile(DeletePrintJobFileRequest) returns (DeletePrintJobFileResponse);
   // Step 3. Submits a DRAFT job whose file has finished uploading, moving it to SUBMITTED. The
   // server places it in a queue.
   rpc SubmitPrintJob(SubmitPrintJobRequest) returns (SubmitPrintJobResponse);
@@ -54,6 +56,18 @@ message CreatePrintJobUploadRequest {
 message CreatePrintJobUploadResponse {
   // The upload slot. Its file_id is now the job's file_id.
   content_asset.v1.FileUploadSlot slot = 1;
+}
+
+// Deletes a job's file.
+message DeletePrintJobFileRequest {
+  // The DRAFT job whose file to delete.
+  id.v1.PrintJobId print_job_id = 1;
+}
+
+// The job after its file was deleted.
+message DeletePrintJobFileResponse {
+  // The job, still in DRAFT, with no file.
+  print_job.v1.PrintJob print_job = 1;
 }
 
 // Submits a DRAFT job.

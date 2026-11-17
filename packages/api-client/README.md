@@ -26,7 +26,7 @@ The file-upload sequence is:
    raw bytes to the opaque `uploadUrl`.
 4. Call `submitPrintJob` after the upload succeeds.
 
-`uploadUrl` is the server's own upload endpoint for that file. The client does not log it, and upload HTTP failures
+`uploadUrl` is the server's own upload endpoint for the job's file. The client does not log it, and upload HTTP failures
 throw `PrintJobUploadError` containing only the HTTP status. Fetch/network failures propagate.
 RPC failures reject with the ConnectRPC `ConnectError`, preserving its code, metadata and
 details. The generated `PrintJobStatus` enum is re-exported; `UNSPECIFIED` is invalid, and

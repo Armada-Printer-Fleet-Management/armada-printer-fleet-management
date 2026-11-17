@@ -75,11 +75,14 @@ plugin or its port, and import-linter enforces it.
 - **File bytes are REST**, because Connect cannot stream them from a browser. A
   `Create<Thing>Upload` RPC creates the file record and returns its `upload_url`, an absolute URL
   on the origin the caller reached (the `Host` header, and `X-Forwarded-Proto` behind a proxy).
-  - `PUT /api/files/{file_id}` stores the raw body. It must match the record's size and SHA-256,
-    or it is refused with a 400 and nothing is stored.
+  - `PUT /api/print-jobs/{print_job_id}/file` stores the raw body as the job's file. It must
+    match the record's size and SHA-256, or it is refused with a 400 and nothing is stored.
+  - The upload goes through the job, whose rules allow it only while it is a draft with a file:
+    409 otherwise, 404 for an unknown job.
+  - Deleting is an RPC, `PrintJobService.DeletePrintJobFile`, since it carries no bytes. It
+    detaches the file from the draft, then deletes the record, and its bytes unless another file
+    holds the same content. Bytes are stored once per content, under `<sha256>.<file type>`.
   - `GET /api/files/{file_id}` streams the bytes back as an attachment named after the file.
-  - `DELETE /api/files/{file_id}` deletes the record, and its bytes unless another file holds the
-    same content. Bytes are stored once per content, under `<sha256>.<file type>`.
 - **Health is exposed twice from one implementation**, `api/common/health.py`:
   `GET /api/health_check` (plain `pass`/`degraded`/`fail`; `?full=true` for JSON with the version,
   `?check_dependencies=true` to run dependency checks; only `fail` is a 503) and

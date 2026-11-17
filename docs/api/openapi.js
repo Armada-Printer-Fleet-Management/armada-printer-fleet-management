@@ -1075,6 +1075,40 @@ window.OPENAPI_SPEC = {
         "title": "CreatePrintJobUploadResponse",
         "type": "object"
       },
+      "server.v1.DeletePrintJobFileRequest": {
+        "additionalProperties": false,
+        "description": "Deletes a job's file.",
+        "properties": {
+          "printJobId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.PrintJobId"
+              }
+            ],
+            "description": "The DRAFT job whose file to delete.",
+            "title": "print_job_id"
+          }
+        },
+        "title": "DeletePrintJobFileRequest",
+        "type": "object"
+      },
+      "server.v1.DeletePrintJobFileResponse": {
+        "additionalProperties": false,
+        "description": "The job after its file was deleted.",
+        "properties": {
+          "printJob": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/print_job.v1.PrintJob"
+              }
+            ],
+            "description": "The job, still in DRAFT, with no file.",
+            "title": "print_job"
+          }
+        },
+        "title": "DeletePrintJobFileResponse",
+        "type": "object"
+      },
       "server.v1.GetAgreementRequest": {
         "additionalProperties": false,
         "description": "Gets one agreement.",
@@ -2049,46 +2083,6 @@ window.OPENAPI_SPEC = {
   "openapi": "3.1.0",
   "paths": {
     "/api/files/{file_id}": {
-      "delete": {
-        "operationId": "delete_file_api_files__file_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "file_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "File Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "404": {
-            "description": "No such file, or its bytes are missing"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "503": {
-            "description": "File storage is unavailable"
-          }
-        },
-        "summary": "Delete File",
-        "tags": [
-          "Files"
-        ]
-      },
       "get": {
         "operationId": "download_file_api_files__file_id__get",
         "parameters": [
@@ -2128,50 +2122,6 @@ window.OPENAPI_SPEC = {
           }
         },
         "summary": "Download File",
-        "tags": [
-          "Files"
-        ]
-      },
-      "put": {
-        "description": "Upload pair, call 2 of 2: the raw bytes of a file created by a Create...Upload RPC.",
-        "operationId": "upload_file_api_files__file_id__put",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "file_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "File Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "400": {
-            "description": "The bytes do not match the file"
-          },
-          "404": {
-            "description": "No such file, or its bytes are missing"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          },
-          "503": {
-            "description": "File storage is unavailable"
-          }
-        },
-        "summary": "Upload File",
         "tags": [
           "Files"
         ]
@@ -2230,6 +2180,55 @@ window.OPENAPI_SPEC = {
         "summary": "Health",
         "tags": [
           "General"
+        ]
+      }
+    },
+    "/api/print-jobs/{print_job_id}/file": {
+      "put": {
+        "description": "Upload pair, call 2 of 2: the raw bytes of the file CreatePrintJobUpload attached to\nthe draft.",
+        "operationId": "upload_print_job_file_api_print_jobs__print_job_id__file_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "print_job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Print Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "The bytes do not match the file"
+          },
+          "404": {
+            "description": "No such print job, or no such file"
+          },
+          "409": {
+            "description": "The print job is not a draft, or it has no file"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "File storage is unavailable"
+          }
+        },
+        "summary": "Upload Print Job File",
+        "tags": [
+          "Files"
         ]
       }
     },
@@ -2786,6 +2785,68 @@ window.OPENAPI_SPEC = {
           }
         },
         "summary": "CreatePrintJobUpload",
+        "tags": [
+          "server.v1.PrintJobService"
+        ]
+      }
+    },
+    "/api/server.v1.PrintJobService/DeletePrintJobFile": {
+      "post": {
+        "description": "Deletes a DRAFT job's file, leaving the job with no file. Refused once the job is past DRAFT.",
+        "operationId": "server.v1.PrintJobService.DeletePrintJobFile",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.DeletePrintJobFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.DeletePrintJobFileResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "DeletePrintJobFile",
         "tags": [
           "server.v1.PrintJobService"
         ]
