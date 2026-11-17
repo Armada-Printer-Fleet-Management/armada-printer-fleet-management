@@ -15,6 +15,8 @@ from proto_utils.gen.server.v1.print_job_service_pb2 import (
     CreatePrintJobResponse,
     CreatePrintJobUploadRequest,
     CreatePrintJobUploadResponse,
+    DeletePrintJobFileRequest,
+    DeletePrintJobFileResponse,
     GetPrintJobRequest,
     GetPrintJobResponse,
     ListPrintJobsRequest,
@@ -30,7 +32,7 @@ from api.domains.content_asset.service import FileService
 from api.domains.fleet.service import PrinterService
 from api.domains.print_job.service import PrintJobService
 from api.domains.queue.service import PrinterQueueService
-from api.routers.file import upload_path
+from api.routers.print_job_file import upload_path
 from api.services.domain_errors import domain_errors_as_connect, request_id
 from api.services.request_url import absolute_url
 
@@ -167,9 +169,24 @@ class PrintJobServiceImplementation:
         file = created[0]
         slot = FileUploadSlot(
             file_id=FileMapper.id_to_proto(FileIdMessage, file.id),
-            upload_url=absolute_url(ctx, upload_path(file.id)),
+            upload_url=absolute_url(ctx, upload_path(print_job_id)),
         )
         return CreatePrintJobUploadResponse(slot=slot)
+
+    async def delete_print_job_file(
+        self,
+        request: DeletePrintJobFileRequest,
+        ctx: RequestContext[DeletePrintJobFileRequest, DeletePrintJobFileResponse],
+        /,
+    ) -> DeletePrintJobFileResponse:
+        print_job_id = request_id(PrintJobId, request.print_job_id)
+        with domain_errors_as_connect():
+            file_id = await self._print_jobs.draft_file(print_job_id)
+            # Detached first, so a failed delete leaves stray bytes rather than a draft pointing
+            # at a file that is gone.
+            print_job = await self._print_jobs.detach_file(print_job_id)
+            await self._files.delete(file_id)
+        return DeletePrintJobFileResponse(print_job=self._mapper.to_proto(print_job))
 
     async def submit_print_job(
         self,

@@ -71,6 +71,38 @@ def test_attach_file_refuses_a_job_past_draft(status: PrintJobStatus) -> None:
         job(status).attach_file(FileId.new(), LATER)
 
 
+def with_file(status: PrintJobStatus) -> PrintJob:
+    print_job = job(status)
+    print_job.file_id = FileId.new()
+    return print_job
+
+
+def test_draft_file_returns_the_drafts_file() -> None:
+    print_job = with_file(PrintJobStatus.DRAFT)
+
+    assert print_job.draft_file() == print_job.file_id
+
+
+@pytest.mark.parametrize("status", [s for s in PrintJobStatus if s is not PrintJobStatus.DRAFT])
+def test_draft_file_refuses_a_job_past_draft(status: PrintJobStatus) -> None:
+    with pytest.raises(RuleViolation, match=f"A {status.name} print job"):
+        with_file(status).draft_file()
+
+
+def test_draft_file_refuses_a_draft_without_a_file() -> None:
+    with pytest.raises(RuleViolation, match="no file"):
+        job(PrintJobStatus.DRAFT).draft_file()
+
+
+def test_detach_file_leaves_the_draft_without_a_file() -> None:
+    print_job = with_file(PrintJobStatus.DRAFT)
+
+    print_job.detach_file(LATER)
+
+    assert print_job.file_id is None
+    assert print_job.updated_at == LATER
+
+
 def test_require_can_attach_file_allows_a_draft() -> None:
     job(PrintJobStatus.DRAFT).require_can_attach_file()
 

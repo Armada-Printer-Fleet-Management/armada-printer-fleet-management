@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.fake_app import FakeApp
+from tests.fake_app import FakeApp, fake_services
 from tests.fakes import MemoryFileStore
 
 
@@ -15,3 +15,9 @@ def client(fake_app: FakeApp) -> TestClient:
 def store() -> MemoryFileStore:
     """An empty file store, for a test that inspects or breaks the bytes it holds."""
     return MemoryFileStore()
+
+
+@pytest.fixture
+def file_client(fake_app: FakeApp, store: MemoryFileStore) -> TestClient:
+    """The app over the default fakes, storing bytes in store so a test can inspect or break it."""
+    return fake_app(fake_services(store=store))

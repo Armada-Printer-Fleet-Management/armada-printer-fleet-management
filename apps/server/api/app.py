@@ -39,6 +39,7 @@ from api.middleware.authentication import AuthenticationMiddleware
 from api.middleware.request_context import RequestContextMiddleware
 from api.routers.file import file_router
 from api.routers.health import health_router
+from api.routers.print_job_file import print_job_file_router
 from api.services.agreement_service import AgreementServiceImplementation
 from api.services.file_service import FileServiceImplementation
 from api.services.health_check_service import HealthCheckServiceImplementation
@@ -97,6 +98,9 @@ def build_app(parts: AppParts) -> FastAPI:
 
     app.include_router(health_router(parts.dependency_checks), prefix=API_PREFIX)
     app.include_router(file_router(services.files), prefix=API_PREFIX)
+    app.include_router(
+        print_job_file_router(services.print_jobs, services.files), prefix=API_PREFIX
+    )
 
     # Named handlers, so they do not clash with the domain services.
     health_check_handler = HealthCheckServiceImplementation(

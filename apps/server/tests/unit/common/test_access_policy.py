@@ -10,7 +10,9 @@ from api.common.access_policy import ACCESS, PUBLIC, STAFF, AccessPolicy, Decisi
 from api.common.authentication import Caller, Role
 from api.common.consts import API_PREFIX
 from api.common.mounted_services import mounted_services
+from api.infrastructure.dev_data import STUB_DRAFT_JOB_ID
 from api.main import app
+from api.routers.print_job_file import upload_path
 
 STUDENT = Caller("student", frozenset({Role.STUDENT}))
 STAFF_MEMBER = Caller("staff", frozenset({Role.STAFF}))
@@ -19,6 +21,7 @@ GUEST = Caller("guest", frozenset({Role.GUEST}))
 EVERY_ROLE = Caller("everyone", frozenset(Role))
 
 FILE_PATH = f"{API_PREFIX}/files/00000000-0000-4000-8000-000000000201"
+PRINT_JOB_FILE_PATH = upload_path(STUB_DRAFT_JOB_ID)
 
 
 def rpc(service: str, method: str) -> str:
@@ -76,9 +79,8 @@ FORBIDDEN = Decision.FORBIDDEN
             FORBIDDEN,
         ),
         ("POST", rpc("FileService", "GetFile"), ALLOWED, ALLOWED, ALLOWED, FORBIDDEN),
-        ("PUT", FILE_PATH, ALLOWED, ALLOWED, ALLOWED, FORBIDDEN),
+        ("PUT", PRINT_JOB_FILE_PATH, ALLOWED, ALLOWED, ALLOWED, FORBIDDEN),
         ("GET", FILE_PATH, ALLOWED, ALLOWED, ALLOWED, FORBIDDEN),
-        ("DELETE", FILE_PATH, ALLOWED, ALLOWED, ALLOWED, FORBIDDEN),
         (
             "POST",
             rpc("PrinterService", "TransitionPrinter"),

@@ -3,7 +3,7 @@ from uuid import UUID
 
 import pytest
 from core_domain.ddd import Unavailable
-from core_domain.ids import FileId, PrinterQueueId, PrintJobId
+from core_domain.ids import PrinterQueueId, PrintJobId
 from core_domain.print_job import PrintJob
 from core_domain.queue import PrinterQueue
 from fastapi.testclient import TestClient
@@ -25,17 +25,20 @@ from api.infrastructure.file_memory import InMemoryFileRepository
 from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
 from api.infrastructure.printer_server_mock import STEP
-from api.routers.file import upload_path
+from api.routers.print_job_file import upload_path
 from api.services.printer_poller import PrinterPoller
 from tests.fake_app import FakeApp, fake_services, on_app_loop
+from tests.fakes import MemoryFileStore
 from tests.print_jobs import (
     CONTENT,
     METADATA,
     PRINT_JOB_RPC,
     call,
+    file_url,
+    new_draft,
     upload_slot,
 )
-from tests.rpc import Json, id_json
+from tests.rpc import Json, id_json, post
 from tests.samples import NOW, printer_queue
 
 
@@ -106,7 +109,7 @@ def test_upload_url_is_https_behind_a_proxy_that_terminates_it(client: TestClien
     )
 
     assert response.json()["slot"]["uploadUrl"].startswith(
-        f"https://fleet.example.test{API_PREFIX}/files/"
+        f"https://fleet.example.test{API_PREFIX}/print-jobs/"
     )
 
 
@@ -265,10 +268,11 @@ def test_submit_refused_while_no_queue_accepts_jobs(fake_app: FakeApp) -> None:
     ("rpc", "body"),
     [
         ("CreatePrintJobUpload", {"printJobId": _UNKNOWN_JOB, "metadata": METADATA}),
+        ("DeletePrintJobFile", {"printJobId": _UNKNOWN_JOB}),
         ("SubmitPrintJob", {"printJobId": _UNKNOWN_JOB}),
         ("TransitionPrintJob", {"printJobId": _UNKNOWN_JOB, "approve": {}}),
     ],
-    ids=["upload", "submit", "transition"],
+    ids=["upload", "delete_file", "submit", "transition"],
 )
 def test_an_unknown_job_is_not_found(client: TestClient, rpc: str, body: Json) -> None:
     assert call(client, rpc, body, expect=404)["code"] == "not_found"
@@ -365,7 +369,7 @@ def test_a_job_goes_from_creation_to_completed(fake_app: FakeApp) -> None:
     job = {"printJobId": created["id"]}
 
     slot = call(client, "CreatePrintJobUpload", {**job, "metadata": METADATA})["slot"]
-    file_path = upload_path(FileId(UUID(slot["fileId"]["value"])))
+    file_path = upload_path(PrintJobId(UUID(created["id"]["value"])))
     assert slot["uploadUrl"] == f"http://testserver{file_path}"
     assert client.put(slot["uploadUrl"], content=CONTENT).status_code == 204
 
@@ -391,3 +395,69 @@ def test_a_job_goes_from_creation_to_completed(fake_app: FakeApp) -> None:
     assert call(client, "GetPrintJob", job)["printJob"]["status"] == "PRINT_JOB_STATUS_FINISHED"
     completed = call(client, "TransitionPrintJob", {**job, "complete": {}})
     assert completed["printJob"]["status"] == "PRINT_JOB_STATUS_COMPLETED"
+
+
+def uploaded_draft(client: TestClient) -> tuple[PrintJobId, Json]:
+    """A new draft whose file's bytes are uploaded, and its upload slot."""
+    draft = new_draft(client)
+    slot = upload_slot(client, draft)
+    client.put(slot["uploadUrl"], content=CONTENT)
+    return draft, slot
+
+
+def test_delete_print_job_file_rejects_a_malformed_id(client: TestClient) -> None:
+    body = call(client, "DeletePrintJobFile", {"printJobId": {"value": "nope"}}, expect=400)
+
+    assert body == {"code": "invalid_argument", "message": "print_job_id must be a UUID"}
+
+
+def test_a_deleted_file_is_gone(file_client: TestClient) -> None:
+    draft, slot = uploaded_draft(file_client)
+
+    call(file_client, "DeletePrintJobFile", {"printJobId": id_json(draft)})
+
+    assert file_client.get(file_url(slot)).status_code == 404
+
+
+def test_delete_print_job_file_leaves_the_draft_without_a_file(file_client: TestClient) -> None:
+    draft, _ = uploaded_draft(file_client)
+
+    deleted = call(file_client, "DeletePrintJobFile", {"printJobId": id_json(draft)})
+
+    assert deleted["printJob"]["status"] == "PRINT_JOB_STATUS_DRAFT"
+    assert "fileId" not in deleted["printJob"]
+    job = call(file_client, "GetPrintJob", {"printJobId": id_json(draft)})["printJob"]
+    assert "fileId" not in job
+
+
+def test_a_store_outage_on_delete_is_unavailable(
+    file_client: TestClient, store: MemoryFileStore
+) -> None:
+    draft, _ = uploaded_draft(file_client)
+    store.healthy = False
+
+    body = call(file_client, "DeletePrintJobFile", {"printJobId": id_json(draft)}, expect=503)
+
+    assert body == {"code": "unavailable", "message": "file storage is unavailable"}
+
+
+def test_delete_print_job_file_refused_past_draft_keeps_the_file(file_client: TestClient) -> None:
+    job = {"printJobId": id_json(STUB_SUBMITTED_JOB_ID)}
+
+    body = call(file_client, "DeletePrintJobFile", job, expect=400)
+
+    assert body["code"] == "failed_precondition"
+    assert "A SUBMITTED print job's file cannot be changed" in body["message"]
+    assert call(file_client, "GetPrintJob", job)["printJob"]["fileId"] == id_json(
+        STUB_SUBMITTED_FILE_ID
+    )
+    file_body = {"fileId": id_json(STUB_SUBMITTED_FILE_ID)}
+    post(file_client, f"{API_PREFIX}/server.v1.FileService/GetFile", file_body)
+
+
+def test_delete_print_job_file_refused_for_a_draft_without_a_file(client: TestClient) -> None:
+    job = {"printJobId": id_json(new_draft(client))}
+
+    body = call(client, "DeletePrintJobFile", job, expect=400)
+
+    assert body == {"code": "failed_precondition", "message": "This print job has no file"}

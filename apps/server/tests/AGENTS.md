@@ -84,6 +84,9 @@ routes, mounts and middleware.  The `client` fixture in `tests/unit/conftest.py`
 fakes calls the `fake_app` fixture itself.  `fake_services()` in `tests/fake_app.py` replaces any one fake, such as a repository that raises
 `Unavailable`.  Only a test of one middleware or of the lifespan builds a smaller app of its own.
 
+Before writing a new client fixture, check whether the existing clients already gives the test what it needs, since two fixtures that build the same app
+split the tests between them for no reason.
+
 ### Integration tests
 
 Integration tests cover all behaviour within a system, and run with the same single `pytest` command as the unit tests.  Run them alone with

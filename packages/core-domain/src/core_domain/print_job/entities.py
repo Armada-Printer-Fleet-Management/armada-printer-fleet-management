@@ -48,11 +48,27 @@ class PrintJob(Entity[PrintJobId]):
 
     def require_can_attach_file(self) -> None:
         if not self.can_attach_file():
-            raise RuleViolation(f"A {self.status.name} print job cannot have its file changed")
+            raise RuleViolation(
+                f"A {self.status.name} print job's file cannot be changed: "
+                "a file can only be changed while the job is a DRAFT"
+            )
 
     def attach_file(self, file_id: FileId, now: datetime) -> None:
         self.require_can_attach_file()
         self.file_id = file_id
+        self.updated_at = now
+
+    def draft_file(self) -> FileId:
+        """The draft's file, whose bytes may be uploaded or deleted. Raises RuleViolation past
+        draft, so a job under review keeps the bytes it was submitted with, or with no file."""
+        self.require_can_attach_file()
+        if self.file_id is None:
+            raise RuleViolation("This print job has no file")
+        return self.file_id
+
+    def detach_file(self, now: datetime) -> None:
+        self.draft_file()
+        self.file_id = None
         self.updated_at = now
 
     def can_submit(self, file_uploaded: bool) -> bool:

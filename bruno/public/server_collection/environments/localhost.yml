@@ -8,7 +8,7 @@ variables:
     description: "The seeded draft job, so the print_job requests run in order without editing. To follow a job you created instead, set this to the ID that Create Print Job returns."
   - name: fileId
     value: 00000000-0000-4000-8000-000000000201
-    description: "The seeded submitted job's file record. For the byte requests, set this to the slot's fileId that Create Print Job Upload returns."
+    description: "The seeded submitted job's file record. To download a file you uploaded, set this to the slot's fileId that Create Print Job Upload returns."
   - name: printerId
     value: 00000000-0000-4000-8000-000000000301
     description: "A seeded idle printer, for dispatching a job and then marking the printer ready."

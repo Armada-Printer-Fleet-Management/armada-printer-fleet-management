@@ -1,7 +1,7 @@
 info:
   name: Get File Record
   type: http
-  seq: 5
+  seq: 3
 
 http:
   method: POST

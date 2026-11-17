@@ -1,11 +1,11 @@
 info:
-  name: Upload File
+  name: Upload Print Job File
   type: http
-  seq: 1
+  seq: 3
 
 http:
   method: PUT
-  url: "{{baseUrl}}/api/files/{{fileId}}"
+  url: "{{baseUrl}}/api/print-jobs/{{printJobId}}/file"
   headers:
     - name: Content-Type
       value: application/octet-stream

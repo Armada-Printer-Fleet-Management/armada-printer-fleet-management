@@ -9,7 +9,7 @@ from enum import StrEnum
 from starlette.routing import compile_path
 
 from api.common.authentication import Caller, Role
-from api.common.consts import API_PREFIX, FILES_PATH
+from api.common.consts import API_PREFIX, FILES_PATH, PRINT_JOBS_PATH
 
 
 @dataclass(frozen=True)
@@ -60,9 +60,8 @@ ACCESS: Mapping[Endpoint, Allowed] = {
     rpc_service("PrinterQueueService"): STAFF,
     # Students slice their own prints; the server decides what they may slice with.
     rpc_service("SlicerConfigurationService"): STUDENTS_AND_STAFF,
-    Endpoint("PUT", f"{API_PREFIX}{FILES_PATH}/{{file_id}}"): STUDENTS_AND_STAFF,
     Endpoint("GET", f"{API_PREFIX}{FILES_PATH}/{{file_id}}"): STUDENTS_AND_STAFF,
-    Endpoint("DELETE", f"{API_PREFIX}{FILES_PATH}/{{file_id}}"): STUDENTS_AND_STAFF,
+    Endpoint("PUT", f"{API_PREFIX}{PRINT_JOBS_PATH}/{{print_job_id}}/file"): STUDENTS_AND_STAFF,
 }
 
 

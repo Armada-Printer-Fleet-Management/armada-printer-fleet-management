@@ -10,6 +10,7 @@ from api.infrastructure.dev_data import (
     STUB_FINISHED_JOB_ID,
     STUB_PRINTER_QUEUE_ID,
     STUB_PRINTING_JOB_ID,
+    STUB_SUBMITTED_FILE_ID,
     STUB_SUBMITTED_JOB_ID,
     stub_print_jobs,
 )
@@ -81,6 +82,49 @@ async def test_attach_new_file_creates_no_file_for_a_job_past_draft(
     with pytest.raises(RuleViolation):
         await service.attach_new_file(STUB_SUBMITTED_JOB_ID, new_file)
     assert created == []
+
+
+async def draft_with_file(service: PrintJobService) -> FileId:
+    """Gives the seeded draft a new file and returns it."""
+    file_id = FileId.new()
+
+    async def new_file() -> FileId:
+        return file_id
+
+    await service.attach_new_file(STUB_DRAFT_JOB_ID, new_file)
+    return file_id
+
+
+async def test_draft_file_returns_the_stored_drafts_file(service: PrintJobService) -> None:
+    file_id = await draft_with_file(service)
+
+    assert await service.draft_file(STUB_DRAFT_JOB_ID) == file_id
+
+
+async def test_draft_file_reports_an_unknown_id(service: PrintJobService) -> None:
+    with pytest.raises(EntityNotFound):
+        await service.draft_file(PrintJobId.new())
+
+
+async def test_detach_file_reports_an_unknown_id(service: PrintJobService) -> None:
+    with pytest.raises(EntityNotFound):
+        await service.detach_file(PrintJobId.new())
+
+
+async def test_detach_file_saves_the_draft_without_its_file(service: PrintJobService) -> None:
+    await draft_with_file(service)
+
+    assert (await service.detach_file(STUB_DRAFT_JOB_ID)).file_id is None
+
+    stored = await service.print_job(STUB_DRAFT_JOB_ID)
+    assert (stored.file_id, stored.updated_at) == (None, NOW)
+
+
+async def test_detach_file_refused_by_the_rule_saves_nothing(service: PrintJobService) -> None:
+    with pytest.raises(RuleViolation):
+        await service.detach_file(STUB_SUBMITTED_JOB_ID)
+
+    assert (await service.print_job(STUB_SUBMITTED_JOB_ID)).file_id == STUB_SUBMITTED_FILE_ID
 
 
 async def test_submit_checks_the_upload_of_the_jobs_own_file(service: PrintJobService) -> None:

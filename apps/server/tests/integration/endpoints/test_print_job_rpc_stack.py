@@ -1,14 +1,17 @@
 from fastapi.testclient import TestClient
+from types_boto3_s3.client import S3Client
 
 from api.infrastructure.dev_data import (
     STUB_DRAFT_JOB_ID,
     STUB_STUDENT_ID,
     STUB_SUBMITTED_JOB_ID,
 )
+from tests.integration.utils.file_store import stored_object_count
 from tests.print_jobs import (
     CONTENT,
     PRINT_JOB_RPC,
     call,
+    file_url,
     upload_slot,
 )
 from tests.rpc import id_json
@@ -55,3 +58,45 @@ def test_submit_is_refused_while_the_bytes_are_not_stored(app_client: TestClient
     assert refused["code"] == "failed_precondition"
     unchanged = call(app_client, "GetPrintJob", job)["printJob"]
     assert unchanged["status"] == "PRINT_JOB_STATUS_DRAFT"
+
+
+DRAFT = {"printJobId": id_json(STUB_DRAFT_JOB_ID)}
+
+
+def test_a_deleted_file_is_gone_with_its_bytes(
+    app_client: TestClient, file_store_client: S3Client, stack_environment: dict[str, str]
+) -> None:
+    slot = upload_slot(app_client, STUB_DRAFT_JOB_ID)
+    app_client.put(slot["uploadUrl"], content=CONTENT)
+    assert stored_object_count(file_store_client, stack_environment["FILE_STORE_BUCKET"]) == 1
+
+    call(app_client, "DeletePrintJobFile", DRAFT)
+
+    assert app_client.get(file_url(slot)).status_code == 404
+    assert stored_object_count(file_store_client, stack_environment["FILE_STORE_BUCKET"]) == 0
+
+
+def test_delete_leaves_the_stored_draft_without_a_file(app_client: TestClient) -> None:
+    slot = upload_slot(app_client, STUB_DRAFT_JOB_ID)
+    app_client.put(slot["uploadUrl"], content=CONTENT)
+
+    call(app_client, "DeletePrintJobFile", DRAFT)
+
+    job = call(app_client, "GetPrintJob", DRAFT)["printJob"]
+    assert job["status"] == "PRINT_JOB_STATUS_DRAFT"
+    assert "fileId" not in job
+
+
+def test_a_submitted_jobs_file_cannot_be_deleted(
+    app_client: TestClient, file_store_client: S3Client, stack_environment: dict[str, str]
+) -> None:
+    slot = upload_slot(app_client, STUB_DRAFT_JOB_ID)
+    app_client.put(slot["uploadUrl"], content=CONTENT)
+    call(app_client, "SubmitPrintJob", DRAFT)
+
+    assert (
+        call(app_client, "DeletePrintJobFile", DRAFT, expect=400)["code"] == "failed_precondition"
+    )
+
+    assert stored_object_count(file_store_client, stack_environment["FILE_STORE_BUCKET"]) == 1
+    assert app_client.get(file_url(slot)).content == CONTENT
