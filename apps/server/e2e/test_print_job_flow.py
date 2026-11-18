@@ -4,7 +4,6 @@ it among the jobs, start its review and approve it."""
 import hashlib
 
 import httpx2
-import pytest
 from proto_utils.gen.common.v1.page_pb2 import PageRequest
 from proto_utils.gen.content_asset.v1.file_pb2 import FILE_TYPE_GCODE
 from proto_utils.gen.content_asset.v1.file_upload_pb2 import FileUploadMetadata
@@ -45,10 +44,6 @@ def _listed(staff: SignedIn, print_job_id: PrintJobId) -> bool:
     return False
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="needs the deploy stack to run the database migrations; its database is empty",
-)
 def test_a_student_submits_a_job_and_staff_approve_it(
     as_student: SignedIn, as_staff: SignedIn, rest: httpx2.Client, tokens: KeycloakTokens
 ) -> None:
