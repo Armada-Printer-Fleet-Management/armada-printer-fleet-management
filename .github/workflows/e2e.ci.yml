@@ -1,0 +1,134 @@
+# Runs the server's e2e smoke suite against this pull request's own build: the deploy images are
+# built and started as the deploy stack inside the job, and its Keycloak is given a test client and
+# users. Every credential is generated here, so no repository secret is needed and fork pull
+# requests run it too. The runner is thrown away afterwards, so nothing is torn down.
+name: CI (e2e)
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Only to post the results comment on the pull request.
+  pull-requests: write
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      ENV_FILE: config/compose.deploy.env
+      ISSUER: http://localhost/auth/realms/armada
+    steps:
+      - uses: actions/checkout@v4
+      # The web image ships the bundled sample prints, and its build refuses LFS pointer files.
+      - uses: ./.github/actions/lfs-pull
+        with:
+          include: packages/sample-prints/bundled/**
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: ./.github/actions/setup-buf
+      - uses: ./.github/actions/setup-protoc
+      - run: uv sync --dev
+        working-directory: apps/server
+      # The suite's Connect clients are generated code.
+      - name: Generate API code
+        run: uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml
+
+      - name: Generate the test credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          client_secret=$(openssl rand -hex 32)
+          user_password=$(openssl rand -hex 16)
+          echo "::add-mask::$client_secret"
+          echo "::add-mask::$user_password"
+          { echo "E2E_AUTH_CLIENT_SECRET=$client_secret"
+            echo "E2E_USER_PASSWORD=$user_password"
+          } >> "$GITHUB_ENV"
+
+      # compose_run.py keeps these values and generates throwaway secrets for the rest. With DOMAIN
+      # :80 the server would otherwise expect https://:80/... as the issuer and reject every token.
+      - name: Write the deploy settings
+        shell: bash
+        run: |
+          printf 'GHCR_OWNER=local\nVERSION=e2e\nAUTH_ISSUER=%s\n' "$ISSUER" > "$ENV_FILE"
+
+      - name: Build the images and start the deploy stack
+        shell: bash
+        run: python scripts/compose_run.py deploy --domain :80 --admin-email ci@example.invalid
+
+      # Both scripts run in the stack's own Keycloak image, on its network, as the dev stack runs
+      # its users script.
+      - name: Give Keycloak the e2e client and test users
+        shell: bash
+        run: |
+          set -euo pipefail
+          admin_user=$(sed -n 's/^KEYCLOAK_ADMIN_USERNAME=//p' "$ENV_FILE")
+          admin_password=$(sed -n 's/^KEYCLOAK_ADMIN_PASSWORD=//p' "$ENV_FILE")
+          echo "::add-mask::$admin_password"
+          image=$(docker compose -f infra/deploy/compose.yaml --env-file "$ENV_FILE" config --images | grep '/keycloak/keycloak:')
+          provision() {
+            docker run --rm --network armada_default \
+              -v "$PWD/$1:/provision.sh:ro" \
+              -e KEYCLOAK_ADMIN_USERNAME="$admin_user" \
+              -e KEYCLOAK_ADMIN_PASSWORD="$admin_password" \
+              -e E2E_AUTH_CLIENT_SECRET \
+              -e DEV_USER_PASSWORD="$E2E_USER_PASSWORD" \
+              --entrypoint bash "$image" /provision.sh
+          }
+          provision apps/server/e2e/keycloak-e2e-client.sh
+          provision infra/dev/keycloak-dev-users.sh
+
+      - name: Run the e2e smoke tests
+        working-directory: apps/server
+        shell: bash
+        env:
+          E2E_SERVER_URL: http://localhost
+          E2E_AUTH_ISSUER: ${{ env.ISSUER }}
+          E2E_AUTH_CLIENT_ID: armada-e2e
+          E2E_STUDENT_USERNAME: student
+          E2E_STAFF_USERNAME: staff
+        run: |
+          export E2E_STUDENT_PASSWORD="$E2E_USER_PASSWORD" E2E_STAFF_PASSWORD="$E2E_USER_PASSWORD"
+          uv run pytest e2e -q --junitxml=e2e-results.xml
+
+      # Reporting never fails the build; the test step above does.
+      - name: Results summary
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        working-directory: apps/server
+        shell: bash
+        run: |
+          python ../../scripts/e2e_results_summary.py e2e-results.xml e2e.md
+          cat e2e.md >> "$GITHUB_STEP_SUMMARY"
+
+      # Pull requests from forks get a read-only token, so only this repository's are commented on.
+      - name: Results comment
+        if: >-
+          ${{ !cancelled() && github.event_name == 'pull_request'
+          && github.event.pull_request.head.repo.full_name == github.repository }}
+        continue-on-error: true
+        working-directory: apps/server
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        # Found by its marker and the bot's login, so no other comment is ever overwritten.
+        run: |
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]"
+                  and (.body | startswith("<!-- server-e2e -->"))) | .id' | head -n 1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@e2e.md
+          else
+            gh pr comment "$PR_NUMBER" --body-file e2e.md
+          fi
+
+      - name: Show the stack's logs
+        if: failure()
+        shell: bash
+        run: docker compose -f infra/deploy/compose.yaml --env-file "$ENV_FILE" logs --no-color || true

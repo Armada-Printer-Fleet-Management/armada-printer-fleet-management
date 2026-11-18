@@ -86,6 +86,27 @@ class DockerStack:
     def stop(self) -> None:
         self._compose("down", "--volumes", "--remove-orphans")
 
+    def identity_provider_admin(self) -> tuple[str, str]:
+        """The username and password of the Keycloak administrator in the master realm."""
+        return (
+            self._compose_environment["KEYCLOAK_ADMIN_USERNAME"],
+            self._compose_environment["KEYCLOAK_ADMIN_PASSWORD"],
+        )
+
+    def run_script(
+        self, service: str, script: Path, environment: dict[str, str]
+    ) -> subprocess.CompletedProcess[str]:
+        """Runs a bash script in a one-off container of a service's image, on the stack's network,
+        so it reaches the other services by name as it would in a deployed stack."""
+        variables = [
+            option for name, value in environment.items() for option in ("-e", f"{name}={value}")
+        ]
+        return self._run(
+            "run", "--rm", "--no-deps", "--entrypoint", "bash",
+            "-v", f"{script}:/script.sh:ro", *variables,
+            service, "/script.sh",
+        )  # fmt: skip
+
     def _remove_leftovers(self) -> None:
         """Removes the stacks of runs that were killed before their own stop(). A stack with any
         live container may belong to a run still in progress, so it is left alone."""

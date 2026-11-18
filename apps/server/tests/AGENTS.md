@@ -114,8 +114,8 @@ so a SQL adapter's factory uses the `empty_database` fixture, which removes the 
 ### End-to-end tests
 
 E2e tests simulate real user behaviour against the full stack, started from the same deploy images that ship, as prod-like as possible.  The target is
-never production, and never the testing server, which updates only after a merge.  Before merging, they are to run in the pull request's CI workflow,
-against a stack that the workflow builds from that pull request and starts for the run.  Run them with
+never production, and never the testing server, which updates only after a merge.  Before merging, they run in the pull request's CI workflow,
+`.github/workflows/e2e.ci.yml`, against a stack that the workflow builds from that pull request and starts for the run; a failure blocks the merge.  Run them with
 `uv run --directory apps/server pytest e2e`; the default `pytest` run leaves them out.
 
 At runtime, the suite is given the target's URL, its Keycloak issuer, a test-only client and a test user per role, all as `E2E_*` environment variables.

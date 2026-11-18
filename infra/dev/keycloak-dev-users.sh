@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Development stack only: gives the armada realm one user per role, admin, staff and student, each
-# named after its role and signing in with DEV_USER_PASSWORD. A user that already exists is left
-# alone, so restarting the stack changes nothing.
+# Gives the armada realm one user per role, admin, staff and student, each named after its role and
+# signing in with DEV_USER_PASSWORD. Used by the development stack, and by e2e.ci.yml for the
+# throwaway stack it tests; never by a deployed machine. A user that already exists is left alone,
+# so restarting the stack changes nothing.
 set -euo pipefail
 
 kcadm=/opt/keycloak/bin/kcadm.sh

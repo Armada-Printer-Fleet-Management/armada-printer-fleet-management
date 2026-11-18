@@ -56,6 +56,15 @@ For a local deploy stack:
    missing. Set a password under **Credentials** with **Temporary** off, and assign the `student`
    or `staff` realm role under **Role mapping**.
 
+## In CI
+
+Every pull request runs the suite in `.github/workflows/e2e.ci.yml`, against a deploy stack built
+from that pull request and started inside the job. The job prepares its target the same way as
+above, with scripts rather than the console: `keycloak-e2e-client.sh` beside this file creates the
+e2e client, and `infra/dev/keycloak-dev-users.sh` creates the `student` and `staff` users. Their
+secrets are generated in the job, so it needs no repository secrets. The results appear in the
+run's summary and in a comment on the pull request.
+
 ## Adding a smoke test
 
 A smoke test follows one key user flow. Its docstring starts "As a <role>, I ...", and it lives in

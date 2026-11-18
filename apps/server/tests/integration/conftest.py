@@ -24,23 +24,29 @@ from tests.postgres import truncate_tables
 ALEMBIC_INI = Path(__file__).parents[2] / "alembic.ini"
 
 
+@pytest.fixture(scope="session")
+def docker_stack() -> Iterator[DockerStack]:
+    """The suite's dependencies, stopped after the whole suite. stack_environment starts them."""
+    stack = DockerStack()
+    try:
+        yield stack
+    finally:
+        stack.stop()
+
+
 # Autouse, because every integration test needs Docker, and this makes the suite fail rather than
 # quietly pass without it.
 @pytest.fixture(scope="session", autouse=True)
-def stack_environment() -> Iterator[dict[str, str]]:
-    """Starts the dependencies once for the whole suite, migrated to head, and stops them after.
-    Yields the environment variables the server reads to use them."""
-    stack = DockerStack()
-    try:
-        environment = stack.start()
-        # The migrations read DB_*, so they are set only while the migrations run.
-        with pytest.MonkeyPatch.context() as monkeypatch:
-            for name, value in environment.items():
-                monkeypatch.setenv(name, value)
-            command.upgrade(Config(ALEMBIC_INI), "head")
-        yield environment
-    finally:
-        stack.stop()
+def stack_environment(docker_stack: DockerStack) -> dict[str, str]:
+    """Starts the dependencies once for the whole suite, migrated to head. Returns the environment
+    variables the server reads to use them."""
+    environment = docker_stack.start()
+    # The migrations read DB_*, so they are set only while the migrations run.
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        for name, value in environment.items():
+            monkeypatch.setenv(name, value)
+        command.upgrade(Config(ALEMBIC_INI), "head")
+    return environment
 
 
 @pytest.fixture(scope="session")
