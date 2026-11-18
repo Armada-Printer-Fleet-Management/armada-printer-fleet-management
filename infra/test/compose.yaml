@@ -51,7 +51,8 @@ services:
       - ../deploy/armada-realm.json:/opt/keycloak/data/import/armada-realm.json:ro
     healthcheck:
       start_period: 60s
-      test: ['CMD', 'bash', '-c', 'exec 3<>/dev/tcp/127.0.0.1/9000 && printf "GET /auth/health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && grep -q UP <&3']
+      # Ready only on a 200: while Keycloak starts, the body already lists sub-checks as UP.
+      test: ['CMD', 'bash', '-c', 'exec 3<>/dev/tcp/127.0.0.1/9000 && printf "GET /auth/health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && read -r status <&3 && [[ $$status == *" 200 "* ]]']
       interval: 10s
       timeout: 5s
       retries: 10
