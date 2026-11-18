@@ -87,6 +87,9 @@ RUN useradd --system --uid 10001 --no-create-home armada
 USER armada
 COPY --from=codegen /repo/packages/proto/utils/src/proto_utils/gen packages/proto/utils/src/proto_utils/gen
 COPY --from=codegen /repo/apps/server/api apps/server/api
+# The deploy stack's migrate service runs migrate.py from this image before the server starts.
+COPY --from=codegen /repo/apps/server/migrations apps/server/migrations
+COPY --from=codegen /repo/apps/server/alembic.ini /repo/apps/server/migrate.py apps/server/
 WORKDIR /repo/apps/server
 ENV PATH="/repo/apps/server/.venv/bin:${PATH}" \
     UV_NO_SYNC=1 \

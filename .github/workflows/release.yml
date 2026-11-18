@@ -232,7 +232,7 @@ jobs:
           files="$RUNNER_TEMP/files"
           deploy="$RUNNER_TEMP/deploy"
           mkdir -p "$deploy"
-          git archive "$COMMIT" infra/deploy | tar -x -C "$deploy"
+          git archive "$COMMIT" infra/deploy apps/server/migrations | tar -x -C "$deploy"
           bash "$deploy/infra/deploy/release.sh" release "$TAG" "$GITHUB_REPOSITORY" "$OWNER" "$files"
 
           # The notes are public, so they name the public packages; the copy kept each digest.

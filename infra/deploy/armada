@@ -17,6 +17,7 @@ TIMER=armada-update.timer
 SERVICE=armada-update.service
 LOCK_FILE=/run/armada.lock
 HEALTH_TIMEOUT="${ARMADA_HEALTH_TIMEOUT:-180}"
+MIGRATION_SECONDS="${ARMADA_MIGRATION_TIMEOUT:-600}"
 
 # Compose settings must come from the installation's .env only. A variable of the same name in the
 # caller's shell would otherwise override it.
@@ -51,10 +52,16 @@ usage() {
 Usage: armada <command> [arguments]
 
 Versions
-  update <version|latest>     Move to a version; latest is the newest available to this machine.
-                              Returns to the previous version if the new one does not start.
-  rollback [version] [--yes]  Return to the version before the last update, or to the version
+  update <version|latest> [--force]
+                              Move to a version; latest is the newest available to this machine.
+                              Migrates the database first. Returns to the previous version if the
+                              new one does not start, unless that version cannot read the new
+                              database schema.
+  rollback [version] [--yes] [--force]
+                              Return to the version before the last update, or to the version
                               given, after asking. Run it again to undo the rollback.
+                              Versions that cannot read the database schema are refused; --force
+                              moves to one anyway, after the database has been restored to suit it.
   check-for-updates           Say whether a newer version is available
   version                     Print the running version
 
@@ -73,6 +80,10 @@ Settings
   uninstall [--delete-data] [--yes]
                               Remove Armada. Data is kept unless --delete-data is given.
   help                        Show this list
+
+Time limits, in seconds, for update, rollback, start and restart
+  ARMADA_MIGRATION_TIMEOUT    How long the database migration may take (default 600)
+  ARMADA_HEALTH_TIMEOUT       How long the services may take to become healthy after it (default 180)
 EOF
 }
 
@@ -166,8 +177,10 @@ in_window() {
 compose_at() {
   local version=$1
   shift
-  docker compose --project-directory "$RELEASES/$version" -f "$RELEASES/$version/compose.yaml" \
-    --env-file "$ENV_FILE" "$@"
+  # The migrate service's health check allows a migration this long, the same limit
+  # wait_for_migration uses.
+  MIGRATION_TIMEOUT="${MIGRATION_SECONDS}s" docker compose --project-directory "$RELEASES/$version" \
+    -f "$RELEASES/$version/compose.yaml" --env-file "$ENV_FILE" "$@"
 }
 
 compose() {
@@ -177,21 +190,73 @@ compose() {
   compose_at "$version" "$@"
 }
 
-# Every service declares a health check, so the stack is up when all of them report healthy.
+# migrate is a step that runs on every start, not a service: a reboot leaves it stopped, so it is
+# left out here and waited for by wait_for_migration instead. Every other service declares a
+# health check, so the stack is up when all of them report healthy.
 all_healthy() {
   local expected lines
-  expected=$(compose config --services | wc -l)
+  expected=$(compose config --services | grep -cvx migrate)
   lines=$(compose ps --all --format '{{.Service}} {{.State}} {{.Health}}' 2>/dev/null) || return 1
-  [ "$(grep -c ' running healthy$' <<<"$lines")" -eq "$expected" ]
+  [ "$(grep -v '^migrate ' <<<"$lines" | grep -c ' running healthy$')" -eq "$expected" ]
+}
+
+# Where the database migration of the running version stands: none (the version has no migrate
+# step), migrating, migrated, timed-out, failed, or stopped (ended by a stop or reboot after it had
+# run; the schema it applied stays).
+migration_state() {
+  local services line state health code
+  # Captured first: grep -q on a pipe can stop the writer mid-output and fail the pipeline.
+  services=$(compose config --services)
+  grep -qx migrate <<<"$services" || { printf none; return 0; }
+  # Separated by |, because an exited container has an empty health column.
+  line=$(compose ps --all --format '{{.Service}}|{{.State}}|{{.Health}}|{{.ExitCode}}' 2>/dev/null |
+    grep '^migrate|' || true)
+  IFS='|' read -r _ state health code <<<"$line"
+  case "$state $health" in
+    "running healthy") printf migrated ;;
+    "running unhealthy") printf timed-out ;;
+    running* | restarting* | created* | " ") printf migrating ;;
+    *)
+      # A signal's exit code (128 + signal) means it was stopped, not that the migration failed.
+      if [ "${code:-1}" -ge 128 ]; then printf stopped; else printf failed; fi
+      ;;
+  esac
+}
+
+# The migration runs before the server starts and may take far longer than starting does, so it
+# gets its own limit.
+wait_for_migration() {
+  local deadline=$((SECONDS + MIGRATION_SECONDS)) said=false
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    case "$(migration_state)" in
+      none | migrated) return 0 ;;
+      failed | timed-out) return 1 ;;
+    esac
+    $said || say "Migrating the database..."
+    said=true
+    sleep 3
+  done
+  return 1
 }
 
 wait_healthy() {
+  wait_for_migration || return 1
   local deadline=$((SECONDS + HEALTH_TIMEOUT))
   while [ "$SECONDS" -lt "$deadline" ]; do
     all_healthy && return 0
     sleep 3
   done
   return 1
+}
+
+# What to try when a version did not become healthy, from how its migration ended.
+not_healthy_hint() {
+  local version=$1
+  case "$(migration_state)" in
+    failed) say "The database migration failed. See why: armada logs migrate" ;;
+    migrating | timed-out) say "The database migration did not finish in time. If it only needs longer, allow it: sudo ARMADA_MIGRATION_TIMEOUT=1800 armada update $version" ;;
+    *) say "If the machine is only slow to start, allow it longer: sudo ARMADA_HEALTH_TIMEOUT=600 armada update $version" ;;
+  esac
 }
 
 image_ref() {
@@ -295,6 +360,21 @@ install_tooling() {
   systemctl enable --now "$TIMER" >/dev/null 2>&1 || warn "Could not start the update timer."
 }
 
+# The number of non-additive migrations a version's schema has been through. A release from before
+# the count was shipped has none.
+schema_epoch() {
+  local epoch
+  epoch=$(head -n 1 "$RELEASES/$1/SCHEMA_EPOCH" 2>/dev/null || true)
+  [[ $epoch =~ ^[0-9]+$ ]] || epoch=0
+  printf '%s' "$epoch"
+}
+
+# True when moving from one fetched version to another crosses a non-additive migration, so the
+# second cannot read the first one's schema.
+downgrade_blocked() {
+  [ "$(schema_epoch "$2")" -lt "$(schema_epoch "$1")" ]
+}
+
 # The images a version's compose.yaml names, one per line.
 release_images() {
   VERSION=$1 compose_at "$1" config --images 2>/dev/null
@@ -329,8 +409,16 @@ prune_releases() {
 # ── commands ─────────────────────────────────────────────────────────────────────────────────────
 
 cmd_update() {
-  local target=${1:-} previous
-  [ -n "$target" ] || die "Usage: armada update <version|latest>"
+  local target="" force=false previous hint
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --force) force=true ;;
+      -*) not_valid "$1" option "Run armada help." ;;
+      *) target=$1 ;;
+    esac
+    shift
+  done
+  [ -n "$target" ] || die "Usage: armada update <version|latest> [--force]"
   [ "$target" = latest ] && target=$(track_version)
   valid_version "$target" || not_valid "$target" version "Use one like 1.2.0, or latest."
   previous=$(setting VERSION)
@@ -343,6 +431,10 @@ cmd_update() {
   # status reads this only while the lock is held, so one left behind by a crash is never shown.
   set_state UPDATING_TO "$target"
   fetch_release "$target"
+  if [ -n "$previous" ] && ! $force && downgrade_blocked "$previous" "$target"; then
+    set_state UPDATING_TO ""
+    die "$target cannot read the database schema $previous left behind, so moving to it was refused and nothing was changed. If the database has been restored to suit $target, run: armada update $target --force"
+  fi
   VERSION=$target compose_at "$target" pull --quiet
   set_setting VERSION "$target"
 
@@ -352,6 +444,7 @@ cmd_update() {
     [ -n "$previous" ] && [ "$previous" != "$target" ] && set_state PREVIOUS_VERSION "$previous"
     set_state INSTALLED_AT "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     set_state AVAILABLE_VERSION ""
+    set_state DOWNGRADE_BLOCKED ""
     set_state UPDATING_TO ""
     install_tooling "$target"
     prune_releases
@@ -362,10 +455,17 @@ cmd_update() {
   set_state UPDATING_TO ""
   warn "$target did not become healthy."
   compose ps --all --format '  {{.Service}}: {{.State}} {{.Health}}' >&2 || true
+  # Read before any return to the previous version replaces the target's containers.
+  hint=$(not_healthy_hint "$target")
   if [ -z "$previous" ]; then
     warn "$target is the first version on this machine, so there is no earlier one to return to. It is left as it is, so you can see what failed: armada logs <service>, for a service listed above."
-    die "If the machine is only slow to start, allow it longer: sudo ARMADA_HEALTH_TIMEOUT=600 armada update $target"
+    die "$hint"
   fi
+  if downgrade_blocked "$target" "$previous"; then
+    warn "$target changed the database schema in a way $previous cannot read, so it is not returned to. $target is left as it is, so you can see what failed: armada logs <service>, for a service listed above."
+    die "$hint"
+  fi
+  warn "$hint"
   warn "Returning to $previous."
   set_setting VERSION "$previous"
   if ! compose_at "$previous" up --detach --remove-orphans || ! wait_healthy; then
@@ -375,10 +475,11 @@ cmd_update() {
 }
 
 cmd_rollback() {
-  local target="" confirmed=false from
+  local target="" confirmed=false force=false from
   while [ $# -gt 0 ]; do
     case "$1" in
       --yes) confirmed=true ;;
+      --force) force=true ;;
       -*) not_valid "$1" option "Run armada help." ;;
       *) target=$1 ;;
     esac
@@ -392,7 +493,11 @@ cmd_rollback() {
       die "Nothing was changed."
   fi
   say "Rolling back to $target"
-  cmd_update "$target" || return 1
+  if $force; then
+    cmd_update "$target" --force || return 1
+  else
+    cmd_update "$target" || return 1
+  fi
   # Automatic updates would otherwise reinstall the version just rolled back from at the next
   # check. Undoing a rollback returns to that version, so it lifts the pause instead.
   if [ "$target" = "$(state ROLLED_BACK_FROM)" ]; then
@@ -418,6 +523,7 @@ cmd_check_for_updates() {
   set_state LAST_CHECK "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   if [ "$latest" = "$current" ]; then
     set_state AVAILABLE_VERSION ""
+    set_state DOWNGRADE_BLOCKED ""
     if preview_track; then
       say "Up to date: $current is the newest on the $(setting TRACK) track."
     else
@@ -425,7 +531,18 @@ cmd_check_for_updates() {
     fi
     return 0
   fi
-  # Follows the pointer down as well as up, so moving a pointer back rolls installations back.
+  # Follows the pointer down as well as up, so moving a pointer back rolls installations back,
+  # except past a non-additive migration: that version's code cannot read this machine's schema.
+  if [ -n "$current" ]; then
+    fetch_release "$latest"
+    if downgrade_blocked "$current" "$latest"; then
+      set_state AVAILABLE_VERSION ""
+      set_state DOWNGRADE_BLOCKED "$latest"
+      say "Not moving to $latest: it cannot read the database schema $current uses. Staying on $current until the track names a version that can. If the database has been restored to suit $latest: armada update $latest --force"
+      return 0
+    fi
+  fi
+  set_state DOWNGRADE_BLOCKED ""
   set_state AVAILABLE_VERSION "$latest"
   say "$latest is available; running ${current:-nothing}."
   window=$(setting UPDATE_WINDOW)
@@ -478,7 +595,10 @@ next_check() {
 }
 
 status_updates() {
-  local policy window next last_check rolled_back_from
+  local policy window next last_check rolled_back_from downgrade_blocked
+  downgrade_blocked=$(state DOWNGRADE_BLOCKED)
+  [ -n "$downgrade_blocked" ] && printf '  %-12s %s%s cannot read this database schema, so the track is not followed back to it%s\n' \
+    Blocked "$YELLOW" "$downgrade_blocked" "$RESET"
   policy=$(setting UPDATE_POLICY notify)
   if [ "$policy" = off ]; then
     printf '  %-12s off\n' Updates
@@ -499,7 +619,7 @@ status_updates() {
 }
 
 cmd_status() {
-  local version available health expiry disk root
+  local version available health migration expiry disk root
   version=$(setting VERSION)
   available=$(state AVAILABLE_VERSION)
   printf '%sArmada  %s%s\n' "$BOLD" "$(setting DOMAIN)" "$RESET"
@@ -523,9 +643,15 @@ cmd_status() {
     health="${RED}NOT HEALTHY${RESET}  (see: armada logs)"
   fi
   printf '  %-12s %s\n' Health "$health"
+  migration=$(migration_state)
   compose ps --all --format '{{.Service}} {{.State}} {{.Health}}' |
     while read -r service status condition; do
-      printf '  %-12s %-20s %-10s %s\n' '' "$service" "$status" "${condition:--}"
+      # migrate is a step, so its row says how the migration went rather than a container state.
+      if [ "$service" = migrate ]; then
+        printf '  %-12s %-20s %s\n' '' "$service" "$migration"
+      else
+        printf '  %-12s %-20s %-10s %s\n' '' "$service" "$status" "${condition:--}"
+      fi
     done
   expiry=$(certificate_expiry "$(setting DOMAIN)")
   [ -n "$expiry" ] && printf '  %-12s renewed automatically; this one is valid until %s\n' Certificate "$(local_time "$expiry")"

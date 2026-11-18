@@ -9,6 +9,8 @@ on:
     paths:
       - infra/deploy/**
       - apps/server/deploy.Dockerfile
+      - apps/server/migrate.py
+      - apps/server/migrations/**
       - apps/web/deploy.Dockerfile
       - scripts/compose_run.py
       - .github/workflows/test-deploy.ci.yml
@@ -44,6 +46,11 @@ jobs:
       GOOD_1: sha-000000000001
       GOOD_2: sha-000000000002
       BROKEN: sha-000000000003
+      MIGRATE_FAIL: sha-000000000004
+      NON_ADDITIVE: sha-000000000005
+      ADDITIVE: sha-000000000006
+      OLD_ARMADA: sha-000000000007
+      SLOW_MIGRATION: sha-000000000008
     steps:
       - uses: actions/checkout@v4
 
@@ -67,20 +74,81 @@ jobs:
           for app in server web; do
             docker build --quiet -f "apps/$app/deploy.Dockerfile" -t "armada-$app:built" .
           done
+          # The release files come from this checkout's infra/deploy unless another is given.
           publish_preview() {
-            local name=$1 files
+            local name=$1 deploy=${2:-infra/deploy} files
             for app in server web; do
               docker tag "armada-$app:built" "$IMAGES/armada-$app-preview:$name"
               docker push --quiet "$IMAGES/armada-$app-preview:$name"
             done
             files=$(mktemp -d)
-            bash infra/deploy/release.sh preview "$name" test/armada armada-test "$files"
+            bash "$deploy/release.sh" preview "$name" test/armada armada-test "$files"
             docker build --quiet -f infra/deploy/release.Dockerfile \
               -t "$IMAGES/armada-release-preview:$name" "$files"
             docker push --quiet "$IMAGES/armada-release-preview:$name"
           }
           publish_preview "$GOOD_1"
           publish_preview "$GOOD_2"
+
+          # Revisions are named by their number, so the newest file names the head.
+          head=$(basename "$(ls apps/server/migrations/versions/[0-9]*.py | sort | tail -n 1)" | cut -d _ -f 1)
+          echo "MIGRATION_HEAD=$head" >> "$GITHUB_ENV"
+
+          # This build's newest migration raises, so updating to it must return to the previous
+          # version.
+          docker tag armada-server:built armada-server:good
+          docker build --quiet -t armada-server:built - <<EOF
+          FROM armada-server:good
+          USER root
+          RUN printf '%s\n' 'revision = "9999"' 'down_revision = "$head"' 'branch_labels = None' \
+                'depends_on = None' 'def upgrade() -> None:' '    raise RuntimeError("deploy test")' \
+                'def downgrade() -> None:' '    pass' > migrations/versions/9999_fail.py
+          USER armada
+          EOF
+          publish_preview "$MIGRATE_FAIL"
+          docker tag armada-server:good armada-server:built
+
+          # The same images, but its release files count one non-additive migration, so machines
+          # that run it must refuse to move back to the builds above.
+          printf 'non_additive = True\n' > apps/server/migrations/versions/9998_deploy_test.py
+          publish_preview "$NON_ADDITIVE"
+          rm apps/server/migrations/versions/9998_deploy_test.py
+
+          # One additive migration past head, so rolling back from it leaves the database at a
+          # revision the older build does not know.
+          docker build --quiet -t armada-server:built - <<EOF
+          FROM armada-server:good
+          USER root
+          RUN printf '%s\n' 'import sqlalchemy as sa' 'from alembic import op' 'revision = "9997"' \
+                'down_revision = "$head"' 'branch_labels = None' 'depends_on = None' \
+                'def upgrade() -> None:' '    op.create_table("deploy_test", sa.Column("id", sa.Uuid(), primary_key=True))' \
+                'def downgrade() -> None:' '    op.drop_table("deploy_test")' > migrations/versions/9997_additive.py
+          USER armada
+          EOF
+          publish_preview "$ADDITIVE"
+          docker tag armada-server:good armada-server:built
+
+          # This build's newest migration takes two minutes, longer than the limit its test allows.
+          docker build --quiet -t armada-server:built - <<EOF
+          FROM armada-server:good
+          USER root
+          RUN printf '%s\n' 'import time' 'revision = "9996"' 'down_revision = "$head"' \
+                'branch_labels = None' 'depends_on = None' 'def upgrade() -> None:' '    time.sleep(120)' \
+                'def downgrade() -> None:' '    pass' > migrations/versions/9996_slow.py
+          USER armada
+          EOF
+          publish_preview "$SLOW_MIGRATION"
+          docker tag armada-server:good armada-server:built
+
+          # This build's images, with the release files of the version in production: its armada and
+          # compose.yaml predate migrations, so the first update from it is run by an armada that
+          # never migrates.
+          # As the checkout's owner: git refuses to work in another user's repository as root.
+          sudo -u "$SUDO_USER" git fetch --quiet --depth 1 origin tag v0.0.1
+          production=$(mktemp -d)
+          sudo -u "$SUDO_USER" git archive v0.0.1 infra/deploy | tar -x -C "$production"
+          publish_preview "$OLD_ARMADA" "$production/infra/deploy"
+
           # The broken build's server never reports healthy, so updating to it must return to the
           # previous version.
           docker build --quiet -t armada-server:broken - <<< $'FROM armada-server:built\nHEALTHCHECK --interval=5s CMD ["false"]'
@@ -157,6 +225,12 @@ jobs:
           echo "$status"
           grep -q '^  Track  *testing$' <<< "$status"
           curl -fsS http://localhost/api/health_check
+          # The install ran the migrations, so the database is at the newest revision.
+          revision=$(docker exec armada-db-1 psql -U armada -d armada -tAc 'SELECT version_num FROM alembic_version')
+          if [ "$revision" != "$MIGRATION_HEAD" ]; then
+            echo "::error::Expected the database at revision $MIGRATION_HEAD after install, found '$revision'"
+            exit 1
+          fi
           echo "::endgroup::"
 
           echo "::group::Automatic updates wait for the update window"
@@ -201,6 +275,73 @@ jobs:
           fi
           expect "$GOOD_1"
           curl -fsS http://localhost/api/health_check
+          echo "::endgroup::"
+
+          echo "::group::A failing migration is reverted to the previous version"
+          if out=$(armada update "$MIGRATE_FAIL" 2>&1); then
+            echo "$out"
+            echo "::error::Updating to a build whose migration fails reported success"
+            exit 1
+          fi
+          echo "$out"
+          grep -qF "$MIGRATE_FAIL did not become healthy" <<< "$out"
+          # Read from the migrate container's state, so it also shows the container stayed exited
+          # rather than being restarted.
+          grep -qF "The database migration failed. See why: armada logs migrate" <<< "$out"
+          grep -qF "Returning to $GOOD_1" <<< "$out"
+          expect "$GOOD_1"
+          curl -fsS http://localhost/api/health_check
+          echo "::endgroup::"
+
+          echo "::group::A migration that outlasts its time limit is reverted"
+          if out=$(ARMADA_MIGRATION_TIMEOUT=30 armada update "$SLOW_MIGRATION" 2>&1); then
+            echo "$out"
+            echo "::error::Updating past the migration time limit reported success"
+            exit 1
+          fi
+          echo "$out"
+          grep -qF "The database migration did not finish in time" <<< "$out"
+          grep -qF "Returning to $GOOD_1" <<< "$out"
+          expect "$GOOD_1"
+          curl -fsS http://localhost/api/health_check
+          echo "::endgroup::"
+
+          echo "::group::A stopped migrate, as a reboot leaves it, still counts as healthy"
+          docker stop armada-migrate-1 > /dev/null
+          status=$(armada status)
+          echo "$status"
+          grep -qE '^  Health +OK' <<< "$status"
+          grep -qE '^ +migrate +stopped$' <<< "$status"
+          armada restart
+          status=$(armada status)
+          grep -qE '^ +migrate +migrated$' <<< "$status"
+          curl -fsS http://localhost/api/health_check
+          echo "::endgroup::"
+
+          echo "::group::The scheduled check does not follow the pointer back past a non-additive migration"
+          armada update "$NON_ADDITIVE"
+          expect "$NON_ADDITIVE"
+          move testing "$GOOD_1"
+          out=$(armada check-for-updates --scheduled)
+          echo "$out"
+          grep -qF "Not moving to $GOOD_1" <<< "$out"
+          expect "$NON_ADDITIVE"
+          status=$(armada status)
+          echo "$status"
+          grep -qF "$GOOD_1 cannot read this database schema" <<< "$status"
+          echo "::endgroup::"
+
+          echo "::group::A manual downgrade past it needs --force"
+          if armada rollback --yes; then
+            echo "::error::Rolling back past a non-additive migration reported success"
+            exit 1
+          fi
+          expect "$NON_ADDITIVE"
+          armada rollback --yes --force
+          expect "$GOOD_1"
+          curl -fsS http://localhost/api/health_check
+          # The groups below expect the pointer where the earlier ones left it.
+          move testing "$GOOD_2"
           echo "::endgroup::"
 
           echo "::group::Notify only records the new build"
@@ -304,6 +445,60 @@ jobs:
           done
           # The database and file storage images are named by every version, so they stay.
           docker image inspect postgres:17-alpine > /dev/null
+          echo "::endgroup::"
+
+      - name: Schema - an update run by the production armada migrates, and a rollback keeps the schema
+        run: |
+          expect() {
+            local running
+            running=$(armada version)
+            if [ "$running" != "$1" ]; then
+              echo "::error::Expected $1 to be running, found $running"
+              armada status || true
+              exit 1
+            fi
+            echo "ok: running $1"
+          }
+          revision() {
+            docker exec armada-db-1 psql -U armada -d armada -tAc 'SELECT version_num FROM alembic_version'
+          }
+
+          echo "::group::Install the production version's armada on an empty database"
+          armada uninstall --yes
+          # .env keeps the database password, so a new database volume starts with it.
+          docker volume rm armada_pgdata > /dev/null
+          dir=$(mktemp -d)
+          docker pull --quiet "$IMAGES/armada-release-preview:$OLD_ARMADA" > /dev/null
+          container=$(docker create "$IMAGES/armada-release-preview:$OLD_ARMADA" none)
+          docker cp "$container:/release/." "$dir"
+          docker rm "$container" > /dev/null
+          # Off, so neither the installer's check nor the timer moves the version during the test.
+          bash "$dir/install.sh" --non-interactive --version "$OLD_ARMADA" --update-policy off
+          expect "$OLD_ARMADA"
+          echo "::endgroup::"
+
+          echo "::group::The update it runs migrates the database"
+          armada update "$GOOD_1"
+          expect "$GOOD_1"
+          if [ "$(revision)" != "$MIGRATION_HEAD" ]; then
+            echo "::error::Expected the database at revision $MIGRATION_HEAD after the update, found '$(revision)'"
+            exit 1
+          fi
+          curl -fsS http://localhost/api/health_check
+          echo "::endgroup::"
+
+          echo "::group::A rollback past a newer revision keeps the schema and comes back healthy"
+          armada update "$ADDITIVE"
+          expect "$ADDITIVE"
+          [ "$(revision)" = 9997 ]
+          armada rollback --yes
+          expect "$GOOD_1"
+          # Never downgraded: the older version runs against the newer, additive schema.
+          if [ "$(revision)" != 9997 ]; then
+            echo "::error::Expected the database to stay at revision 9997 after the rollback, found '$(revision)'"
+            exit 1
+          fi
+          curl -fsS http://localhost/api/health_check
           echo "::endgroup::"
 
       # Uninstalling clears the version, so the next install is a first one with nothing to go back to.

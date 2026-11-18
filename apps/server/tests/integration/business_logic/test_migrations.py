@@ -1,16 +1,12 @@
-"""Runs the migrations and the dev seed against a real Postgres. Each test creates its own
-throwaway database and drops it after, because downgrading must not touch the shared one."""
+"""Runs the migrations and the dev seed against a real Postgres. Each test uses the throwaway
+database from the engine fixture, because downgrading must not touch the shared one."""
 
-from collections.abc import Iterator
 from pathlib import Path
-from uuid import uuid4
 
-import pytest
 import sqlalchemy as sa
 from alembic import command
 from alembic.config import Config
 
-from api.common.settings import database_url
 from dev_seed import SEED, seed
 
 ALEMBIC_INI = Path(__file__).parents[3] / "alembic.ini"
@@ -39,24 +35,6 @@ REVISION_0001_TABLES = {
     "broadcasts",
     "notification_preferences",
 }
-
-
-@pytest.fixture
-def engine(monkeypatch: pytest.MonkeyPatch) -> Iterator[sa.Engine]:
-    name = f"armada_test_{uuid4().hex}"
-    # CREATE and DROP DATABASE cannot run inside a transaction.
-    admin = sa.create_engine(database_url(), isolation_level="AUTOCOMMIT")
-    with admin.connect() as connection:
-        connection.execute(sa.text(f'CREATE DATABASE "{name}"'))
-    monkeypatch.setenv("DB_NAME", name)
-    test_engine = sa.create_engine(database_url())
-    try:
-        yield test_engine
-    finally:
-        test_engine.dispose()
-        with admin.connect() as connection:
-            connection.execute(sa.text(f'DROP DATABASE "{name}" WITH (FORCE)'))
-        admin.dispose()
 
 
 def tables(engine: sa.Engine) -> set[str]:

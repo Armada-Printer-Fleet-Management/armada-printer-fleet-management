@@ -27,8 +27,17 @@ sed -e "s|@ARMADA_CHANNEL@|$channel|g" \
   -e "s|@ARMADA_IMAGE_OWNER@|$owner|g" \
   "$deploy/install.sh" >"$out/install.sh"
 printf '%s\n' "$version" >"$out/VERSION"
+# The number of non-additive migrations so far. armada refuses to move to a release with a lower
+# one, since that version's code cannot read the schema. A missing folder must fail rather than
+# count as none, or the release would allow every downgrade.
+migrations="$deploy/../../apps/server/migrations/versions"
+[ -d "$migrations" ] || {
+  echo "$0: $migrations not found; the release needs the server's migrations beside infra/deploy" >&2
+  exit 1
+}
+{ grep -lE '^non_additive = True[[:space:]]*$' "$migrations"/*.py || true; } | wc -l | tr -d ' ' >"$out/SCHEMA_EPOCH"
 (
   cd "$out"
   sha256sum compose.yaml garage.toml armada-realm.json armada armada-update.service armada-update.timer install.sh \
-    VERSION >SHA256SUMS
+    VERSION SCHEMA_EPOCH >SHA256SUMS
 )

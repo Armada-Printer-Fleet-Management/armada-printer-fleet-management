@@ -248,8 +248,8 @@ again.
 | Command | What it does |
 |---|---|
 | `armada status` | The version, health of every service, update settings, disk use and certificate |
-| `armada update <version\|latest>` | Moves to a version, and puts the previous one back if it does not become healthy |
-| `armada rollback [version]` | Returns to the version before the last update; run it again to undo |
+| `armada update <version\|latest> [--force]` | Migrates the database, then moves to a version, and puts the previous one back if it does not become healthy |
+| `armada rollback [version] [--force]` | Returns to the version before the last update; run it again to undo |
 | `armada logs [service]` | Follows the logs |
 | `armada config <key> [value]` | Shows or changes one setting (below) |
 
@@ -264,6 +264,23 @@ again.
 A machine follows its pointer down as well as up: if a pointer is moved back, automatic updates
 move back with it. A rollback pauses automatic updates for the version rolled back from, until the
 track names another version or someone runs `armada update`.
+
+The server waits for `migrate`, a step rather than a service, so every start brings the database
+up to that version's schema first. This holds whichever `armada` runs the update, including the
+older ones already installed. The server is down while the migration runs. `armada` waits up to
+`ARMADA_MIGRATION_TIMEOUT` seconds (600 by default) for the migration, then
+`ARMADA_HEALTH_TIMEOUT` for the services. After a reboot `migrate` stays stopped, and
+`armada status` shows it as `stopped`; the schema it applied stays. A failed migration fails the
+update, and the machine returns to the previous version like any other update that does not
+become healthy. Moving back to an older version never downgrades the database: the older version
+runs against the newer schema. A migration flagged as non-additive (older code cannot read the
+schema afterwards) raises the release's `SCHEMA_EPOCH`. Once a machine has passed it, it will not
+move to a version with a lower epoch:
+
+- The scheduled check stays put and `armada status` shows the block.
+- `armada update` and `armada rollback` refuse unless given `--force`. Use `--force` only after
+  restoring a database that suits the older version.
+- An update across the marker that does not become healthy is left in place rather than reverted.
 
 The update window is in the machine's own time zone, and `armada status` shows times in it too.
 Ubuntu servers default to UTC; set the zone once with `sudo timedatectl set-timezone <zone>`.
