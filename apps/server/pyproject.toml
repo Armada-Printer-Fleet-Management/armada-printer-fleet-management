@@ -57,7 +57,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
-include = ["api", "migrations", "dev_seed.py", "e2e", "tests"]
+include = ["api", "migrations", "dev_seed.py", "migrate.py", "e2e", "tests"]
 exclude = ["api/gen"]
 
 [tool.pytest.ini_options]

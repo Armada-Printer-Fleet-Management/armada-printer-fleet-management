@@ -32,11 +32,39 @@ services:
       - caddy_data:/data
       - caddy_config:/config
 
+  # A step, not a service: it brings the database up to this version's schema before the server
+  # starts, on every `up`, so whichever armada runs the update, the schema follows. A failed
+  # migration exits and stays exited, which fails `up`. After succeeding it sleeps rather than
+  # exiting, because older armada versions count an update healthy only when every service is
+  # running and healthy. A reboot leaves it stopped, which the current armada expects.
+  migrate:
+    image: ${REGISTRY:-ghcr.io}/${GHCR_OWNER:?}/armada-server${IMAGE_SUFFIX:-}:${VERSION:?}
+    restart: "no"
+    logging: *logging
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: armada
+      DB_USER: armada
+      DB_PASSWORD: ${DB_PASSWORD:?}
+    command: ["sh", "-c", "rm -f /tmp/migrated && python migrate.py && touch /tmp/migrated && exec sleep infinity"]
+    # Healthy once the migration has finished. armada sets MIGRATION_TIMEOUT to the limit it waits
+    # for; older armada versions do not, and get 10 minutes.
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/migrated"]
+      interval: 10s
+      start_period: ${MIGRATION_TIMEOUT:-10m}
+      start_interval: 1s
+
   server:
     image: ${REGISTRY:-ghcr.io}/${GHCR_OWNER:?}/armada-server${IMAGE_SUFFIX:-}:${VERSION:?}
     restart: always
     logging: *logging
     depends_on:
+      migrate:
+        condition: service_healthy
       db:
         condition: service_healthy
       garage-s3-storage:

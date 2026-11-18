@@ -21,6 +21,7 @@ implementations in `plugins/`, never here.
 | `api/infrastructure/enum_ids.py` | The UUID the database stores for each enum member. Never change or reuse one |
 | `api/infrastructure/dev_data.py` | The one set of development data: the in-memory repositories start with it, tests use its IDs, `dev_seed.py` writes it |
 | `migrations/`, `alembic.ini` | Alembic migrations. Foreign keys only inside a domain; enum columns are `uuid` from `enum_ids.py`. `alembic.ini` holds no connection details |
+| `migrate.py`           | The deploy stack's migration entry point, run by its `migrate` service: `alembic upgrade head`, unless the database is ahead of this image |
 | `dev_seed.py`          | Writes `dev_data.py` into the development database, run by the dev stack's `migrate` service. Never run by a deployment |
 | `tests/`, `e2e/`       | The server's tests. `tests/AGENTS.md` holds their layout and rules; `e2e/README.md` has the end-to-end setup |
 | `api/plugins.py`       | Builds the plugins each deployment chose in config, such as `FILE_STORE_BACKEND` |
@@ -115,6 +116,14 @@ plugin or its port, and import-linter enforces it.
 - The dev stack's `migrate` service runs `alembic upgrade head` and then `dev_seed.py` before the
   server starts, so a fresh stack comes up migrated and seeded.
 - Number each new revision one past the latest (`--rev-id 0002`), so files sort in apply order.
+- Deployments run `migrate.py` from the new image before the server starts. A database at a
+  revision the image does not know is left as it is, because the version after a rollback or
+  revert runs against the newer schema rather than downgrading it. So a migration should be
+  additive: new tables, nullable or defaulted columns. Drop or rename in a later release, once no
+  deployed code reads the old shape.
+- A migration the previous version's code cannot run against declares `non_additive = True` at
+  module level, exactly so. `infra/deploy/release.sh` counts these into the release's
+  `SCHEMA_EPOCH`, and `armada` refuses to downgrade a machine below it.
 - Development data goes in `api/infrastructure/dev_data.py` with a fixed ID. If its table is not
   seeded yet, add the table to `SEED` in `dev_seed.py`, after the tables it refers to. The seed
   only inserts missing rows and never changes an existing one.
