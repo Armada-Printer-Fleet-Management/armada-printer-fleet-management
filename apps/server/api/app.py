@@ -27,6 +27,7 @@ from api.common.consts import API_PREFIX
 from api.common.dependencies import application_info
 from api.common.models import DependencyCheck
 from api.common.openapi import openapi_schema
+from api.domains.auth.service import UserService
 from api.domains.content_asset.service import FileService
 from api.domains.fleet.service import PrinterService
 from api.domains.legal.service import AgreementService
@@ -56,6 +57,7 @@ class AppServices:
     printer_queues: PrinterQueueService
     agreements: AgreementService
     slicer_configuration: SlicerConfigurationService
+    users: UserService
 
 
 @dataclass(frozen=True)

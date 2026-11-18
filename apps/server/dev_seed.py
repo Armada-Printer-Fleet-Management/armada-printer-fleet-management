@@ -3,6 +3,8 @@
 # already exist are left alone, so it is safe to rerun.
 """Seed the development database. Reads the DB_* environment variables."""
 
+from uuid import UUID
+
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import insert
 
@@ -23,7 +25,7 @@ from api.infrastructure.enum_ids import (
     FLEET_ACCESS_POLICY_STAFF_ONLY_ID,
     PRINT_JOB_STATUS_IDS,
     USER_ROLE_IDS,
-    USER_STATUS_ACTIVE_ID,
+    USER_STATUS_IDS,
 )
 
 Rows = list[dict[str, object]]
@@ -34,7 +36,17 @@ def _table(name: str, *columns: str) -> sa.TableClause:
     return sa.table(name, *clauses)
 
 
-_users = _table("users", "id", "keycloak_user_ref", "email", "display_name", "role", "status")
+_users = _table(
+    "users",
+    "id",
+    "keycloak_user_ref",
+    "email",
+    "display_name",
+    "role",
+    "status",
+    "created_at",
+    "updated_at",
+)
 _fleet_sections = _table("fleet_sections", "id", "name", "access_policy")
 _printer_queues = _table(
     "printer_queues", "id", "name", "type", "user_id", "is_active", "requires_approval"
@@ -79,15 +91,18 @@ _print_jobs = _table(
 )
 
 
+# Bridged onto the columns as SqlUserRepository does, until the users table is migrated.
 def _user_rows() -> Rows:
     return [
         {
             "id": user.id.value,
-            "keycloak_user_ref": user.keycloak_user_ref,
+            "keycloak_user_ref": UUID(user.identity_provider_subject),
             "email": user.email,
-            "display_name": user.display_name,
+            "display_name": user.first_name,
             "role": USER_ROLE_IDS[user.role],
-            "status": USER_STATUS_ACTIVE_ID,
+            "status": USER_STATUS_IDS[user.status],
+            "created_at": user.created_at,
+            "updated_at": user.updated_at,
         }
         for user in stub_users()
     ]

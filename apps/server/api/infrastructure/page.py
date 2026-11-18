@@ -11,7 +11,7 @@ type SortKey = tuple[datetime, UUID]
 
 
 # Read-only properties, so an entity whose id is a TypedId subclass still matches.
-class _Keyed(Protocol):
+class Keyed(Protocol):
     @property
     def id(self) -> TypedId: ...
 
@@ -19,7 +19,7 @@ class _Keyed(Protocol):
     def created_at(self) -> datetime: ...
 
 
-def sort_key(entity: _Keyed) -> SortKey:
+def sort_key(entity: Keyed) -> SortKey:
     return entity.created_at, entity.id.value
 
 
@@ -42,7 +42,7 @@ def decode_token(token: str) -> SortKey:
     return key
 
 
-def newest_first_page[EntityT: _Keyed](
+def newest_first_page[EntityT: Keyed](
     entities: Iterable[EntityT], page_size: int, page_token: str
 ) -> Page[EntityT]:
     """Pages entities held in memory. Returns them as given; copying is the caller's concern."""

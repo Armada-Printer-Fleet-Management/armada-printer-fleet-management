@@ -5,10 +5,10 @@
 from collections.abc import Mapping
 from uuid import UUID
 
+from core_domain.auth import UserRole, UserStatus
 from core_domain.content_asset import FileType
 from core_domain.legal import LegalDocumentKind
 from core_domain.print_job import PrintJobStatus
-from proto_utils.gen.auth.v1 import user_pb2
 
 PRINT_JOB_STATUS_IDS: dict[PrintJobStatus, UUID] = {
     PrintJobStatus.DRAFT: UUID("2c5216d8-6fe3-4a53-b079-a09029538dc7"),
@@ -35,16 +35,21 @@ LEGAL_DOCUMENT_KIND_IDS: dict[LegalDocumentKind, UUID] = {
     LegalDocumentKind.PRIVACY_POLICY: UUID("09f7840c-6c7b-4973-8ee3-fb493e18e04a"),
 }
 
-USER_ROLE_IDS: dict[user_pb2.UserRole, UUID] = {
-    user_pb2.USER_ROLE_GUEST: UUID("17051c1b-afa2-46f9-a9cf-12f9b250b8bb"),
-    user_pb2.USER_ROLE_STUDENT: UUID("e398f1da-6203-4d85-894e-838de08c35e5"),
-    user_pb2.USER_ROLE_STAFF: UUID("44136de6-0927-47ea-8763-4e93ae2a27f8"),
-    user_pb2.USER_ROLE_ADMIN: UUID("47cd9afe-e69d-4e20-9839-e19cf2c71f84"),
+USER_ROLE_IDS: dict[UserRole, UUID] = {
+    UserRole.GUEST: UUID("17051c1b-afa2-46f9-a9cf-12f9b250b8bb"),
+    UserRole.STUDENT: UUID("e398f1da-6203-4d85-894e-838de08c35e5"),
+    UserRole.STAFF: UUID("44136de6-0927-47ea-8763-4e93ae2a27f8"),
+    UserRole.ADMIN: UUID("47cd9afe-e69d-4e20-9839-e19cf2c71f84"),
+}
+
+USER_STATUS_IDS: dict[UserStatus, UUID] = {
+    UserStatus.ACTIVE: UUID("fcbfe76e-3ec2-468e-b0b4-4c61a3045622"),
+    UserStatus.SUSPENDED: UUID("e83cf637-31af-4307-b795-4cde61418054"),
+    UserStatus.DELETED: UUID("b3598fd2-e125-43ab-9d41-350b327557dd"),
 }
 
 # Members the dev seed and the SQL repositories need whose enums are not in packages/proto yet.
 # Each moves into a map above, keeping its UUID, when the feature that uses it adds the proto enum.
-USER_STATUS_ACTIVE_ID = UUID("fcbfe76e-3ec2-468e-b0b4-4c61a3045622")
 FLEET_ACCESS_POLICY_STAFF_ONLY_ID = UUID("0893e1a6-e0b8-4035-b001-d08f352398a4")
 FILE_SCAN_STATUS_NOT_SCANNED_ID = UUID("bbbdd29f-b7b5-4d49-bbee-2ffd06111512")
 FILE_SCAN_STATUS_CLEAN_ID = UUID("cf2ae902-1b0d-4a06-a1d8-56d7552203d7")
