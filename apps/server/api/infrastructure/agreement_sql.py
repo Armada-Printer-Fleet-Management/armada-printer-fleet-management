@@ -65,14 +65,7 @@ class SqlAgreementRepository(SqlRepository, AgreementRepository):
         return [_agreement(row) for row in rows]
 
     async def save(self, entity: Agreement) -> None:
-        row = _row(entity)
-        statement = insert(_agreements).values(row)
-        statement = statement.on_conflict_do_update(
-            index_elements=[_agreements.c.id],
-            set_={column: statement.excluded[column] for column in row if column != "id"},
-        )
-        async with self._transaction() as connection:
-            await connection.execute(statement)
+        await self._upsert(_agreements, _row(entity))
 
     async def add(self, agreement: Agreement) -> Agreement:
         row = _row(agreement)

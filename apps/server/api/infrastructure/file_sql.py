@@ -4,7 +4,6 @@ import sqlalchemy as sa
 from core_domain.content_asset import File
 from core_domain.ddd import EntityNotFound
 from core_domain.ids import FileId, UserId
-from sqlalchemy.dialects.postgresql import insert
 
 from api.domains.content_asset.repository import FileRepository
 from api.infrastructure.enum_ids import (
@@ -85,18 +84,7 @@ class SqlFileRepository(SqlRepository, FileRepository):
         return [_file(row) for row in rows]
 
     async def save(self, entity: File) -> None:
-        row = _row(entity)
-        statement = insert(_files).values(row)
-        statement = statement.on_conflict_do_update(
-            index_elements=[_files.c.id],
-            set_={
-                column: statement.excluded[column]
-                for column in row
-                if column != "id" and column not in _INSERT_ONLY
-            },
-        )
-        async with self._transaction() as connection:
-            await connection.execute(statement)
+        await self._upsert(_files, _row(entity), insert_only=_INSERT_ONLY)
 
     async def delete(self, file_id: FileId) -> None:
         async with self._transaction() as connection:

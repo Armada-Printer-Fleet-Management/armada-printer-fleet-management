@@ -7,6 +7,7 @@ import structlog
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from core_domain.ddd import (
+    AlreadyExists,
     EntityNotFound,
     InvalidPageToken,
     InvalidValue,
@@ -26,6 +27,8 @@ def domain_errors_as_connect() -> Generator[None]:
         yield
     except EntityNotFound as error:
         raise ConnectError(Code.NOT_FOUND, str(error)) from error
+    except AlreadyExists as error:
+        raise ConnectError(Code.ALREADY_EXISTS, str(error)) from error
     except RuleViolation as error:
         raise ConnectError(Code.FAILED_PRECONDITION, str(error)) from error
     except (InvalidPageToken, InvalidValue) as error:

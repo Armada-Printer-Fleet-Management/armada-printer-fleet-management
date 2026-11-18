@@ -1,10 +1,11 @@
+from collections.abc import Collection
 from enum import Enum
 from typing import cast
 from uuid import UUID
 
+from core_domain.auth import UserRole, UserStatus
 from core_domain.content_asset import FileType
 from core_domain.print_job import PrintJobStatus
-from proto_utils.gen.auth.v1 import user_pb2
 
 from api.infrastructure import enum_ids
 from api.infrastructure.enum_ids import (
@@ -13,7 +14,7 @@ from api.infrastructure.enum_ids import (
     FLEET_ACCESS_POLICY_STAFF_ONLY_ID,
     PRINT_JOB_STATUS_IDS,
     USER_ROLE_IDS,
-    USER_STATUS_ACTIVE_ID,
+    USER_STATUS_IDS,
 )
 
 
@@ -30,22 +31,18 @@ def every_stored_id() -> list[UUID]:
 
 
 def test_every_domain_enum_member_has_a_stored_id() -> None:
-    maps: list[tuple[type[Enum], dict[PrintJobStatus, UUID] | dict[FileType, UUID]]] = [
+    maps: list[tuple[type[Enum], Collection[Enum]]] = [
         (PrintJobStatus, PRINT_JOB_STATUS_IDS),
         (FileType, FILE_TYPE_IDS),
+        (UserRole, USER_ROLE_IDS),
+        (UserStatus, USER_STATUS_IDS),
     ]
     for enum, ids in maps:
         assert set(ids) == set(enum)
 
 
-def test_every_user_role_but_unspecified_has_a_stored_id() -> None:
-    roles = set(user_pb2.UserRole.values()) - {user_pb2.USER_ROLE_UNSPECIFIED}
-    assert set(USER_ROLE_IDS) == roles
-
-
 def test_seed_only_members_have_a_stored_id() -> None:
     seed_only = [
-        USER_STATUS_ACTIVE_ID,
         FLEET_ACCESS_POLICY_STAFF_ONLY_ID,
         FILE_SCAN_STATUS_CLEAN_ID,
     ]

@@ -5,7 +5,8 @@ from typing import Self
 
 import sqlalchemy as sa
 from core_domain.ddd import Unavailable
-from sqlalchemy.exc import SQLAlchemyError
+from psycopg.errors import UniqueViolation
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 _DEPENDENCY = "database"
@@ -18,6 +19,13 @@ def database_errors() -> Generator[None]:
         yield
     except (SQLAlchemyError, OSError) as error:
         raise Unavailable(_DEPENDENCY) from error
+
+
+def unique_constraint(error: IntegrityError) -> str | None:
+    """The name of the unique constraint a write broke, or None when it broke something else."""
+    if isinstance(error.orig, UniqueViolation):
+        return error.orig.diag.constraint_name
+    return None
 
 
 class PostgresDatabase:

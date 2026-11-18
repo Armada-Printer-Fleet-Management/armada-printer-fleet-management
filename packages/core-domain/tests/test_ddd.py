@@ -3,7 +3,15 @@ from uuid import uuid4
 
 import pytest
 
-from core_domain.ddd import Entity, EntityNotFound, RuleViolation, TypedId, Unavailable, change
+from core_domain.ddd import (
+    AlreadyExists,
+    Entity,
+    EntityNotFound,
+    RuleViolation,
+    TypedId,
+    Unavailable,
+    change,
+)
 
 
 class AlphaId(TypedId):
@@ -88,3 +96,9 @@ def test_change_reports_a_missing_entity() -> None:
 
 def test_unavailable_names_only_the_dependency() -> None:
     assert str(Unavailable("file storage")) == "file storage is unavailable"
+
+
+def test_already_exists_names_the_field_but_not_the_value() -> None:
+    error = AlreadyExists("user", "email")
+    assert str(error) == "A user with this email already exists"
+    assert error.field == "email"

@@ -10,6 +10,7 @@ from proto_utils.mappers.printer import PrinterMapper, PrinterTypeMapper
 from proto_utils.mappers.printer_queue import PrinterQueueMapper
 from proto_utils.mappers.slice_profile import SliceProfileMapper
 from proto_utils.mappers.slice_settings import SliceSettingsMapper
+from proto_utils.mappers.user import UserMapper
 
 __all__ = [
     "AgreementMapper",
@@ -21,4 +22,5 @@ __all__ = [
     "PrinterTypeMapper",
     "SliceProfileMapper",
     "SliceSettingsMapper",
+    "UserMapper",
 ]

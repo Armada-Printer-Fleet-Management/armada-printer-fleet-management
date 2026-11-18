@@ -16,7 +16,7 @@ twice = pytest.mark.parametrize("run", ["first", "second"])
 
 
 def _student_name() -> str:
-    return next(user.display_name for user in stub_users() if user.id == STUB_STUDENT_ID)
+    return next(user.first_name for user in stub_users() if user.id == STUB_STUDENT_ID)
 
 
 @twice
