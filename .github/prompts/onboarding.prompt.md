@@ -351,8 +351,9 @@ pnpm -r test --run
 The server and desktop each have their own project, which the root-level `uv run pytest` does not
 reach. The desktop tests import generated code, so step 5 must have run.
 
-The server's command runs two suites, which the pre-push hook and CI run as separate steps:
-`tests/unit`, which needs no Docker, and `tests/integration`. Run one alone with
+The server's command runs two suites, which CI runs as separate steps: `tests/unit`, which needs
+no Docker, and `tests/integration`. The pre-push hook runs only `tests/unit` unless
+`PRE_PUSH_EXHAUSTIVE=1` is set, so pushing never needs Docker. Run one alone with
 `uv run --directory apps/server pytest tests/unit` or
 `uv run --directory apps/server pytest tests/integration`.
 

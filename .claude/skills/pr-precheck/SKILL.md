@@ -40,7 +40,8 @@ python scripts/sync_agent_config.py --check
 bash .githooks/pre-push
 ```
 
-`.githooks/pre-push` runs exactly what a push will run, including the DDD gate. Fix failures
+`.githooks/pre-push` runs exactly what a push will run, including the DDD gate: the fast checks
+for the projects the branch changes. CI runs the rest. Fix failures
 before going on; do not push past them. If the developer overrode the review in step 1, run it as
 `ARMADA_DDD_OVERRIDE="<reason>" bash .githooks/pre-push`.
 

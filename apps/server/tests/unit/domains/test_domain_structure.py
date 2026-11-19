@@ -13,7 +13,7 @@ from core_domain.ddd import Service
 import api.domains
 
 DOMAINS = Path(api.domains.__file__).parent
-NAMES = sorted(p.name for p in DOMAINS.iterdir() if p.is_dir() and p.name != "__pycache__")
+NAMES = sorted(p.name for p in DOMAINS.iterdir() if p.is_dir() and any(p.glob("*.py")))
 
 
 def test_domains_are_found() -> None:

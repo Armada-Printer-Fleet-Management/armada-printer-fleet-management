@@ -7,11 +7,15 @@ from pathlib import Path
 from core_domain.ddd import Entity
 
 PACKAGE = Path(__file__).resolve().parents[1] / "src" / "core_domain"
-NOT_DOMAINS = {"ddd", "ids", "__pycache__"}
+NOT_DOMAINS = {"ddd", "ids"}
 
 
 def domains() -> list[str]:
-    return sorted(p.name for p in PACKAGE.iterdir() if p.is_dir() and p.name not in NOT_DOMAINS)
+    return sorted(
+        p.name
+        for p in PACKAGE.iterdir()
+        if p.is_dir() and p.name not in NOT_DOMAINS and any(p.glob("*.py"))
+    )
 
 
 def test_every_domain_has_an_entities_module() -> None:
