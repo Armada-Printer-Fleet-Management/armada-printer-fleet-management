@@ -10,6 +10,15 @@
 # is mandatory: a missing tool fails the push rather than being waved through,
 # so nobody pushes code they cannot verify.
 #
+# Only projects this branch changes are checked, with everything that depends on
+# them (scripts/affected_projects.py); `require` skips the rest by itself. Slow or
+# environment-heavy suites (Docker, browser, WASM) use `require_exhaustive`: CI
+# runs them on every pull request, so a push does not.
+#
+#   PRE_PUSH_BASE=<ref>    compare against <ref> instead of origin/main
+#   PRE_PUSH_ALL=1         check every project, changed or not
+#   PRE_PUSH_EXHAUSTIVE=1  also run the CI-only suites
+#
 # Deliberate bypass:  git push --no-verify
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
@@ -23,14 +32,40 @@ source .githooks/pre-push.d/_lib.sh
 
 FAILED=0
 NA=()
+RAN=0
+SKIPPED_UNCHANGED=0
+SKIPPED_CI_ONLY=0
+HOOK_START="$(now)"
+# Stale bytecode left by other branches breaks imports and structure tests; write none.
+export PYTHONDONTWRITEBYTECODE=1
+
+PY="$(find_python || true)"
+if [ -n "$PY" ]; then
+  AFFECTED="$("$PY" scripts/affected_projects.py)" || AFFECTED="ALL"
+fi
 
 echo "pre-push checks:"
+if [ "$AFFECTED" = "ALL" ]; then
+  dim "  checking every project"
+else
+  dim "  checking changed projects: $(printf '%s' "$AFFECTED" | tr '\n' ' ')"
+fi
 
 # ── Protobuf contract (shared across every service, not per-service) ────────
 if [ -f buf.yaml ]; then
-  require "buf lint" buf buf lint
-  # Shared generated Python code; every Python check below imports it.
-  require "python gen" uv uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml
+  if any_affected packages/proto/utils; then
+    require "buf lint" buf buf lint
+  else
+    skip_unchanged "buf lint" packages/proto
+  fi
+  # Shared generated Python code; every Python check below imports it, so it is
+  # regenerated before them whenever any Python project is checked.
+  # `--project=` rather than `--project <dir>`, so require does not scope it to proto utils alone.
+  if any_affected packages/proto/utils apps/server apps/desktop/backend; then
+    require "python gen" uv uv run --project=packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml
+  else
+    skip_unchanged "python gen" "any Python project"
+  fi
   require "proto utils" uv run_in packages/proto/utils uv run pytest -q
   require "proto pyright" uv run_in packages/proto/utils uv run pyright
 else
@@ -48,6 +83,7 @@ done
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 echo ""
+dim "ran $RAN, skipped $SKIPPED_UNCHANGED unchanged, skipped $SKIPPED_CI_ONLY CI-only, in $(elapsed "$HOOK_START")"
 if [ ${#NA[@]} -gt 0 ]; then
   dim "not applicable (no such code in repo yet): ${NA[*]}"
 fi

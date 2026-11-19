@@ -314,6 +314,10 @@ so the hook spends no tokens. When the review is wrong, push once with
 `ARMADA_DDD_OVERRIDE="<reason>" git push` and put the reason in the PR description. Never set the
 override on the developer's behalf.
 
+**The pre-push hook runs only fast checks, only for projects changed since `origin/main` and
+their dependents; add slow or Docker/browser/WASM gates with `require_exhaustive` (CI-only unless
+`PRE_PUSH_EXHAUSTIVE=1`).**
+
 **Every PR gets a diagram.** The PR Lens GitHub App comments one automatically. When it is not
 installed or not working, `/pr-precheck` can draw one locally with the PR Lens CLI, pinned in that
 skill.
@@ -460,6 +464,7 @@ theme, so a hardcoded colour breaks someone else's brand.
 | Sync agent config             | `python scripts/sync_agent_config.py`                                 |
 | Export AI audit log           | `python scripts/export_ai_audit.py`                                   |
 | Push finished work as PRs     | `/pr-precheck` (runs `/pr-ddd`, the pre-push checks and `/pr-split`)  |
+| Every pre-push check, locally | `PRE_PUSH_ALL=1 PRE_PUSH_EXHAUSTIVE=1 bash .githooks/pre-push` (needs Docker running) |
 | DDD verdict for this commit   | `python scripts/ddd_verdict.py check` (also `scope`, `diff`, `show`)  |
 | Repository script tests       | `python -m unittest discover -s scripts/tests` (standard library only) |
 | Fetch the slicer engine        | `python scripts/fetch_slicer_engine.py` (`--check` offline; `--require-attestation` in CI) |
@@ -482,7 +487,7 @@ theme, so a hardcoded colour breaks someone else's brand.
 | Run desktop app (hot reload)   | `python apps/desktop/dev_run.py --dev`                               |
 | Server Python deps             | `uv sync --project apps/server`                                      |
 | Server tests                   | `uv run --directory apps/server pytest` (integration tests need Docker running; they start and stop their own stack) |
-| Server unit tests              | `uv run --directory apps/server pytest tests/unit` (no Docker; the first suite the pre-push hook and CI run) |
+| Server unit tests              | `uv run --directory apps/server pytest tests/unit` (no Docker; the only server suite the pre-push hook runs by default) |
 | Server integration tests       | `uv run --directory apps/server pytest tests/integration` (Docker running) |
 | Server e2e smoke tests         | `uv run --directory apps/server pytest e2e` (set `E2E_*`; see `apps/server/e2e/README.md`) |
 | Run dev stack (Docker, live reload) | `python scripts/compose_run.py dev` (server, web, Postgres, Garage, Keycloak) |

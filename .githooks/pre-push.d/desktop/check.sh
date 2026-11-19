@@ -16,14 +16,20 @@ if [ -f apps/desktop/frontend/package.json ]; then
     dim "    Dependencies are not installed. Run 'pnpm install' in apps/desktop/frontend or /onboarding."
     FAILED=1
   else
-    require "frontend: generate" buf bash -c \
-      'PATH="$(pwd)/apps/desktop/frontend/node_modules/.bin:$PATH" python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules'
+    require "frontend: generate" buf "${PY:-python}" scripts/generate_proto.py buf.gen.desktop_ts.yaml \
+      --node-modules apps/desktop/frontend/node_modules
     # The frontend imports @armada/slicer, whose generated code the slicer check would make later.
-    require "frontend: slicer gen" buf env PY="$(find_python || echo python)" bash -c \
-      'PATH="$(pwd)/packages/slicer/node_modules/.bin:$PATH" "$PY" scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules'
+    # Scoped by the frontend, which is affected whenever the slicer is. `--node-modules=` rather
+    # than `--node-modules <dir>`, so require does not scope it to the slicer alone.
+    if is_affected apps/desktop/frontend; then
+      require "frontend: slicer gen" buf "${PY:-python}" scripts/generate_proto.py buf.gen.slicer_ts.yaml \
+        --node-modules=packages/slicer/node_modules
+    else
+      skip_unchanged "frontend: slicer gen" apps/desktop/frontend
+    fi
     require "frontend: tsc" pnpm pnpm --dir apps/desktop/frontend exec tsc --noEmit
     require "frontend: eslint" pnpm pnpm --dir apps/desktop/frontend exec eslint .
-    require "frontend: vitest" pnpm pnpm --dir apps/desktop/frontend exec vitest run
+    require_exhaustive "frontend: vitest" pnpm pnpm --dir apps/desktop/frontend exec vitest run
   fi
 else
   NA+=("desktop-frontend")

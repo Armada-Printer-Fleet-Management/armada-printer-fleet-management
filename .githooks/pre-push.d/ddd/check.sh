@@ -4,7 +4,7 @@
 # shellcheck disable=SC2034
 if [ -f scripts/ddd_verdict.py ]; then
   PY=$(find_python || true)
-  printf '  %-14s ' "ddd: verdict"
+  printf '  %-26s ' "ddd: verdict"
   if [ -z "$PY" ]; then
     red "MISSING"
     dim "    Python is not installed but this repo requires it."
