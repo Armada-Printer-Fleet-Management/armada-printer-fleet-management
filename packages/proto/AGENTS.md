@@ -7,22 +7,29 @@ front door and never restates these rules.
 ## Domain-driven layout
 
 Packages follow the domains of the database schema diagram, `docs/database-schema.html`. There
-are four kinds:
+are five kinds:
 
 | Kind | Packages | Holds | May import |
 | --- | --- | --- | --- |
 | ID kernel | `id.v1` | One strongly typed ID per entity | nothing |
-| Shared units | `common.v1` | Base units every package reuses (`TimeStatus`, `PageRequest`/`PageResponse`) and application metadata | `google.protobuf.*` |
-| Domain | `auth.v1`, `content_asset.v1`, `print_job.v1`, `fleet.v1`, `queue.v1` | One bounded context's entities, value types and enums | `id.v1`, `common.v1`, `google.protobuf.*` |
+| Shared units | `common.v1` | Base units every package reuses (`TimeStatus`, `PageRequest`/`PageResponse`, `Violation`) | `google.protobuf.*` |
+| Application identity | `organization.v1` | `OrganizationInfo`, the identity every application shares, read from `organization.json` | domains, `common.v1`, `google.protobuf.*` |
+| Domain | `auth.v1`, `content_asset.v1`, `print_job.v1`, `fleet.v1`, `queue.v1`, `legal.v1`, `print_preparation.v1` (with `print_preparation.slicing.v1` and `print_preparation.validation.v1`) | One bounded context's entities, value types and enums | `id.v1`, `common.v1`, `google.protobuf.*`, and its own sub-domains |
 | Server (API layer) | `server.v1` (remote server), `printer_server.v1` (on-premise printer server) | Services, RPCs and their request/response messages | domains, `id.v1`, `common.v1`, `google.protobuf.*` |
 
-Never put domain types in `common.v1`. It holds only units with no domain meaning.
+Never put domain types in `common.v1`. It holds only units with no domain meaning. Something the
+whole application needs from a domain, such as its legal documents, goes in `organization.v1`,
+which may import domains; `common.v1` importing one would make a package import cycle.
 
 - **Domains couple by ID only.** A domain package never imports another domain package. A job
   refers to its file as `id.v1.FileId file_id`, never by embedding `content_asset.v1.File`.
 - **The folder is the package, and the file is the entity.** A domain's entity lives in
   `<domain>/v1/<entity>.proto` (`fleet/v1/printer.proto` holds `fleet.v1.Printer`); a type that
   only serves one entity, such as `content_asset/v1/file_upload.proto`, sits beside it.
+- **A large domain splits into sub-domains** at `<domain>/<sub>/v1/`, package `<domain>.<sub>.v1`.
+  Types shared by its sub-domains stay in `<domain>/v1/`.
+- **A domain with no tables**, such as `print_preparation`, is a domain here and in code, but is
+  never drawn on the schema diagram: that page shows persisted domains only.
 - **Composition happens in server packages.** When a response needs data from several domains,
   the server message carries each one side by side, e.g. `GetPrintJobResponse { print_job, file }`.
 - **A service lives with the server that serves it**, not with a domain. Name services after the
@@ -76,6 +83,11 @@ agent, rather than in review.
 
 `common.v1` holds base units, such as `TimeStatus` and `PageRequest`/`PageResponse`. Check it
 before building a new proto, and reuse or extend a base unit rather than adding a parallel shape.
+
+**Violations.** Every problem reported to a person wraps `common.v1.Violation` (severity and a
+plain-language message) in its domain's own kind, which adds a typed `<Kind>ViolationCode` enum and
+any domain fields, such as `print_preparation.validation.v1.PrintViolation`'s location. A new
+problem is a new code value. A domain never embeds another domain's violation kind.
 
 ## Patterns
 

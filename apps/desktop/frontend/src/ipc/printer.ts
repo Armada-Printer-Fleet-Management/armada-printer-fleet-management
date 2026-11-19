@@ -6,6 +6,7 @@ import {
   toJson,
 } from '@bufbuild/protobuf';
 import {
+  ListPrinterTypesResponseSchema,
   ListPrintersRequestSchema,
   ListPrintersResponseSchema,
   TransitionPrinterRequestSchema,
@@ -17,6 +18,7 @@ declare global {
   interface PywebviewIpc {
     printer: {
       list_printers(request: JsonValue): Promise<JsonValue>;
+      list_printer_types(): Promise<JsonValue>;
       transition_printer(request: JsonValue): Promise<JsonValue>;
     };
   }
@@ -33,6 +35,14 @@ export async function listPrinters(
     ),
   );
   return fromJson(ListPrintersResponseSchema, raw);
+}
+
+export async function listPrinterTypes() {
+  const ipc = await waitForPywebviewIpc();
+  return fromJson(
+    ListPrinterTypesResponseSchema,
+    await ipc.printer.list_printer_types(),
+  );
 }
 
 export async function transitionPrinter(

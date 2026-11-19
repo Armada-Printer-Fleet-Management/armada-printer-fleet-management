@@ -369,6 +369,15 @@
         "additionalProperties": false,
         "description": "A physical printer.",
         "properties": {
+          "capabilities": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/fleet.v1.PrinterCapabilities"
+              }
+            ],
+            "description": "What it can print. Kept by the application server, so it is known even while the printer\n server cannot reach the printer.",
+            "title": "capabilities"
+          },
           "id": {
             "allOf": [
               {
@@ -427,6 +436,44 @@
         "title": "Printer",
         "type": "object"
       },
+      "fleet.v1.PrinterCapabilities": {
+        "additionalProperties": false,
+        "description": "What a printer can physically print: the facts a slicer needs to slice for it.",
+        "properties": {
+          "buildVolumeXMm": {
+            "description": "Printable width along the X axis, in millimetres.",
+            "format": "double",
+            "title": "build_volume_x_mm",
+            "type": "number"
+          },
+          "buildVolumeYMm": {
+            "description": "Printable depth along the Y axis, in millimetres.",
+            "format": "double",
+            "title": "build_volume_y_mm",
+            "type": "number"
+          },
+          "buildVolumeZMm": {
+            "description": "Printable height along the Z axis, in millimetres.",
+            "format": "double",
+            "title": "build_volume_z_mm",
+            "type": "number"
+          },
+          "filamentDiameterMm": {
+            "description": "Diameter of the filament the printer takes, in millimetres.",
+            "format": "double",
+            "title": "filament_diameter_mm",
+            "type": "number"
+          },
+          "nozzleDiameterMm": {
+            "description": "Diameter of the fitted nozzle, in millimetres.",
+            "format": "double",
+            "title": "nozzle_diameter_mm",
+            "type": "number"
+          }
+        },
+        "title": "PrinterCapabilities",
+        "type": "object"
+      },
       "fleet.v1.PrinterStatus": {
         "description": "A printer's normalized state. Adapters map each vendor's states onto these.",
         "enum": [
@@ -440,6 +487,28 @@
         "title": "PrinterStatus",
         "type": "string"
       },
+      "fleet.v1.PrinterType": {
+        "additionalProperties": false,
+        "description": "A kind of printer in the fleet: what a student slices for. It names no printer and carries no\n state, so it reveals neither how many printers there are nor whether any is free.",
+        "properties": {
+          "capabilities": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/fleet.v1.PrinterCapabilities"
+              }
+            ],
+            "description": "What printers of this type can print.",
+            "title": "capabilities"
+          },
+          "model": {
+            "description": "The printer model, such as a manufacturer's product name.",
+            "title": "model",
+            "type": "string"
+          }
+        },
+        "title": "PrinterType",
+        "type": "object"
+      },
       "google.protobuf.Timestamp": {
         "description": "A point in time in RFC 3339 format, with up to nanosecond precision. Output uses UTC (`Z`); input may use an offset from UTC.",
         "examples": [
@@ -448,6 +517,19 @@
         ],
         "format": "date-time",
         "type": "string"
+      },
+      "id.v1.AgreementId": {
+        "additionalProperties": false,
+        "description": "Identifies a legal.v1.Agreement.",
+        "properties": {
+          "value": {
+            "description": "UUID.",
+            "title": "value",
+            "type": "string"
+          }
+        },
+        "title": "AgreementId",
+        "type": "object"
       },
       "id.v1.FileId": {
         "additionalProperties": false,
@@ -501,6 +583,19 @@
         "title": "PrinterQueueId",
         "type": "object"
       },
+      "id.v1.SliceProfileId": {
+        "additionalProperties": false,
+        "description": "Identifies a slice profile: the settings a print may be sliced with.",
+        "properties": {
+          "value": {
+            "description": "UUID.",
+            "title": "value",
+            "type": "string"
+          }
+        },
+        "title": "SliceProfileId",
+        "type": "object"
+      },
       "id.v1.UserId": {
         "additionalProperties": false,
         "description": "Identifies a user.",
@@ -513,6 +608,108 @@
         },
         "title": "UserId",
         "type": "object"
+      },
+      "legal.v1.Agreement": {
+        "additionalProperties": false,
+        "description": "A user's acceptance of one version of a legal document.",
+        "properties": {
+          "effectiveDate": {
+            "description": "The version accepted: the document's effective date, as YYYY-MM-DD.",
+            "title": "effective_date",
+            "type": "string"
+          },
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.AgreementId"
+              }
+            ],
+            "description": "This agreement.",
+            "title": "id"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/legal.v1.LegalDocumentKind"
+              }
+            ],
+            "description": "The document accepted.",
+            "title": "kind"
+          },
+          "timeStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.TimeStatus"
+              }
+            ],
+            "description": "created_at is when the user accepted.",
+            "title": "time_status"
+          },
+          "userId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.UserId"
+              }
+            ],
+            "description": "The user who accepted.",
+            "title": "user_id"
+          }
+        },
+        "title": "Agreement",
+        "type": "object"
+      },
+      "legal.v1.LegalDocument": {
+        "additionalProperties": false,
+        "description": "One version of a legal document, as organization.json lists it.",
+        "properties": {
+          "effectiveDate": {
+            "description": "The day this version took effect, as YYYY-MM-DD. A later date asks every user to accept again.",
+            "title": "effective_date",
+            "type": "string"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/legal.v1.LegalDocumentKind"
+              }
+            ],
+            "description": "What the document is.",
+            "title": "kind"
+          },
+          "path": {
+            "description": "Where the document's text is, relative to the repository root.",
+            "title": "path",
+            "type": "string"
+          },
+          "sha256": {
+            "description": "Lower-case hex SHA-256 of the text at path. Builds refuse to run when it does not match.",
+            "title": "sha256",
+            "type": "string"
+          },
+          "spdx": {
+            "description": "SPDX licence identifier, such as AGPL-3.0-only, when the document is a licence; else empty.",
+            "title": "spdx",
+            "type": "string"
+          },
+          "title": {
+            "description": "Display title.",
+            "title": "title",
+            "type": "string"
+          }
+        },
+        "title": "LegalDocument",
+        "type": "object"
+      },
+      "legal.v1.LegalDocumentKind": {
+        "description": "What a legal document is. Users accept each kind separately.",
+        "enum": [
+          "LEGAL_DOCUMENT_KIND_UNSPECIFIED",
+          "LEGAL_DOCUMENT_KIND_LICENSE",
+          "LEGAL_DOCUMENT_KIND_TERMS_OF_SERVICE",
+          "LEGAL_DOCUMENT_KIND_PRIVACY_POLICY"
+        ],
+        "title": "LegalDocumentKind",
+        "type": "string"
       },
       "print_job.v1.PrintJob": {
         "additionalProperties": false,
@@ -617,6 +814,110 @@
         "title": "PrintJobStatus",
         "type": "string"
       },
+      "print_preparation.slicing.v1.SettingRange": {
+        "additionalProperties": false,
+        "description": "The values one adjustable setting may take. With no limits and no choices, any value is allowed.",
+        "properties": {
+          "choices": {
+            "description": "The only values allowed, such as true and false, or an enumeration's names. Empty allows any.",
+            "items": {
+              "type": "string"
+            },
+            "title": "choices",
+            "type": "array"
+          },
+          "maximum": {
+            "description": "The highest number allowed, when set.",
+            "format": "double",
+            "title": "maximum",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "minimum": {
+            "description": "The lowest number allowed, when set.",
+            "format": "double",
+            "title": "minimum",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "title": "SettingRange",
+        "type": "object"
+      },
+      "print_preparation.slicing.v1.SliceProfile": {
+        "additionalProperties": false,
+        "description": "What a print may be sliced with: settings the profile always sets, and the only settings a\n student may change.",
+        "properties": {
+          "adjustable": {
+            "additionalProperties": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/print_preparation.slicing.v1.SettingRange"
+                }
+              ],
+              "title": "value"
+            },
+            "description": "The engine settings a student may change, each with the values it may take.",
+            "title": "adjustable",
+            "type": "object"
+          },
+          "fixed": {
+            "additionalProperties": {
+              "title": "value",
+              "type": "string"
+            },
+            "description": "Engine settings the profile always sets, which no override can change.",
+            "title": "fixed",
+            "type": "object"
+          },
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.SliceProfileId"
+              }
+            ],
+            "description": "This profile.",
+            "title": "id"
+          },
+          "name": {
+            "description": "Display name.",
+            "title": "name",
+            "type": "string"
+          }
+        },
+        "title": "SliceProfile",
+        "type": "object"
+      },
+      "print_preparation.slicing.v1.SliceSettings": {
+        "additionalProperties": false,
+        "description": "The engine settings for one slice, as the server builds them from a printer type and its slice\n profile. Keys are the engine's own setting names; values are as the engine reads them.",
+        "properties": {
+          "extruderSettings": {
+            "additionalProperties": {
+              "title": "value",
+              "type": "string"
+            },
+            "description": "Settings for the extruder, such as its nozzle size and the line widths that follow it.",
+            "title": "extruder_settings",
+            "type": "object"
+          },
+          "machineSettings": {
+            "additionalProperties": {
+              "title": "value",
+              "type": "string"
+            },
+            "description": "Settings for the whole machine, such as its build volume and the profile's fixed values.",
+            "title": "machine_settings",
+            "type": "object"
+          }
+        },
+        "title": "SliceSettings",
+        "type": "object"
+      },
       "queue.v1.PrinterQueue": {
         "additionalProperties": false,
         "description": "A line of print jobs waiting for a printer.",
@@ -651,6 +952,54 @@
           }
         },
         "title": "PrinterQueue",
+        "type": "object"
+      },
+      "server.v1.AcceptAgreementRequest": {
+        "additionalProperties": false,
+        "description": "Accepts one document version.",
+        "properties": {
+          "effectiveDate": {
+            "description": "The version shown to the user. Refused when it is no longer the current one.",
+            "title": "effective_date",
+            "type": "string"
+          },
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/legal.v1.LegalDocumentKind"
+              }
+            ],
+            "description": "The document accepted.",
+            "title": "kind"
+          },
+          "userId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.UserId"
+              }
+            ],
+            "description": "The user accepting. TEMP: the web sends its signed-in user's identity provider ID.",
+            "title": "user_id"
+          }
+        },
+        "title": "AcceptAgreementRequest",
+        "type": "object"
+      },
+      "server.v1.AcceptAgreementResponse": {
+        "additionalProperties": false,
+        "description": "The recorded acceptance.",
+        "properties": {
+          "agreement": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/legal.v1.Agreement"
+              }
+            ],
+            "description": "The agreement. Accepting the same version again returns the first one.",
+            "title": "agreement"
+          }
+        },
+        "title": "AcceptAgreementResponse",
         "type": "object"
       },
       "server.v1.CreatePrintJobRequest": {
@@ -724,6 +1073,40 @@
           }
         },
         "title": "CreatePrintJobUploadResponse",
+        "type": "object"
+      },
+      "server.v1.GetAgreementRequest": {
+        "additionalProperties": false,
+        "description": "Gets one agreement.",
+        "properties": {
+          "agreementId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.AgreementId"
+              }
+            ],
+            "description": "The agreement to get.",
+            "title": "agreement_id"
+          }
+        },
+        "title": "GetAgreementRequest",
+        "type": "object"
+      },
+      "server.v1.GetAgreementResponse": {
+        "additionalProperties": false,
+        "description": "One agreement.",
+        "properties": {
+          "agreement": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/legal.v1.Agreement"
+              }
+            ],
+            "description": "The agreement.",
+            "title": "agreement"
+          }
+        },
+        "title": "GetAgreementResponse",
         "type": "object"
       },
       "server.v1.GetFileRequest": {
@@ -871,6 +1254,83 @@
         "title": "GetPrinterResponse",
         "type": "object"
       },
+      "server.v1.GetSliceProfileRequest": {
+        "additionalProperties": false,
+        "description": "Asks for one slice profile.",
+        "properties": {
+          "sliceProfileId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.SliceProfileId"
+              }
+            ],
+            "description": "The profile.",
+            "title": "slice_profile_id"
+          }
+        },
+        "title": "GetSliceProfileRequest",
+        "type": "object"
+      },
+      "server.v1.GetSliceProfileResponse": {
+        "additionalProperties": false,
+        "description": "The slice profile asked for.",
+        "properties": {
+          "sliceProfile": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/print_preparation.slicing.v1.SliceProfile"
+              }
+            ],
+            "description": "The profile.",
+            "title": "slice_profile"
+          }
+        },
+        "title": "GetSliceProfileResponse",
+        "type": "object"
+      },
+      "server.v1.GetSliceSettingsRequest": {
+        "additionalProperties": false,
+        "description": "The printer type to slice for, and the settings the student wants to change.",
+        "properties": {
+          "overrides": {
+            "additionalProperties": {
+              "title": "value",
+              "type": "string"
+            },
+            "description": "Engine setting names and the values asked for. Only the profile's adjustable settings may\n appear, within their ranges.",
+            "title": "overrides",
+            "type": "object"
+          },
+          "printerType": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/fleet.v1.PrinterType"
+              }
+            ],
+            "description": "One of the types ListPrinterTypes returns. Its capabilities are checked against the fleet.",
+            "title": "printer_type"
+          }
+        },
+        "title": "GetSliceSettingsRequest",
+        "type": "object"
+      },
+      "server.v1.GetSliceSettingsResponse": {
+        "additionalProperties": false,
+        "description": "The settings to slice with.",
+        "properties": {
+          "sliceSettings": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/print_preparation.slicing.v1.SliceSettings"
+              }
+            ],
+            "description": "Machine and extruder settings for the engine.",
+            "title": "slice_settings"
+          }
+        },
+        "title": "GetSliceSettingsResponse",
+        "type": "object"
+      },
       "server.v1.HealthCheckRequest": {
         "additionalProperties": false,
         "description": "Asks how healthy the server is.",
@@ -966,6 +1426,61 @@
         "title": "ListFilesResponse",
         "type": "object"
       },
+      "server.v1.ListLegalDocumentsRequest": {
+        "additionalProperties": false,
+        "description": "Asks for the current legal documents.",
+        "title": "ListLegalDocumentsRequest",
+        "type": "object"
+      },
+      "server.v1.ListLegalDocumentsResponse": {
+        "additionalProperties": false,
+        "description": "The current legal documents.",
+        "properties": {
+          "legalDocuments": {
+            "description": "One per kind, at its current version.",
+            "items": {
+              "$ref": "#/components/schemas/legal.v1.LegalDocument"
+            },
+            "title": "legal_documents",
+            "type": "array"
+          }
+        },
+        "title": "ListLegalDocumentsResponse",
+        "type": "object"
+      },
+      "server.v1.ListOutstandingLegalDocumentsRequest": {
+        "additionalProperties": false,
+        "description": "Asks which current documents a user still has to accept.",
+        "properties": {
+          "userId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.UserId"
+              }
+            ],
+            "description": "The user. TEMP: the web sends its signed-in user's identity provider ID.",
+            "title": "user_id"
+          }
+        },
+        "title": "ListOutstandingLegalDocumentsRequest",
+        "type": "object"
+      },
+      "server.v1.ListOutstandingLegalDocumentsResponse": {
+        "additionalProperties": false,
+        "description": "The documents a user still has to accept.",
+        "properties": {
+          "legalDocuments": {
+            "description": "Empty when the user has accepted every current document that asks for acceptance.",
+            "items": {
+              "$ref": "#/components/schemas/legal.v1.LegalDocument"
+            },
+            "title": "legal_documents",
+            "type": "array"
+          }
+        },
+        "title": "ListOutstandingLegalDocumentsResponse",
+        "type": "object"
+      },
       "server.v1.ListPrintJobsRequest": {
         "additionalProperties": false,
         "description": "Lists print jobs.",
@@ -1056,6 +1571,28 @@
           }
         },
         "title": "ListPrinterQueuesResponse",
+        "type": "object"
+      },
+      "server.v1.ListPrinterTypesRequest": {
+        "additionalProperties": false,
+        "description": "Lists the printer types.",
+        "title": "ListPrinterTypesRequest",
+        "type": "object"
+      },
+      "server.v1.ListPrinterTypesResponse": {
+        "additionalProperties": false,
+        "description": "Every printer type, sorted by model.",
+        "properties": {
+          "printerTypes": {
+            "description": "The types.",
+            "items": {
+              "$ref": "#/components/schemas/fleet.v1.PrinterType"
+            },
+            "title": "printer_types",
+            "type": "array"
+          }
+        },
+        "title": "ListPrinterTypesResponse",
         "type": "object"
       },
       "server.v1.ListPrintersRequest": {
@@ -1693,6 +2230,254 @@
         "summary": "Health",
         "tags": [
           "General"
+        ]
+      }
+    },
+    "/api/server.v1.AgreementService/AcceptAgreement": {
+      "post": {
+        "description": "Records that a user accepted the current version of a document.",
+        "operationId": "server.v1.AgreementService.AcceptAgreement",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.AcceptAgreementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.AcceptAgreementResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "AcceptAgreement",
+        "tags": [
+          "server.v1.AgreementService"
+        ]
+      }
+    },
+    "/api/server.v1.AgreementService/GetAgreement": {
+      "post": {
+        "description": "Gets one agreement.",
+        "operationId": "server.v1.AgreementService.GetAgreement",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.GetAgreementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.GetAgreementResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "GetAgreement",
+        "tags": [
+          "server.v1.AgreementService"
+        ]
+      }
+    },
+    "/api/server.v1.AgreementService/ListLegalDocuments": {
+      "post": {
+        "description": "The current version of every legal document.",
+        "operationId": "server.v1.AgreementService.ListLegalDocuments",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.ListLegalDocumentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.ListLegalDocumentsResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "ListLegalDocuments",
+        "tags": [
+          "server.v1.AgreementService"
+        ]
+      }
+    },
+    "/api/server.v1.AgreementService/ListOutstandingLegalDocuments": {
+      "post": {
+        "description": "The current documents a user has not accepted yet.",
+        "operationId": "server.v1.AgreementService.ListOutstandingLegalDocuments",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.ListOutstandingLegalDocumentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.ListOutstandingLegalDocumentsResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "ListOutstandingLegalDocuments",
+        "tags": [
+          "server.v1.AgreementService"
         ]
       }
     },
@@ -2440,6 +3225,68 @@
         ]
       }
     },
+    "/api/server.v1.PrinterService/ListPrinterTypes": {
+      "post": {
+        "description": "Lists the kinds of printer in the fleet, for choosing what to slice for. Open to students,\n because it names no printer and shows no status.",
+        "operationId": "server.v1.PrinterService.ListPrinterTypes",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.ListPrinterTypesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.ListPrinterTypesResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "ListPrinterTypes",
+        "tags": [
+          "server.v1.PrinterService"
+        ]
+      }
+    },
     "/api/server.v1.PrinterService/ListPrinters": {
       "post": {
         "description": "Lists printers, one page at a time.",
@@ -2563,9 +3410,137 @@
           "server.v1.PrinterService"
         ]
       }
+    },
+    "/api/server.v1.SlicerConfigurationService/GetSliceProfile": {
+      "post": {
+        "description": "Returns one slice profile.",
+        "operationId": "server.v1.SlicerConfigurationService.GetSliceProfile",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.GetSliceProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.GetSliceProfileResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "GetSliceProfile",
+        "tags": [
+          "server.v1.SlicerConfigurationService"
+        ]
+      }
+    },
+    "/api/server.v1.SlicerConfigurationService/GetSliceSettings": {
+      "post": {
+        "description": "Builds the engine settings for slicing on a printer type. Refuses a type that is not in the\n fleet, and an override the slice profile does not allow.",
+        "operationId": "server.v1.SlicerConfigurationService.GetSliceSettings",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.GetSliceSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.GetSliceSettingsResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "GetSliceSettings",
+        "tags": [
+          "server.v1.SlicerConfigurationService"
+        ]
+      }
     }
   },
   "tags": [
+    {
+      "description": "Users' acceptance of the legal documents, served by the remote server.\n\n TEMP: each request names its user until the server maps a caller's access token to a user.\n Then the user is the authenticated caller and the user_id fields are removed.",
+      "name": "server.v1.AgreementService"
+    },
     {
       "description": "File records, served by the remote server. The bytes are never sent through this service.",
       "name": "server.v1.FileService"
@@ -2585,6 +3560,10 @@
     {
       "description": "The printers the remote server knows of, with their latest reported state.",
       "name": "server.v1.PrinterService"
+    },
+    {
+      "description": "How the slicer is configured for a print, decided by the server so its slice profiles are enforced\n in one place.",
+      "name": "server.v1.SlicerConfigurationService"
     }
   ]
 }

@@ -2,8 +2,9 @@ import { read } from '@armada/organization-info';
 import { AboutBox } from '@armada/ui-kit';
 import { useEffect, useState } from 'react';
 
-import { OrganizationInfoSchema } from '../gen/common/v1/organization_info_pb';
+import { OrganizationInfoSchema } from '../gen/organization/v1/organization_info_pb';
 import { version } from '../ipc/application-info';
+import { aboutLegalDocuments } from '../legal/documents';
 import { routePaths } from '../routes';
 
 type VersionState =
@@ -38,6 +39,7 @@ export function AboutPage() {
       <h1 className="text-3xl font-bold">{routePaths.about.label}</h1>
       <AboutBox
         organization={read(OrganizationInfoSchema)}
+        legalDocuments={aboutLegalDocuments}
         version={state.status === 'ready' ? state.version : undefined}
       />
       {state.status === 'loading' && <p>Loading backend version…</p>}

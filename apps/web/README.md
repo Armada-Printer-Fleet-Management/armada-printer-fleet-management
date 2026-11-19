@@ -15,7 +15,9 @@ are separate applications and share code only through `packages/`.
 
 **Layout:** `src/routes.ts` lists the routes, `src/WebRouter.tsx` maps them to `src/pages/`,
 and `src/components/AppLayout.tsx` wraps them in the sidebar. Add a page in those three places.
-The `/temp` dev tools route exists only under `vite dev`. The walkthrough is `docs/web.html`.
+The `/temp` dev tools route exists only under `vite dev`. Sign-in lives in `src/lib/auth.ts`,
+`src/lib/auth-context.tsx` and the `/signin-callback` route; API calls go through the one client
+in `src/lib/api.ts`. The walkthrough is `docs/web.html`.
 
 ## Run in Docker
 

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package fleet.v1;
+
+// What a printer can physically print: the facts a slicer needs to slice for it.
+message PrinterCapabilities {
+  // Printable width along the X axis, in millimetres.
+  double build_volume_x_mm = 1;
+  // Printable depth along the Y axis, in millimetres.
+  double build_volume_y_mm = 2;
+  // Printable height along the Z axis, in millimetres.
+  double build_volume_z_mm = 3;
+  // Diameter of the fitted nozzle, in millimetres.
+  double nozzle_diameter_mm = 4;
+  // Diameter of the filament the printer takes, in millimetres.
+  double filament_diameter_mm = 5;
+}

@@ -2,11 +2,9 @@ import sqlalchemy as sa
 from core_domain.ddd import EntityNotFound, Page
 from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserId
 from core_domain.print_job import PrintJob
-from sqlalchemy.dialects.postgresql import insert
 
 from api.domains.print_job.repository import PrintJobRepository
 from api.infrastructure.enum_ids import PRINT_JOB_STATUS_IDS, by_stored_id
-from api.infrastructure.page import decode_token, encode_token, sort_key
 from api.infrastructure.sql_columns import optional_typed_id, optional_uuid
 from api.infrastructure.sql_repository import SqlRepository
 
@@ -71,25 +69,7 @@ class SqlPrintJobRepository(SqlRepository, PrintJobRepository):
         return _print_job(row)
 
     async def save(self, entity: PrintJob) -> None:
-        row = _row(entity)
-        statement = insert(_print_jobs).values(row)
-        statement = statement.on_conflict_do_update(
-            index_elements=[_print_jobs.c.id],
-            set_={column: statement.excluded[column] for column in row if column != "id"},
-        )
-        async with self._transaction() as connection:
-            await connection.execute(statement)
+        await self._upsert(_print_jobs, _row(entity))
 
     async def page(self, page_size: int, page_token: str) -> Page[PrintJob]:
-        key = _print_jobs.c.created_at, _print_jobs.c.id
-        query = sa.select(_print_jobs).order_by(*(column.desc() for column in key))
-        if page_token:
-            query = query.where(sa.tuple_(*key) < decode_token(page_token))
-        # One extra row says whether another page follows, without a COUNT.
-        query = query.limit(page_size + 1)
-        async with self._transaction() as connection:
-            result = await connection.execute(query)
-            rows = result.mappings().all()
-        items = [_print_job(row) for row in rows[:page_size]]
-        more = len(rows) > page_size
-        return Page(items, encode_token(sort_key(items[-1])) if more else "")
+        return await self._newest_first_page(_print_jobs, _print_job, page_size, page_token)

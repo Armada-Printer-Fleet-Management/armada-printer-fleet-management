@@ -1,7 +1,7 @@
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from core_domain.ddd import EntityNotFound, RuleViolation, Unavailable
+from core_domain.ddd import AlreadyExists, EntityNotFound, RuleViolation, Unavailable
 from core_domain.ids import PrintJobId
 from proto_utils.gen.id.v1.print_job_id_pb2 import PrintJobId as PrintJobIdMessage
 
@@ -16,6 +16,14 @@ def raised_code(error: Exception) -> Code:
 
 def test_a_missing_entity_is_not_found() -> None:
     assert raised_code(EntityNotFound(PrintJobId.new())) is Code.NOT_FOUND
+
+
+def test_a_duplicate_already_exists_with_its_message() -> None:
+    with pytest.raises(ConnectError) as raised, domain_errors_as_connect():
+        raise AlreadyExists("user", "email")
+
+    assert raised.value.code is Code.ALREADY_EXISTS
+    assert raised.value.message == "A user with this email already exists"
 
 
 def test_a_refused_rule_is_a_failed_precondition() -> None:

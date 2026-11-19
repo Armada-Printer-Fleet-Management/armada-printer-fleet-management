@@ -30,6 +30,7 @@ Report the version of each, and stop with installation guidance if one is missin
 | Tool | Check |
 |---|---|
 | Git | `git --version` |
+| Git LFS | `git lfs version` (bundled with Git for Windows; otherwise apt `git-lfs`, brew `git-lfs`) |
 | Node | `node --version` (22.22 or newer) |
 | Python | `python --version` (3.13; newer versions are not supported until every dependency ships wheels for them) |
 | Docker | `docker --version` |
@@ -116,6 +117,17 @@ git config core.hooksPath .githooks
 This is per-clone and is not inherited, so a fresh clone always needs it. Verify with
 `git config core.hooksPath`, then confirm the hooks are executable.
 
+Then set up Git LFS for this clone and fetch its files (the sample prints in `packages/sample-prints/`):
+
+```
+git lfs install --local --skip-repo
+git lfs pull
+```
+
+`--skip-repo` sets up the LFS filters without trying to install LFS's own hooks, which
+`core.hooksPath` replaces; `.githooks/pre-push` uploads LFS files itself. Without `git lfs pull` the
+sample prints are small pointer files, and the checks that read them stop with that command.
+
 The current expected layout: `.githooks/pre-push` is a thin dispatcher; shared helpers live in
 `.githooks/pre-push.d/_lib.sh`, and each service's own checks live in
 `.githooks/pre-push.d/<service>/check.sh`. Check the clone actually matches this -- confirm
@@ -143,6 +155,7 @@ Each template covers one language and is invoked through the shared script rathe
 | `buf.gen.desktop_ts.yaml` exists and `apps/desktop/frontend/node_modules` exists | `python scripts/generate_proto.py buf.gen.desktop_ts.yaml --node-modules apps/desktop/frontend/node_modules` |
 | `buf.gen.server.yaml` exists | `uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml` |
 | `buf.gen.web_ts.yaml` exists and `apps/web/node_modules` exists | `python scripts/generate_proto.py buf.gen.web_ts.yaml --node-modules apps/web/node_modules` |
+| `buf.gen.slicer_ts.yaml` exists and `packages/slicer/node_modules` exists | `python scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules` (both frontends import `@armada/slicer`, so they type-check only after it) |
 
 (Step 4 installs dependencies before this step generates code, so the local plugins are already
 present: the frontends' `protoc-gen-es` for the TypeScript rows. The Python row runs through
@@ -154,6 +167,18 @@ and the desktop backend both import; the server row writes only its API document
 This produces the Python code and TypeScript clients from `packages/proto`. The output
 is gitignored and must exist before anything type-checks. Every template sets `clean: true`, so each
 run deletes that template's output folders before regenerating them; re-running a row is always safe.
+
+## 5a. Fetch the slicer engine
+
+If `packages/slicer-engine/engine.pin.json` exists, run:
+
+```
+python scripts/fetch_slicer_engine.py
+```
+
+It downloads the pinned CuraEngine WebAssembly release into `packages/slicer-engine/gen/` (gitignored),
+checking every file's SHA-256 and, because `gh` is installed and signed in, its build attestation. Both
+frontends fail to build and type-check without it. Re-running it is always safe.
 
 ## 5b. Check TypeScript style
 

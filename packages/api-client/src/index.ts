@@ -1,6 +1,13 @@
 export { createApiClient } from './client';
-export type { ApiClientOptions } from './client';
-export { PrintJobUploadError } from './errors';
+export type { ApiClientOptions, AccessToken } from './client';
+export { PrintJobUploadError, requestFailure } from './errors';
+export type { RequestFailure } from './errors';
+export { createAgreementApi } from './agreement';
 export { createPrintJobApi } from './print-job';
+export { createPrinterApi } from './printer';
+export { createSlicerConfigurationApi } from './slicer-configuration';
+export type { SliceSettings } from './gen/print_preparation/slicing/v1/slice_settings_pb';
+export type { PrinterType } from './gen/fleet/v1/printer_type_pb';
+export type { PrinterCapabilities } from './gen/fleet/v1/printer_capabilities_pb';
 export { PrintJobStatus } from './gen/print_job/v1/print_job_pb';
 export type { PrintJob } from './gen/print_job/v1/print_job_pb';

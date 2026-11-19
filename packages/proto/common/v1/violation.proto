@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package common.v1;
+
+// How serious a violation is.
+enum ViolationSeverity {
+  // Not set. Never valid; treat as an error.
+  VIOLATION_SEVERITY_UNSPECIFIED = 0;
+  // Worth knowing; nothing has to change.
+  VIOLATION_SEVERITY_INFO = 1;
+  // Likely to cause a problem; should be looked at.
+  VIOLATION_SEVERITY_WARNING = 2;
+  // Must be fixed before going further.
+  VIOLATION_SEVERITY_ERROR = 3;
+}
+
+// What every violation has, so any client can show any of them the same way. Each domain wraps it
+// in its own kind of violation, which adds a typed code saying exactly which problem it is.
+message Violation {
+  // How serious it is.
+  ViolationSeverity severity = 1;
+  // What is wrong and what to do about it, in plain language for the person who has to act.
+  string message = 2;
+}

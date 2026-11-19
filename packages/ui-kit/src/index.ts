@@ -6,7 +6,31 @@ export {
   CardHeader,
   CardTitle,
 } from './components/card';
-export { AboutBox } from './components/about-box';
+export { AboutBox, type AboutLegalDocument } from './components/about-box';
+export {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from './components/collapsible';
+export {
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  type DialogProps,
+} from './components/dialog';
+export {
+  LegalAgreementDialog,
+  type LegalAgreementDialogProps,
+  type LegalAgreementDocument,
+} from './components/legal-agreement-dialog';
+export {
+  LegalAgreementGate,
+  type LegalAgreementGateProps,
+  type LegalDocumentView,
+} from './components/legal-agreement-gate';
 export { Tooltip, type TooltipProps } from './components/tooltip';
 export { ActivityIcon } from './icons/activity-icon';
 export { BookOpenIcon } from './icons/book-open-icon';
@@ -17,6 +41,7 @@ export { DevToolsIcon } from './icons/dev-tools-icon';
 export { FleetIcon } from './icons/fleet-icon';
 export { HelpCircleIcon } from './icons/help-circle-icon';
 export { HomeIcon } from './icons/home-icon';
+export { LogInIcon } from './icons/log-in-icon';
 export { LogOutIcon } from './icons/log-out-icon';
 export { PrinterIcon } from './icons/printer-icon';
 export { QueuesIcon } from './icons/queues-icon';
@@ -25,6 +50,15 @@ export { StatisticsIcon } from './icons/statistics-icon';
 export { UserIcon } from './icons/user-icon';
 export { UsersIcon } from './icons/users-icon';
 export { cn } from './lib/utils';
+export {
+  requestFailureMessage,
+  type RequestFailure,
+} from './lib/request-failure';
+export {
+  createFeatureGate,
+  type FeatureGateProps,
+  type FeatureProviderProps,
+} from './lib/feature-gate';
 export { TempRoutePage, type TempRoutePageProps } from './temp/TempRoutePage';
 export {
   TempVerticalSlicePage,

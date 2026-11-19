@@ -23,6 +23,11 @@ export const routePaths = {
   },
   help: { path: '/help', label: 'Help', nav: 'main', icon: HelpCircleIcon },
   temp: { path: '/temp', label: 'Dev tools', nav: 'none' },
+  signInCallback: {
+    path: '/signin-callback',
+    label: 'Signing in',
+    nav: 'none',
+  },
 } as const;
 
 export const navRoutes = Object.values(routePaths).filter(

@@ -42,6 +42,11 @@ root workspace links `apps/web`, `apps/desktop/frontend`, and shared packages su
 
 ---
 
+## License
+
+Licensed under the [GNU Affero General Public License v3.0](LICENSE). Every user accepts it
+before using the software.
+
 ## AI Use Statement
 
 This project uses AI coding assistants, and does so under a written policy:

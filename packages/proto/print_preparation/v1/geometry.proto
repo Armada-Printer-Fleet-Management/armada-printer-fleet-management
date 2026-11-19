@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package print_preparation.v1;
+
+// A point in printer coordinates, in millimetres, with the bed's front-left corner at the origin.
+message Vector3Mm {
+  // Left to right across the bed.
+  double x = 1;
+  // Front to back across the bed.
+  double y = 2;
+  // Up from the bed.
+  double z = 3;
+}
+
+// The box a print, or part of one, occupies, in printer coordinates.
+message BoundingBoxMm {
+  // The corner nearest the origin.
+  Vector3Mm min = 1;
+  // The corner furthest from the origin.
+  Vector3Mm max = 2;
+}

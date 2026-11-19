@@ -1,6 +1,7 @@
 # The development image, run by infra/dev/compose.yaml with live reload; deploy.Dockerfile is
-# the one that ships. Build from the repo root, which the shared packages need. The generated API
-# client code is copied from the host rather than generated here, so run web codegen first.
+# the one that ships. Build from the repo root, which the shared packages need. The generated code,
+# the fetched slicer engine and the sample prints are copied from the host rather than made here,
+# so run the web and slicer codegen, scripts/fetch_slicer_engine.py and git lfs pull first.
 
 ARG NODE_VERSION=22
 
@@ -21,15 +22,21 @@ COPY apps/web/package.json apps/web/
 COPY packages/ui-kit/package.json packages/ui-kit/
 COPY packages/organization-info/package.json packages/organization-info/
 COPY packages/api-client/package.json packages/api-client/
+COPY packages/slicer-engine/package.json packages/slicer-engine/
+COPY packages/slicer/package.json packages/slicer/
+COPY packages/sample-prints/package.json packages/sample-prints/
 # Only the web app and the workspace packages it depends on, not the desktop frontend.
 RUN pnpm install --frozen-lockfile --filter apps-web...
 
 # The development image: Vite's dev server, reloading when compose syncs in an edit.
 FROM deps AS dev
-COPY tsconfig.base.json ./
+COPY tsconfig.base.json LICENSE ./
 COPY packages/organization-info packages/organization-info
 COPY packages/ui-kit packages/ui-kit
 COPY packages/api-client packages/api-client
+COPY packages/slicer-engine packages/slicer-engine
+COPY packages/slicer packages/slicer
+COPY packages/sample-prints packages/sample-prints
 COPY apps/web apps/web
 WORKDIR /repo/apps/web
 EXPOSE 5174

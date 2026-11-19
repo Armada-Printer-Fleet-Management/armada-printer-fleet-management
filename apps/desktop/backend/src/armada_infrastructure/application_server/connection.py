@@ -20,6 +20,9 @@ class ApplicationServerConnection:
         self._settings_path = settings_path
         self.http_client = SyncClient()
 
+    def is_configured(self) -> bool:
+        return bool(self._address)
+
     def address(self) -> str:
         """Raises ServerNotConfigured when no address is set, so the app starts and each call
         that needs the server fails with an error saying how to fix it."""

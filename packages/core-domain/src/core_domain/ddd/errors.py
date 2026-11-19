@@ -13,6 +13,15 @@ class EntityNotFound(DomainError):
         self.entity_id = entity_id
 
 
+class AlreadyExists(DomainError):
+    """Another entity already holds a value that must be unique, such as an email address. The
+    message names only the field, never the value, so it cannot reveal someone else's data."""
+
+    def __init__(self, entity: str, field: str) -> None:
+        super().__init__(f"A {entity} with this {field} already exists")
+        self.field = field
+
+
 class RuleViolation(DomainError):
     """An entity refused a change its rules do not allow."""
 

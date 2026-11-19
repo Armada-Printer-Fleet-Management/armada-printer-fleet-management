@@ -7,7 +7,11 @@ from the repository root to refresh it. Never hand-edit generated files.
 
 The RPC transport uses the official [`connect-es`](https://github.com/connectrpc/connect-es)
 TypeScript libraries for generated-service dispatch and standard Connect error parsing. Native
-`fetch` is used only for the signed file PUT, which is not an RPC.
+`fetch` is used only for the file upload PUT, which is not an RPC.
+
+Pass `accessToken`, a function returning the current token or `undefined`, to send
+`Authorization: Bearer <token>` on every RPC and on the file upload. It is called before each
+request, so a renewed token is always the one sent. Without it, requests go out unauthenticated.
 
 Create a client with `createApiClient()`. Its `printJobs` API exposes
 `createPrintJob`, `createPrintJobUpload`, `uploadPrintJobFile`, `submitPrintJob`,
@@ -22,7 +26,7 @@ The file-upload sequence is:
    raw bytes to the opaque `uploadUrl`.
 4. Call `submitPrintJob` after the upload succeeds.
 
-`uploadUrl` is a short-lived credential. The client does not log it, and upload HTTP failures
+`uploadUrl` is the server's own upload endpoint for that file. The client does not log it, and upload HTTP failures
 throw `PrintJobUploadError` containing only the HTTP status. Fetch/network failures propagate.
 RPC failures reject with the ConnectRPC `ConnectError`, preserving its code, metadata and
 details. The generated `PrintJobStatus` enum is re-exported; `UNSPECIFIED` is invalid, and

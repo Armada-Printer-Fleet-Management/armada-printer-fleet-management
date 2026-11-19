@@ -1,5 +1,8 @@
 from datetime import timedelta
 
+from organization_info import read
+from proto_utils.gen.organization.v1 import organization_info_pb2
+from proto_utils.mappers import AgreementMapper
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from api.app import AppParts, AppServices, build_app
@@ -7,10 +10,14 @@ from api.common.clock import clock
 from api.common.health import raising_probe
 from api.common.models import DependencyCheck
 from api.common.settings import AuthSettings, FileStoreSettings, database_url
+from api.domains.auth.service import UserService
 from api.domains.content_asset.service import FileService
 from api.domains.fleet.service import PrinterService
+from api.domains.legal.service import AgreementService
 from api.domains.print_job.service import PrintJobService
+from api.domains.print_preparation.service import SlicerConfigurationService
 from api.domains.queue.service import PrinterQueueService
+from api.infrastructure.agreement_sql import SqlAgreementRepository
 from api.infrastructure.dev_data import (
     STUB_FAULTY_PRINTER_ID,
     STUB_STUDENT_ID,
@@ -24,6 +31,8 @@ from api.infrastructure.postgres_database import PostgresDatabase
 from api.infrastructure.print_job_sql import SqlPrintJobRepository
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
 from api.infrastructure.printer_server_mock import MockPrinterServer
+from api.infrastructure.slice_profile_stub import StubSliceProfiles
+from api.infrastructure.user_sql import SqlUserRepository
 from api.plugins import build_file_store, build_token_verifier
 from api.services.printer_poller import PrinterPoller
 
@@ -49,7 +58,17 @@ def production_parts() -> AppParts:
     printer_queue_service = PrinterQueueService(
         InMemoryPrinterQueueRepository(stub_printer_queues())
     )
+    user_service = UserService(SqlUserRepository(database), clock)
     printer_poller = PrinterPoller(printer_service, print_job_service, timedelta(seconds=1))
+    agreement_service = AgreementService(
+        SqlAgreementRepository(database),
+        [
+            AgreementMapper.legal_document_from_proto(document)
+            for document in read(organization_info_pb2.OrganizationInfo()).legal_documents
+        ],
+        clock,
+    )
+    slicer_configuration_service = SlicerConfigurationService(StubSliceProfiles())
 
     dependency_checks = {
         "file_storage": DependencyCheck(raising_probe(files.health_check)),
@@ -66,6 +85,9 @@ def production_parts() -> AppParts:
             files=file_service,
             printers=printer_service,
             printer_queues=printer_queue_service,
+            agreements=agreement_service,
+            slicer_configuration=slicer_configuration_service,
+            users=user_service,
         ),
         # Stub: every caller is the seeded student until the server authenticates requests.
         caller=lambda: STUB_STUDENT_ID,

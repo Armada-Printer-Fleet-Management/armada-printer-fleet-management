@@ -4,6 +4,7 @@ package server.v1;
 
 import "common/v1/page.proto";
 import "fleet/v1/printer.proto";
+import "fleet/v1/printer_type.proto";
 import "id/v1/printer_id.proto";
 
 // The printers the remote server knows of, with their latest reported state.
@@ -15,6 +16,18 @@ service PrinterService {
   // An operator changes a printer's state. The server asks the printer server, and rejects an
   // action that is not valid from the printer's current status.
   rpc TransitionPrinter(TransitionPrinterRequest) returns (TransitionPrinterResponse);
+  // Lists the kinds of printer in the fleet, for choosing what to slice for. Open to students,
+  // because it names no printer and shows no status.
+  rpc ListPrinterTypes(ListPrinterTypesRequest) returns (ListPrinterTypesResponse);
+}
+
+// Lists the printer types.
+message ListPrinterTypesRequest {}
+
+// Every printer type, sorted by model.
+message ListPrinterTypesResponse {
+  // The types.
+  repeated fleet.v1.PrinterType printer_types = 1;
 }
 
 // Gets one printer.

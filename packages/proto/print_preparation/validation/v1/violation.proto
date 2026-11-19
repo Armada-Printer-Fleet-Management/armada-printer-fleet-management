@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package print_preparation.validation.v1;
+
+import "common/v1/violation.proto";
+import "print_preparation/v1/geometry.proto";
+
+// Which problem stopped or troubled the slicer.
+enum SlicerViolationCode {
+  // Not set. Never valid; treat as an error.
+  SLICER_VIOLATION_CODE_UNSPECIFIED = 0;
+  // The engine stopped without slicing.
+  SLICER_VIOLATION_CODE_ENGINE_FAILED = 1;
+  // The engine sliced but reported something worth a look.
+  SLICER_VIOLATION_CODE_ENGINE_WARNING = 2;
+  // The engine ran out of memory part way through.
+  SLICER_VIOLATION_CODE_OUT_OF_MEMORY = 3;
+  // The model needs more memory than slicing in the browser may use; slice it elsewhere and upload
+  // the G-code.
+  SLICER_VIOLATION_CODE_MODEL_TOO_LARGE = 4;
+  // The model file could not be read as a mesh.
+  SLICER_VIOLATION_CODE_UNREADABLE_MODEL = 5;
+  // The G-code has more moves than can be shown.
+  SLICER_VIOLATION_CODE_GCODE_TOO_LARGE = 6;
+  // The file could not be read as G-code.
+  SLICER_VIOLATION_CODE_UNREADABLE_GCODE = 7;
+}
+
+// The slicer could not do what was asked. Says nothing about the print itself.
+message SlicerViolation {
+  // How serious it is and what to do.
+  common.v1.Violation violation = 1;
+  // Which problem it is.
+  SlicerViolationCode code = 2;
+}
+
+// Which problem a print has. Each value is a rule that checks for it.
+enum PrintViolationCode {
+  // Not set. Never valid; treat as an error.
+  PRINT_VIOLATION_CODE_UNSPECIFIED = 0;
+}
+
+// Where on a print a violation is. Any combination may be set; none means the whole print.
+message ModelLocation {
+  // One point, such as the start of an overhang.
+  optional print_preparation.v1.Vector3Mm point = 1;
+  // One layer, counted from zero at the bed.
+  optional uint32 layer_index = 2;
+  // A region.
+  optional print_preparation.v1.BoundingBoxMm bounds = 3;
+}
+
+// A problem with the print itself, such as an unsupported overhang or a part that will not fit the
+// printer. Shown to everyone who looks at the print.
+message PrintViolation {
+  // How serious it is and what to do.
+  common.v1.Violation violation = 1;
+  // Which problem it is.
+  PrintViolationCode code = 2;
+  // Where it is.
+  ModelLocation location = 3;
+}

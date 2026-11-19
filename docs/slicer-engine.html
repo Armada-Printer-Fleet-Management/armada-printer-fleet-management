@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Slicer engine</title>
+    <link rel="stylesheet" href="shared/docs.css" />
+  </head>
+  <body data-depth="0">
+    <div class="layout">
+      <nav></nav>
+      <main>
+        <h1>Slicer engine</h1>
+        <p class="lede">
+          How CuraEngine, compiled to WebAssembly, gets from its source to the web and desktop apps,
+          and which side owns what once it is running.
+        </p>
+
+        <h2>What it is, and why we build it ourselves</h2>
+        <p>
+          Both clients slice models in the browser with
+          <a href="https://github.com/Ultimaker/CuraEngine">CuraEngine</a>, compiled to WebAssembly.
+          We compile it ourselves, from pinned and checksummed source, in a sister repository,
+          <a href="https://github.com/Armada-Printer-Fleet-Management/armada-slicer-engine">armada-slicer-engine</a>.
+          A prebuilt <code>.wasm</code> from anyone else would be code we could not inspect, running
+          in our users' browsers. Here every input is pinned by hash, every release is signed by the
+          workflow that built it, and anyone can rebuild a release and get the same bytes.
+        </p>
+        <p>
+          The sister repository holds only the toolchain. Everything Armada does with the engine lives
+          in this repository, so the two never need to change together except to move to a new
+          engine release.
+        </p>
+
+        <h2 id="flow">From source to the apps</h2>
+        <figure class="diagram">
+          <svg viewBox="0 0 760 320" width="100%" role="img"
+               aria-label="In the sister repository, pinned upstream source and checksums are compiled from source in a pinned Docker and Conan build, and a tagged release is smoke tested, attested and published. In this repository, the fetch script checks each released file's SHA-256 and attestation and writes it to packages/slicer-engine/gen. The Vite plugin copies it into the web build, served by Caddy, and the desktop build, bundled by PyInstaller into the installer. End users never fetch the engine.">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" class="arrowhead" />
+              </marker>
+            </defs>
+
+            <text x="30" y="26" class="label-title" font-size="12">armada-slicer-engine (sister repository)</text>
+            <rect x="30" y="40" width="200" height="54" rx="8" class="external" />
+            <text x="130" y="62" text-anchor="middle" font-size="12">Pins</text>
+            <text x="130" y="80" text-anchor="middle" class="label-muted">upstream source + checksums</text>
+            <rect x="280" y="40" width="200" height="54" rx="8" class="external" />
+            <text x="380" y="62" text-anchor="middle" font-size="12">Build</text>
+            <text x="380" y="80" text-anchor="middle" class="label-muted">Docker + Conan, all from source</text>
+            <rect x="530" y="40" width="200" height="54" rx="8" class="external" />
+            <text x="630" y="62" text-anchor="middle" font-size="12">Tagged release</text>
+            <text x="630" y="80" text-anchor="middle" class="label-muted">smoke tested, attested, published</text>
+            <path d="M230,67 L276,67" class="flow" />
+            <path d="M480,67 L526,67" class="flow" />
+
+            <path d="M630,94 L630,126 L115,126 L115,184" class="flow" />
+
+            <text x="30" y="160" class="label-title" font-size="12">This repository</text>
+            <rect x="30" y="188" width="170" height="54" rx="8" class="box-accent" />
+            <text x="115" y="210" text-anchor="middle" font-size="12">Fetch script</text>
+            <text x="115" y="228" text-anchor="middle" class="label-muted">SHA-256 + attestation</text>
+            <rect x="220" y="188" width="150" height="54" rx="8" class="box" />
+            <text x="295" y="210" text-anchor="middle" font-size="12">slicer-engine/gen/</text>
+            <text x="295" y="228" text-anchor="middle" class="label-muted">gitignored</text>
+            <rect x="390" y="188" width="120" height="54" rx="8" class="box" />
+            <text x="450" y="210" text-anchor="middle" font-size="12">Vite plugin</text>
+            <text x="450" y="228" text-anchor="middle" class="label-muted">copies, unhashed</text>
+            <path d="M200,215 L216,215" class="flow" />
+            <path d="M370,215 L386,215" class="flow" />
+
+            <rect x="540" y="160" width="190" height="44" rx="8" class="box" />
+            <text x="635" y="179" text-anchor="middle" font-size="12">Web build</text>
+            <text x="635" y="195" text-anchor="middle" class="label-muted">served by Caddy</text>
+            <rect x="540" y="226" width="190" height="44" rx="8" class="box" />
+            <text x="635" y="245" text-anchor="middle" font-size="12">Desktop build</text>
+            <text x="635" y="261" text-anchor="middle" class="label-muted">PyInstaller, then the installer</text>
+            <path d="M510,205 L536,184" class="flow" />
+            <path d="M510,225 L536,246" class="flow" />
+
+            <text x="380" y="304" text-anchor="middle" class="label-muted">End users never fetch the engine: it is already inside each build.</text>
+          </svg>
+        </figure>
+        <p>
+          Developers, CI and the web image all run the same fetch script. A file whose SHA-256 does not
+          match the pin, or which was not attested by the sister repository's release workflow for that
+          tag, never reaches a build.
+        </p>
+
+        <h2 id="boundaries">At run time: who does what</h2>
+        <figure class="diagram">
+          <svg viewBox="0 0 760 410" width="100%" role="img"
+               aria-label="The browser, in the web app or the desktop app's renderer, loads the engine once and reuses it, writes the model and definitions into it, slices it into layers and toolpaths, draws them in the 3D view, marks problems on the model and shows progress and results. It sends a slice summary to Python: the desktop backend over IPC, or the server over ConnectRPC. Python receives the summary, applies the rules and validation shared by the server and the desktop, runs analysis including AI, and returns violations saying what is wrong and where. The server re-checks anything submitted to it.">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" class="arrowhead" />
+              </marker>
+              <marker id="arrow-muted" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" class="arrowhead-muted" />
+              </marker>
+            </defs>
+
+            <text x="180" y="26" text-anchor="middle" class="label-title" font-size="12">Browser (web app, desktop renderer)</text>
+            <text x="580" y="26" text-anchor="middle" class="label-title" font-size="12">Python (desktop backend, server)</text>
+
+            <rect x="30" y="44" width="300" height="44" rx="8" class="box" />
+            <text x="180" y="63" text-anchor="middle" font-size="12">Load the engine once, reuse it</text>
+            <text x="180" y="79" text-anchor="middle" class="label-muted">in the page or a Web Worker</text>
+            <rect x="30" y="98" width="300" height="44" rx="8" class="box" />
+            <text x="180" y="117" text-anchor="middle" font-size="12">Write the model and definitions in</text>
+            <text x="180" y="133" text-anchor="middle" class="label-muted">the uploaded file and printer settings</text>
+            <rect x="30" y="152" width="300" height="44" rx="8" class="box-accent" />
+            <text x="180" y="171" text-anchor="middle" font-size="12">Slice</text>
+            <text x="180" y="187" text-anchor="middle" class="label-muted">layers and toolpaths, the heavy work</text>
+            <rect x="30" y="206" width="300" height="44" rx="8" class="box" />
+            <text x="180" y="225" text-anchor="middle" font-size="12">3D view</text>
+            <text x="180" y="241" text-anchor="middle" class="label-muted">rotate, zoom, step through layers</text>
+            <rect x="30" y="260" width="300" height="44" rx="8" class="box" />
+            <text x="180" y="279" text-anchor="middle" font-size="12">Mark problems on the model</text>
+            <text x="180" y="295" text-anchor="middle" class="label-muted">at the place each violation points to</text>
+            <rect x="30" y="314" width="300" height="44" rx="8" class="box" />
+            <text x="180" y="333" text-anchor="middle" font-size="12">Show progress and results</text>
+            <text x="180" y="349" text-anchor="middle" class="label-muted">print time, material, status</text>
+
+            <rect x="430" y="152" width="300" height="44" rx="8" class="box-accent" />
+            <text x="580" y="171" text-anchor="middle" font-size="12">Receive the slice summary</text>
+            <text x="580" y="187" text-anchor="middle" class="label-muted">desktop: IPC · web: the server, over ConnectRPC</text>
+            <rect x="430" y="206" width="300" height="44" rx="8" class="box-accent" />
+            <text x="580" y="225" text-anchor="middle" font-size="12">Rules and validation</text>
+            <text x="580" y="241" text-anchor="middle" class="label-muted">core-domain, shared by server and desktop</text>
+            <rect x="430" y="260" width="300" height="44" rx="8" class="box-accent" />
+            <text x="580" y="279" text-anchor="middle" font-size="12">Analysis, including AI</text>
+            <text x="580" y="295" text-anchor="middle" class="label-muted">runs on the server or the desktop backend</text>
+            <rect x="430" y="314" width="300" height="44" rx="8" class="box-accent" />
+            <text x="580" y="333" text-anchor="middle" font-size="12">Violations</text>
+            <text x="580" y="349" text-anchor="middle" class="label-muted">what is wrong, and where on the model</text>
+
+            <path d="M330,174 L426,174" class="flow" />
+            <text x="378" y="166" text-anchor="middle" class="label-muted">summary</text>
+            <path d="M430,336 L380,336 L380,282 L334,282" class="flow-return" />
+            <text x="404" y="326" text-anchor="middle" class="label-muted">violations</text>
+
+            <text x="380" y="388" text-anchor="middle" class="label-muted">Toolpaths stay in the browser; only the summary and the violations cross IPC or the network.</text>
+            <text x="380" y="404" text-anchor="middle" class="label-muted">The server re-checks anything submitted to it: it has the final say.</text>
+          </svg>
+        </figure>
+        <p>
+          The heavy work stays where the model is drawn. Toolpaths are far too large to send over the
+          desktop's IPC bridge or across the network, so the renderer runs the engine and passes on
+          only what a decision needs. The decisions themselves are domain rules, shared by the server
+          and the desktop and written in Python like every other domain.
+        </p>
+
+        <div class="callout">
+          <strong>Limit:</strong> the engine can use at most 4 GB of memory, the most WebAssembly
+          allows, and a model that needs more stops the slice with an out-of-memory error. The ceiling
+          is a build setting in the sister repository.
+        </div>
+
+        <section class="ai-statement">
+          <h2>AI Use Statement</h2>
+          <dl>
+            <dt>Tool</dt>
+            <dd>Claude Code (Opus 5.5)</dd>
+            <dt>Mode</dt>
+            <dd>Local</dd>
+            <dt>Output</dt>
+            <dd>drafted this page and its diagrams from the implemented pipeline and the agreed design</dd>
+            <dt>Data</dt>
+            <dd>none</dd>
+            <dt>Verified</dt>
+            <dd>Proof Read and corrected the documents to show more accurate diagrams. Ensured that the 4GB limit was more accurately stated.</dd>
+          </dl>
+          <p>
+            Required by the project's
+            <a href="../.integrity/POLICY.md">AI use policy</a>. The
+            verification field is written by a developer, never by an agent.
+          </p>
+        </section>
+      </main>
+    </div>
+    <script src="shared/nav.js"></script>
+  </body>
+</html>

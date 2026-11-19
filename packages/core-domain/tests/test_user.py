@@ -1,0 +1,134 @@
+from datetime import UTC, datetime, timedelta
+
+import pytest
+
+from core_domain.auth import User, UserRole, UserStatus
+from core_domain.auth.entities import MAX_EMAIL_LENGTH, MAX_NAME_LENGTH
+from core_domain.ddd import RuleViolation
+
+NOW = datetime(2026, 10, 1, tzinfo=UTC)
+LATER = NOW + timedelta(days=1)
+
+
+def create(
+    *,
+    subject: str = "subject",
+    email: str = "user@example.com",
+    role: UserRole = UserRole.STUDENT,
+    expires_at: datetime | None = None,
+    first_name: str = "First",
+    last_name: str = "Last",
+) -> User:
+    return User.create(subject, email, first_name, last_name, role, expires_at, NOW)
+
+
+def test_create_makes_an_active_user_with_no_history() -> None:
+    user = create()
+
+    assert user.status is UserStatus.ACTIVE
+    assert user.role is UserRole.STUDENT
+    assert (user.created_at, user.updated_at) == (NOW, NOW)
+    assert (user.expires_at, user.last_login_at, user.deleted_at) == (None, None, None)
+
+
+def test_create_gives_each_user_a_new_id() -> None:
+    assert create().id != create().id
+
+
+def test_create_trims_and_lower_cases_the_email() -> None:
+    assert create(email="  User@Example.COM ").email == "user@example.com"
+
+
+@pytest.mark.parametrize("email", ["", "   "])
+def test_create_refuses_a_blank_email(email: str) -> None:
+    with pytest.raises(RuleViolation):
+        create(email=email)
+
+
+@pytest.mark.parametrize("subject", ["", "   "])
+def test_create_refuses_a_blank_subject(subject: str) -> None:
+    with pytest.raises(RuleViolation):
+        create(subject=subject)
+
+
+def test_create_accepts_a_guest_whose_access_ends_later() -> None:
+    user = create(role=UserRole.GUEST, expires_at=LATER)
+    assert user.expires_at == LATER
+
+
+@pytest.mark.parametrize(
+    "expires_at", [None, NOW, NOW - timedelta(seconds=1)], ids=["none", "now", "past"]
+)
+def test_create_refuses_a_guest_without_a_future_expiry(expires_at: datetime | None) -> None:
+    with pytest.raises(RuleViolation):
+        create(role=UserRole.GUEST, expires_at=expires_at)
+
+
+@pytest.mark.parametrize("role", [r for r in UserRole if r is not UserRole.GUEST])
+def test_create_refuses_an_expiry_for_any_other_role(role: UserRole) -> None:
+    with pytest.raises(RuleViolation):
+        create(role=role, expires_at=LATER)
+
+
+@pytest.mark.parametrize(
+    "email",
+    [
+        "user@example.com",
+        "user@mail.example.com",
+        "user+tag@example.com",
+        "first.last@example.com",
+    ],
+)
+def test_create_accepts_a_well_formed_email(email: str) -> None:
+    assert create(email=email).email == email
+
+
+@pytest.mark.parametrize(
+    "email",
+    [
+        pytest.param("user.example.com", id="no-at"),
+        pytest.param("@example.com", id="nothing-before-at"),
+        pytest.param("user@", id="no-domain"),
+        pytest.param("user@example", id="domain-without-dot"),
+        pytest.param("user@@example.com", id="two-ats-together"),
+        pytest.param("user@mail@example.com", id="two-ats-apart"),
+        pytest.param("first last@example.com", id="space"),
+        pytest.param("first\tlast@example.com", id="tab"),
+        pytest.param("user@.example.com", id="domain-starts-with-dot"),
+        pytest.param("user@example.com.", id="domain-ends-with-dot"),
+        pytest.param("user@example..com", id="two-dots-in-a-row"),
+    ],
+)
+def test_create_refuses_a_malformed_email(email: str) -> None:
+    with pytest.raises(RuleViolation):
+        create(email=email)
+
+
+def email_of_length(length: int) -> str:
+    domain = "@example.com"
+    return "x" * (length - len(domain)) + domain
+
+
+def test_create_accepts_an_email_at_the_length_limit() -> None:
+    assert len(create(email=email_of_length(MAX_EMAIL_LENGTH)).email) == MAX_EMAIL_LENGTH
+
+
+def test_create_refuses_an_email_over_the_length_limit() -> None:
+    with pytest.raises(RuleViolation):
+        create(email=email_of_length(MAX_EMAIL_LENGTH + 1))
+
+
+def test_create_accepts_names_at_the_length_limit() -> None:
+    name = "x" * MAX_NAME_LENGTH
+    user = create(first_name=name, last_name=name)
+    assert (user.first_name, user.last_name) == (name, name)
+
+
+def test_create_refuses_a_first_name_over_the_length_limit() -> None:
+    with pytest.raises(RuleViolation):
+        create(first_name="x" * (MAX_NAME_LENGTH + 1))
+
+
+def test_create_refuses_a_last_name_over_the_length_limit() -> None:
+    with pytest.raises(RuleViolation):
+        create(last_name="x" * (MAX_NAME_LENGTH + 1))

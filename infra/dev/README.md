@@ -25,7 +25,9 @@ on your machine already holds 5432, set `DB_PORT` there.
 
 Both images copy in the generated API code from your machine, so run codegen before the first
 start and after changing a `.proto` file. With the stack running, the regenerated code is synced
-in automatically so you should only need to regenerate it, not re compose.
+in automatically so you should only need to regenerate it, not re compose. The web image also
+copies in the fetched slicer engine and the sample prints, so run
+`python scripts/fetch_slicer_engine.py` and `git lfs pull` first too.
 
 **Belongs here:** the development compose file, and any seed or init scripts it mounts. The
 deployment stack is `infra/deploy/`.
@@ -41,6 +43,10 @@ builds its URLs and token issuer from the address it is reached on, so going thr
 - **Admin console:** `http://localhost:5174/auth/admin`, signing in with `KEYCLOAK_ADMIN_USERNAME`
   and `KEYCLOAK_ADMIN_PASSWORD` from `config/compose.dev.env`. This is the `master` realm, for
   operating Keycloak itself; switch to the `armada` realm with the dropdown at the top left.
+- **Users:** `keycloak-dev-users` runs `keycloak-dev-users.sh` once Keycloak is ready and exits.
+  It creates `admin`, `staff` and `student` in the `armada` realm, each with its realm role and
+  `DEV_USER_PASSWORD` from `config/compose.dev.env`, and skips any that already exist. It is part
+  of this stack only. Sign-in details: `docs/authentication.html#dev-users`.
 - **Realm:** `infra/deploy/armada-realm.json` is imported on Keycloak's first start, and skipped
   once the `armada` realm exists. To load a changed file, delete only Keycloak's data and start
   again:

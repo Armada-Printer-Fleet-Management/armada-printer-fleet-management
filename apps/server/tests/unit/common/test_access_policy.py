@@ -87,6 +87,16 @@ FORBIDDEN = Decision.FORBIDDEN
             ALLOWED,
             FORBIDDEN,
         ),
+        ("POST", rpc("PrinterService", "ListPrinters"), FORBIDDEN, ALLOWED, ALLOWED, FORBIDDEN),
+        ("POST", rpc("PrinterService", "GetPrinter"), FORBIDDEN, ALLOWED, ALLOWED, FORBIDDEN),
+        (
+            "POST",
+            rpc("PrinterService", "ListPrinterTypes"),
+            ALLOWED,
+            ALLOWED,
+            ALLOWED,
+            FORBIDDEN,
+        ),
         (
             "POST",
             rpc("PrinterQueueService", "ListPrinterQueues"),

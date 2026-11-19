@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
 from core_domain.ddd import AbstractReadRepository, Page
-from core_domain.fleet import Printer
+from core_domain.fleet import Printer, PrinterType
 from core_domain.ids import PrinterId
 
 
@@ -14,3 +14,7 @@ class PrinterRepository(AbstractReadRepository[PrinterId, Printer]):
 
     @abstractmethod
     def request_ready(self, printer_id: PrinterId) -> Printer: ...
+
+    @abstractmethod
+    def types(self) -> list[PrinterType]:
+        """The kinds of printer in the fleet, as the server works them out."""

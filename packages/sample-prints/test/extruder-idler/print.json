@@ -1,0 +1,25 @@
+{
+  "title": "Extruder idler",
+  "description": "A real printer part and its G-code: holes, curves and infill. Converted to binary STL, unchanged, from PrusaSlicer's test OBJ.",
+  "license": {
+    "spdx": "AGPL-3.0-only",
+    "source": "https://github.com/prusa3d/PrusaSlicer/blob/e6c85c50dcc56f9968a61dfdd7a3b695e1004037/tests/data/extruder_idler.obj",
+    "attribution": "PrusaSlicer test data by Prusa Research"
+  },
+  "files": [
+    {
+      "name": "extruder_idler.stl",
+      "kind": "model",
+      "sizeBytes": 179384,
+      "sha256": "fa99a3f0b707e2e9a4c0a02eec5f5cfe121d440d0680aa161dddb43290ab730c"
+    },
+    {
+      "name": "extruder_idler_MK4S.gcode",
+      "kind": "gcode",
+      "sizeBytes": 2470922,
+      "sha256": "710ac0eaa1760a8d1df6c814d86187cbb80b560109569183c66221bc27a70fda",
+      "printer": "Original Prusa MK4S",
+      "generator": "Cura_SteamEngine 5.13.0, the development server's slice profile, by packages/slicer/scripts/generate-test-gcode.ts"
+    }
+  ]
+}

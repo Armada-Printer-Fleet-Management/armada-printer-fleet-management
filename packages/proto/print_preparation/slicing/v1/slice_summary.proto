@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package print_preparation.slicing.v1;
+
+import "google/protobuf/duration.proto";
+import "print_preparation/v1/geometry.proto";
+
+// What a stretch of toolpath is for, in terms that do not depend on which slicer made it.
+enum ToolpathFeature {
+  // Not set. Never valid; treat as an error.
+  TOOLPATH_FEATURE_UNSPECIFIED = 0;
+  // The outermost wall, the surface people see.
+  TOOLPATH_FEATURE_OUTER_WALL = 1;
+  // Walls inside the outer one.
+  TOOLPATH_FEATURE_INNER_WALL = 2;
+  // Solid top and bottom layers.
+  TOOLPATH_FEATURE_SKIN = 3;
+  // The sparse fill inside a part.
+  TOOLPATH_FEATURE_INFILL = 4;
+  // Support structures under overhangs.
+  TOOLPATH_FEATURE_SUPPORT = 5;
+  // The dense layer between support and the part.
+  TOOLPATH_FEATURE_SUPPORT_INTERFACE = 6;
+  // A skirt or brim around the part, for priming and adhesion.
+  TOOLPATH_FEATURE_SKIRT_BRIM = 7;
+  // A tower used to prime between materials.
+  TOOLPATH_FEATURE_PRIME_TOWER = 8;
+  // A move without extruding.
+  TOOLPATH_FEATURE_TRAVEL = 9;
+  // Extrusion whose purpose the G-code does not say, such as from an unsupported slicer.
+  TOOLPATH_FEATURE_EXTRUSION_UNKNOWN = 10;
+}
+
+// How much of one feature a print has.
+message FeatureStat {
+  // The feature.
+  ToolpathFeature feature = 1;
+  // Total path length.
+  double distance_mm = 2;
+  // Time the printer spends on it, when the G-code says.
+  google.protobuf.Duration time = 3;
+}
+
+// A small, slicer-independent description of a sliced print, computed from its G-code. Small
+// enough to send to a server; the toolpaths themselves never leave the client.
+message SliceSummary {
+  // The slicer that made the G-code and its version, as the file names it.
+  string slicer = 1;
+  // How many layers the print has.
+  uint32 layer_count = 2;
+  // How long the print takes, when the G-code says.
+  google.protobuf.Duration print_time = 3;
+  // Length of filament the print uses.
+  double filament_length_mm = 4;
+  // The space the extruded print occupies.
+  print_preparation.v1.BoundingBoxMm bounds = 5;
+  // How much of each feature the print has.
+  repeated FeatureStat feature_stats = 6;
+}

@@ -1,5 +1,5 @@
 from core_domain.ddd import Page, Service
-from core_domain.fleet import Printer
+from core_domain.fleet import Printer, PrinterType
 from core_domain.ids import PrinterId
 
 from armada_domains.fleet.repository import PrinterRepository
@@ -14,3 +14,6 @@ class PrinterService(Service[PrinterRepository]):
 
     def ready(self, printer_id: PrinterId) -> Printer:
         return self._repository.request_ready(printer_id)
+
+    def types(self) -> list[PrinterType]:
+        return self._repository.types()

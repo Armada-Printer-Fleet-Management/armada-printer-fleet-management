@@ -83,8 +83,10 @@ Pages carry large inline SVG, so read one only when the task needs its picture.
 | `docs/index.html` | Orienting in the repository for the first time |
 | `docs/domain-architecture.html` | Adding or changing a domain, entity, service or repository |
 | `docs/database-schema.html` | Adding or changing a domain, entity, table or column |
+| `docs/slicer-engine.html` | Working on slicing: the engine's build pipeline, or what runs in the browser versus Python |
 | `docs/desktop.html` | Working on `apps/desktop/`: IPC, codegen, packaging or the installer |
 | `docs/web.html` | Working on `apps/web/`: the layout, routes, sidebar or adding a page |
+| `docs/authentication.html` | Working on sign-in, roles or endpoint access; finding the development stack's sign-in users |
 | `docs/testing.html` | Choosing which size of server test to write; the rules are `apps/server/tests/AGENTS.md` |
 | `docs/git-hygiene.html` | Explaining the branch, rebase, release or PR-stack flow to a developer |
 | `docs/data-management-choices.html` | Planning across services; the text version is `data-management-choices.md` |
@@ -200,6 +202,20 @@ each project enforce this shape. The wire contract's rules are in `packages/prot
 read it before changing anything under `packages/proto/`.
 
 Picture: `docs/domain-architecture.html`.
+
+---
+
+## Slicer engine
+
+Slicing uses CuraEngine compiled to WebAssembly, built in a sister repository. **Before any slicing work, read
+`packages/slicer-engine/AGENTS.md`**: it holds the repository split, and what runs in the browser versus Python.
+Both clients slice through `@armada/slicer`; **read `packages/slicer/AGENTS.md` before building on it.**
+
+## Sample and test prints
+
+Real model and G-code files live in `packages/sample-prints/`, stored in Git LFS. **Before adding or
+using one, read `packages/sample-prints/AGENTS.md`**: it holds which prints ship in the apps and
+which never may, and the licences a print may carry.
 
 ---
 
@@ -446,6 +462,13 @@ theme, so a hardcoded colour breaks someone else's brand.
 | Push finished work as PRs     | `/pr-precheck` (runs `/pr-ddd`, the pre-push checks and `/pr-split`)  |
 | DDD verdict for this commit   | `python scripts/ddd_verdict.py check` (also `scope`, `diff`, `show`)  |
 | Repository script tests       | `python -m unittest discover -s scripts/tests` (standard library only) |
+| Fetch the slicer engine        | `python scripts/fetch_slicer_engine.py` (`--check` offline; `--require-attestation` in CI) |
+| Fetch the sample prints (Git LFS) | `git lfs pull`                                                     |
+| Sample prints ship boundary    | `pnpm --dir packages/sample-prints test`                             |
+| Slicer engine smoke test       | `pnpm --dir packages/slicer-engine test`                             |
+| Generate slicer TS proto       | `python scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules` |
+| Slicer tests                   | `pnpm --dir packages/slicer test`                                    |
+| Regenerate the test G-code     | `pnpm --dir packages/slicer generate:test-gcode` (dev stack up)      |
 | Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
 | Desktop Python deps           | `uv sync --project apps/desktop/backend`                              |
 | Desktop JS deps                | `pnpm install` (in `root`)                          |
@@ -475,7 +498,7 @@ theme, so a hardcoded colour breaks someone else's brand.
 | New migration                  | `uv run --directory apps/server alembic revision --rev-id <next number> -m "<change>"` |
 | Regenerate API docs (`docs/api/`) | `uv run --project apps/server python apps/server/export_openapi.py` (pre-commit runs it; never hand-edit `docs/api/`) |
 | Build desktop app (Windows)    | `python apps/desktop/build_run.py`                                   |
-| Build desktop installer        | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test]` |
+| Build desktop installer        | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test] [--dev-tools]` |
 | Install NSIS (Windows)         | `python scripts/install_nsis.py`                                     |
 | Run CI job locally             | `act -W .github/workflows/<file>.yml -j <job>` (Windows job: add `-P windows-latest=-self-hosted`) |
 | Lint deployment scripts        | `shellcheck infra/deploy/armada infra/deploy/*.sh`                   |
@@ -507,9 +530,9 @@ Full environment setup is `/onboarding`.
 
 ## Shared organization identity: `packages/organization-info/organization.json`
 
-The title, description, license and source repository live in exactly one place:
+The title, description, legal documents and source repository live in exactly one place:
 `packages/organization-info/organization.json`, typed by `OrganizationInfo` in
-`packages/proto/common/v1/organization_info.proto`. **Never hardcode them** in an application —
+`packages/proto/organization/v1/organization_info.proto`. **Never hardcode them** in an application —
 window and page titles, headings and executable names all read it.
 
 - **Python:** `organization_info.read(OrganizationInfo())` (a local path dependency; the caller
@@ -523,6 +546,10 @@ this base information.
 
 `uv` installs path dependencies as built copies, so `packages/organization-info/pyproject.toml`
 lists `organization.json` in `cache-keys`. Keep that when editing the file.
+
+**Legal documents** such as `LICENSE` are pinned in `legalDocuments` by `effectiveDate` and
+`sha256`: changing one's text means bumping both in the same change, or every build refuses
+(`scripts/check_legal_documents.py` prints the new hash).
 
 ---
 

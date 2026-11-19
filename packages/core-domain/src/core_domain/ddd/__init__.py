@@ -2,6 +2,7 @@
 
 from core_domain.ddd.entity import Entity
 from core_domain.ddd.errors import (
+    AlreadyExists,
     DomainError,
     EntityNotFound,
     InvalidPageToken,
@@ -28,6 +29,7 @@ __all__ = [
     "AbstractAsyncRepository",
     "AbstractReadRepository",
     "AbstractRepository",
+    "AlreadyExists",
     "AsyncReadRepository",
     "AsyncRepository",
     "DomainError",

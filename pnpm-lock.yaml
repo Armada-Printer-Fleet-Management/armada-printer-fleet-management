@@ -136,6 +136,15 @@ importers:
       '@armada/organization-info':
         specifier: workspace:*
         version: link:../../../packages/organization-info
+      '@armada/sample-prints':
+        specifier: workspace:*
+        version: link:../../../packages/sample-prints
+      '@armada/slicer':
+        specifier: workspace:*
+        version: link:../../../packages/slicer
+      '@armada/slicer-engine':
+        specifier: workspace:*
+        version: link:../../../packages/slicer-engine
       '@armada/ui-kit':
         specifier: workspace:*
         version: link:../../../packages/ui-kit
@@ -200,12 +209,24 @@ importers:
       '@armada/organization-info':
         specifier: workspace:*
         version: link:../../packages/organization-info
+      '@armada/sample-prints':
+        specifier: workspace:*
+        version: link:../../packages/sample-prints
+      '@armada/slicer':
+        specifier: workspace:*
+        version: link:../../packages/slicer
+      '@armada/slicer-engine':
+        specifier: workspace:*
+        version: link:../../packages/slicer-engine
       '@armada/ui-kit':
         specifier: workspace:*
         version: link:../../packages/ui-kit
       '@bufbuild/protobuf':
         specifier: ^2
         version: 2.15.0
+      oidc-client-ts:
+        specifier: ^3.5.0
+        version: 3.5.0
       react:
         specifier: ^19
         version: 19.3.0
@@ -274,6 +295,77 @@ importers:
       '@bufbuild/protobuf':
         specifier: ^2
         version: 2.15.0
+    devDependencies:
+      '@types/node':
+        specifier: ^26
+        version: 26.6.3
+      vite:
+        specifier: ^6
+        version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
+
+  packages/sample-prints:
+    devDependencies:
+      '@types/node':
+        specifier: ^26
+        version: 26.6.3
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vite:
+        specifier: ^6
+        version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
+      vitest:
+        specifier: ^5
+        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
+
+  packages/slicer:
+    dependencies:
+      '@armada/slicer-engine':
+        specifier: workspace:*
+        version: link:../slicer-engine
+      '@armada/ui-kit':
+        specifier: workspace:*
+        version: link:../ui-kit
+      '@bufbuild/protobuf':
+        specifier: ^2
+        version: 2.15.0
+    devDependencies:
+      '@bufbuild/protoc-gen-es':
+        specifier: ^2
+        version: 2.15.0(@bufbuild/protobuf@2.15.0)(supports-color@7.2.0)
+      '@types/node':
+        specifier: ^26
+        version: 26.6.3
+      '@types/react':
+        specifier: ^19
+        version: 19.3.0
+      react:
+        specifier: ^19
+        version: 19.3.0
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vite:
+        specifier: ^6
+        version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
+      vitest:
+        specifier: ^5
+        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
+
+  packages/slicer-engine:
+    devDependencies:
+      '@types/node':
+        specifier: ^26
+        version: 26.6.3
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vite:
+        specifier: ^6
+        version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
+      vitest:
+        specifier: ^5
+        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/ui-kit:
     dependencies:
@@ -1901,6 +1993,10 @@ packages:
     resolution: {integrity: sha512-ZZow9HBI5O6EPgSJLUb8n2NKgmVWTwCvHGwFuJlMjvLFqlGG6pjirPhtdsseaLZjSibD8eegzmYpUZwoIlj2cQ==}
     engines: {node: '>=4.0'}
 
+  jwt-decode@4.0.0:
+    resolution: {integrity: sha512-+KJGIyHgkGuIq3IEBNftfhW/LfWhXUIY6OmyVWjliu5KH1y0fw7VQ8YndE2O4qZdMSd9SqbnC8GOcZEy0Om7sA==}
+    engines: {node: '>=18'}
+
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
 
@@ -2074,6 +2170,10 @@ packages:
   obug@2.2.1:
     resolution: {integrity: sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q==}
     engines: {node: '>=12.20.0'}
+
+  oidc-client-ts@3.5.0:
+    resolution: {integrity: sha512-l2q8l9CTCTOlbX+AnK4p3M+4CEpKpyQhle6blQkdFhm0IsBqsxm15bYaSa11G7pWdsYr6epdsRZxJpCyCRbT8A==}
+    engines: {node: '>=18'}
 
   optionator@0.9.4:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
@@ -4167,6 +4267,8 @@ snapshots:
       object.assign: 4.1.7
       object.values: 1.2.1
 
+  jwt-decode@4.0.0: {}
+
   keyv@4.5.4:
     dependencies:
       json-buffer: 3.0.1
@@ -4315,6 +4417,10 @@ snapshots:
       es-object-atoms: 1.1.2
 
   obug@2.2.1: {}
+
+  oidc-client-ts@3.5.0:
+    dependencies:
+      jwt-decode: 4.0.0
 
   optionator@0.9.4:
     dependencies:

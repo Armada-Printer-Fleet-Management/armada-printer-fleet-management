@@ -1,0 +1,14 @@
+{
+  "repository": "Armada-Printer-Fleet-Management/armada-slicer-engine",
+  "tag": "v5.13.0-r2",
+  "assets": {
+    "BUILDINFO.json": "8ad5dbbbcef21223358f6e3257066774e6246596e0bb402e969a715f3cae32e1",
+    "CuraEngine.d.ts": "9a74d798f11a38089996f528e021ec3ac0790789b54bfb191cea97481fcc098b",
+    "CuraEngine.js": "ccc8d273482fc83e6ee5adf4d474d0f1e5840c73822536fae08411a64987032e",
+    "LICENSE-Cura-definitions.txt": "f361bfaa2b63576ba829b3fb608f3f8baf5c25df51ebaba8c3554a7f3108e87d",
+    "LICENSE-CuraEngine.txt": "57c8ff33c9c0cfc3ef00e650a1cc910d7ee479a8bc509f6c9209a7c2a11399d6",
+    "NOTICE.txt": "39b8f72563557fead5820950ffc58677a26b4b50ec852d69d29e246c1b23c6e1",
+    "fdmextruder.def.json": "df07327843a3c12d0b0c369ae4aec807da5e4ecf5b6bd9676cc3dc13316b7040",
+    "fdmprinter.def.json": "8fbbf8b779e806bd8d0b0e2b8b9be17bdd26a575b7ea1875c20481eb2c7e11ee"
+  }
+}
