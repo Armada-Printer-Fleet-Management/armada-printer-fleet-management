@@ -1,5 +1,3 @@
-from uuid import UUID
-
 import sqlalchemy as sa
 from core_domain.auth import User
 from core_domain.ddd import EntityNotFound, Page
@@ -14,7 +12,7 @@ _USER_STATUS = by_stored_id(USER_STATUS_IDS)
 # Postgres's default names for the table's unique constraints.
 _UNIQUE: UniqueFields = {
     "users_email_key": ("user", "email"),
-    "users_keycloak_user_ref_key": ("user", "identity provider subject"),
+    "users_identity_provider_ref_key": ("user", "identity provider reference"),
 }
 
 
@@ -22,9 +20,10 @@ _users = sa.Table(
     "users",
     sa.MetaData(),
     sa.Column("id", sa.Uuid(), primary_key=True),
-    sa.Column("keycloak_user_ref", sa.Uuid(), nullable=False),
+    sa.Column("identity_provider_ref", sa.Text(), nullable=False),
     sa.Column("email", sa.Text(), nullable=False),
-    sa.Column("display_name", sa.Text(), nullable=False),
+    sa.Column("first_name", sa.Text(), nullable=False),
+    sa.Column("last_name", sa.Text(), nullable=False),
     sa.Column("role", sa.Uuid(), nullable=False),
     sa.Column("status", sa.Uuid(), nullable=False),
     sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
@@ -35,14 +34,13 @@ _users = sa.Table(
 )
 
 
-# The schema predates the entity's names, so until it is migrated the first name is stored as
-# display_name, the last name is not stored, and the subject must be a UUID.
 def _row(user: User) -> dict[str, object]:
     return {
         "id": user.id.value,
-        "keycloak_user_ref": UUID(user.identity_provider_subject),
+        "identity_provider_ref": user.identity_provider_ref,
         "email": user.email,
-        "display_name": user.first_name,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
         "role": USER_ROLE_IDS[user.role],
         "status": USER_STATUS_IDS[user.status],
         "expires_at": user.expires_at,
@@ -56,10 +54,10 @@ def _row(user: User) -> dict[str, object]:
 def _user(row: sa.RowMapping) -> User:
     return User(
         id=UserId(row["id"]),
-        identity_provider_subject=str(row["keycloak_user_ref"]),
+        identity_provider_ref=row["identity_provider_ref"],
         email=row["email"],
-        first_name=row["display_name"],
-        last_name="",
+        first_name=row["first_name"],
+        last_name=row["last_name"],
         role=_USER_ROLE[row["role"]],
         status=_USER_STATUS[row["status"]],
         expires_at=row["expires_at"],

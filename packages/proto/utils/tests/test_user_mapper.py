@@ -13,11 +13,11 @@ OPTIONAL_TIMES = ["expires_at", "last_login_at", "deleted_at"]
 
 
 def user(optional_time: datetime | None = LATER) -> User:
-    """Every optional time set to optional_time. The subject is empty, as it never crosses the
-    wire."""
+    """Every optional time set to optional_time. The identity provider reference is empty, as it
+    never crosses the wire."""
     return User(
         id=UserId.new(),
-        identity_provider_subject="",
+        identity_provider_ref="",
         email="user@example.com",
         first_name="First",
         last_name="Last",
@@ -36,10 +36,10 @@ def test_to_entity_reverses_to_proto() -> None:
     assert vars(UserMapper().to_entity(UserMapper().to_proto(original))) == vars(original)
 
 
-def test_the_subject_does_not_cross_the_wire() -> None:
+def test_the_identity_provider_ref_does_not_cross_the_wire() -> None:
     original = user()
-    original.identity_provider_subject = "subject"
-    assert UserMapper().to_entity(UserMapper().to_proto(original)).identity_provider_subject == ""
+    original.identity_provider_ref = "identity-provider-ref"
+    assert UserMapper().to_entity(UserMapper().to_proto(original)).identity_provider_ref == ""
 
 
 def test_unset_optional_times_stay_unset() -> None:
