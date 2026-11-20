@@ -12,14 +12,14 @@ LATER = NOW + timedelta(days=1)
 
 def create(
     *,
-    subject: str = "subject",
+    identity_provider_ref: str = "identity-provider-ref",
     email: str = "user@example.com",
     role: UserRole = UserRole.STUDENT,
     expires_at: datetime | None = None,
     first_name: str = "First",
     last_name: str = "Last",
 ) -> User:
-    return User.create(subject, email, first_name, last_name, role, expires_at, NOW)
+    return User.create(identity_provider_ref, email, first_name, last_name, role, expires_at, NOW)
 
 
 def test_create_makes_an_active_user_with_no_history() -> None:
@@ -45,10 +45,10 @@ def test_create_refuses_a_blank_email(email: str) -> None:
         create(email=email)
 
 
-@pytest.mark.parametrize("subject", ["", "   "])
-def test_create_refuses_a_blank_subject(subject: str) -> None:
+@pytest.mark.parametrize("identity_provider_ref", ["", "   "])
+def test_create_refuses_a_blank_identity_provider_ref(identity_provider_ref: str) -> None:
     with pytest.raises(RuleViolation):
-        create(subject=subject)
+        create(identity_provider_ref=identity_provider_ref)
 
 
 def test_create_accepts_a_guest_whose_access_ends_later() -> None:

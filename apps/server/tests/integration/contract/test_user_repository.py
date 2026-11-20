@@ -43,15 +43,14 @@ def repository(request: pytest.FixtureRequest) -> UserRepository:
 
 
 def user(minutes: int = 0) -> User:
-    """A guest with every field set. The last name is empty because the SQL adapter cannot store
-    one yet; test_user_sql.py covers that."""
+    """A guest with every field set."""
     time = START + timedelta(minutes=minutes)
     return User(
         id=UserId.new(),
-        identity_provider_subject=str(uuid4()),
+        identity_provider_ref=str(uuid4()),
         email=f"user{minutes}@example.com",
         first_name="First",
-        last_name="",
+        last_name="Last",
         role=UserRole.GUEST,
         status=UserStatus.SUSPENDED,
         created_at=time,
@@ -137,16 +136,18 @@ async def test_a_duplicate_email_is_refused_and_not_stored(repository: UserRepos
         await repository.get(duplicate.id)
 
 
-async def test_a_duplicate_subject_is_refused_and_not_stored(repository: UserRepository) -> None:
+async def test_a_duplicate_identity_provider_ref_is_refused_and_not_stored(
+    repository: UserRepository,
+) -> None:
     original = user()
     await repository.save(original)
     duplicate = user(minutes=1)
-    duplicate.identity_provider_subject = original.identity_provider_subject
+    duplicate.identity_provider_ref = original.identity_provider_ref
 
     with pytest.raises(AlreadyExists) as raised:
         await repository.save(duplicate)
 
-    assert raised.value.field == "identity provider subject"
+    assert raised.value.field == "identity provider reference"
     with pytest.raises(EntityNotFound):
         await repository.get(duplicate.id)
 
