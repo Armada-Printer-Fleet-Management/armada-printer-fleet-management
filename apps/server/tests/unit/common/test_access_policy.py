@@ -131,6 +131,14 @@ def test_each_role_reaches_only_its_endpoints(
     ]
 
 
+@pytest.mark.parametrize("procedure", ["GetUser", "CreateUser"])
+@pytest.mark.parametrize("caller", [STAFF_MEMBER, ADMIN], ids=["staff", "admin"])
+def test_staff_and_admins_manage_users(procedure: str, caller: Caller) -> None:
+    policy = AccessPolicy(ACCESS)
+
+    assert policy.decide("POST", rpc("UserService", procedure), caller) == ALLOWED
+
+
 # Specificity and defaults
 
 

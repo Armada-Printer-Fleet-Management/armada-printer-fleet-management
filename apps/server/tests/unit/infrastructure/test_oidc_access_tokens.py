@@ -5,7 +5,7 @@ from core_domain.ddd import Unavailable
 from plugin_api.token_verifier import InvalidTokenError, TokenVerifierError, VerifiedToken
 
 from api.common.authentication import Caller, InvalidAccessToken, Role
-from api.infrastructure.oidc_access_tokens import OidcAccessTokens
+from api.infrastructure.auth.oidc_access_tokens import OidcAccessTokens
 from tests.fakes import FakeTokenVerifier
 
 type Use[T] = Callable[[OidcAccessTokens], Coroutine[object, object, T]]

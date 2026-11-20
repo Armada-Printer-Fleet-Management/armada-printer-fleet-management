@@ -29,6 +29,8 @@ from api.domains.print_preparation.service import SlicerConfigurationService
 from api.domains.queue.repository import PrinterQueueRepository
 from api.domains.queue.service import PrinterQueueService
 from api.infrastructure.agreement_memory import InMemoryAgreementRepository
+from api.infrastructure.auth.identity_directory_accounts import IdentityDirectoryAccounts
+from api.infrastructure.content_asset.file_store_files import FileStoreFiles
 from api.infrastructure.dev_data import (
     stub_files,
     stub_print_jobs,
@@ -37,13 +39,12 @@ from api.infrastructure.dev_data import (
     stub_users,
 )
 from api.infrastructure.file_memory import InMemoryFileRepository
-from api.infrastructure.file_store_files import FileStoreFiles
 from api.infrastructure.print_job_memory import InMemoryPrintJobRepository
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
 from api.infrastructure.printer_server_mock import MockPrinterServer
 from api.infrastructure.slice_profile_stub import StubSliceProfiles
 from api.infrastructure.user_memory import InMemoryUserRepository
-from tests.fakes import MemoryFileStore
+from tests.fakes import MemoryFileStore, MemoryIdentityDirectory
 from tests.samples import NOW
 
 
@@ -64,6 +65,7 @@ def fake_services(
     printer_queues: PrinterQueueRepository | None = None,
     agreements: AgreementRepository | None = None,
     users: UserRepository | None = None,
+    identity_directory: MemoryIdentityDirectory | None = None,
 ) -> FakeServices:
     """Every service over an in-memory fake seeded from the development data, on a fixed clock.
     Pass a fake to replace the default one, such as a repository that raises Unavailable."""
@@ -85,7 +87,10 @@ def fake_services(
     if users is None:
         users = InMemoryUserRepository(stub_users())
 
+    directory = MemoryIdentityDirectory() if identity_directory is None else identity_directory
+
     storage = FileStoreFiles(lambda: file_store)
+    accounts = IdentityDirectoryAccounts(lambda: directory)
     services = AppServices(
         print_jobs=PrintJobService(print_jobs, clock),
         files=FileService(files, storage, clock),
@@ -93,9 +98,9 @@ def fake_services(
         printer_queues=PrinterQueueService(printer_queues),
         agreements=AgreementService(agreements, documents, clock),
         slicer_configuration=SlicerConfigurationService(StubSliceProfiles()),
-        users=UserService(users, clock),
+        users=UserService(users, accounts, clock),
     )
-    return FakeServices(services, [storage])
+    return FakeServices(services, [storage, accounts])
 
 
 def on_app_loop[T](client: TestClient, function: Callable[[], Awaitable[T]]) -> T:

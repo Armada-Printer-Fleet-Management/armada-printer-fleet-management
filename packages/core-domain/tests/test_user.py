@@ -132,3 +132,42 @@ def test_create_refuses_a_first_name_over_the_length_limit() -> None:
 def test_create_refuses_a_last_name_over_the_length_limit() -> None:
     with pytest.raises(RuleViolation):
         create(last_name="x" * (MAX_NAME_LENGTH + 1))
+
+
+# Checking a new user before their account exists
+
+
+def test_check_new_returns_the_email_trimmed_and_lower_cased() -> None:
+    email = User.check_new("  User@Example.COM ", "First", "Last", UserRole.STUDENT, None, NOW)
+
+    assert email == "user@example.com"
+
+
+@pytest.mark.parametrize(
+    ("email", "first_name", "last_name", "role", "expires_at"),
+    [
+        ("", "First", "Last", UserRole.STUDENT, None),
+        ("not-an-email", "First", "Last", UserRole.STUDENT, None),
+        ("a" * MAX_EMAIL_LENGTH + "@example.com", "First", "Last", UserRole.STUDENT, None),
+        ("user@example.com", "a" * (MAX_NAME_LENGTH + 1), "Last", UserRole.STUDENT, None),
+        ("user@example.com", "First", "a" * (MAX_NAME_LENGTH + 1), UserRole.STUDENT, None),
+        ("user@example.com", "First", "Last", UserRole.GUEST, None),
+        ("user@example.com", "First", "Last", UserRole.GUEST, NOW),
+        ("user@example.com", "First", "Last", UserRole.STUDENT, LATER),
+    ],
+    ids=[
+        "blank email",
+        "malformed email",
+        "email too long",
+        "first name too long",
+        "last name too long",
+        "guest without expiry",
+        "guest expiry not in the future",
+        "expiry for another role",
+    ],
+)
+def test_check_new_refuses_what_create_refuses(
+    email: str, first_name: str, last_name: str, role: UserRole, expires_at: datetime | None
+) -> None:
+    with pytest.raises(RuleViolation):
+        User.check_new(email, first_name, last_name, role, expires_at, NOW)

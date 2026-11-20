@@ -206,6 +206,7 @@ dependencies = [
     { name = "connectrpc" },
     { name = "core-domain" },
     { name = "fastapi" },
+    { name = "identity-keycloak" },
     { name = "organization-info" },
     { name = "packaging" },
     { name = "plugin-api" },
@@ -239,6 +240,7 @@ requires-dist = [
     { name = "connectrpc", specifier = ">=0.12.1,<0.13" },
     { name = "core-domain", editable = "../../packages/core-domain" },
     { name = "fastapi", specifier = ">=0.141,<1" },
+    { name = "identity-keycloak", editable = "../../plugins/identity-keycloak" },
     { name = "organization-info", directory = "../../packages/organization-info" },
     { name = "packaging", specifier = ">=24" },
     { name = "plugin-api", editable = "../../packages/plugin-api" },
@@ -609,6 +611,28 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cd/c4/0e5636363151a2a1795e0a77617168b9ca438e1748ec05fc9b5687f93d64/httpx2_jsfetch-1.0.tar.gz", hash = "sha256:70a0e3eabfef7cce5ad9c629f7d01ca05e418f586646f4ddf14782e4c1454c60", size = 6872, upload-time = "2026-08-07T00:13:07.492Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9b/43/832f631d32e4f1211caa2ba368317739fe71f0b8530e4c9d15dc454bac2a/httpx2_jsfetch-1.0-py3-none-any.whl", hash = "sha256:cb916b707601e69a07721aabc8f3f6659be3a6893bc1ff5c6f9e02241df2da32", size = 6382, upload-time = "2026-08-07T00:13:06.567Z" },
+]
+
+[[package]]
+name = "identity-keycloak"
+version = "0.1.0"
+source = { editable = "../../plugins/identity-keycloak" }
+dependencies = [
+    { name = "httpx2" },
+    { name = "plugin-api" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx2", specifier = ">=2.16,<3" },
+    { name = "plugin-api", editable = "../../packages/plugin-api" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pyright" },
+    { name = "pytest", specifier = ">=9,<10" },
+    { name = "ruff" },
 ]
 
 [[package]]
