@@ -8,6 +8,7 @@ from proto_utils.mappers.machine_spec import MachineSpecMapper
 from proto_utils.mappers.print_job import PrintJobMapper
 from proto_utils.mappers.printer import PrinterMapper, PrinterTypeMapper
 from proto_utils.mappers.printer_queue import PrinterQueueMapper
+from proto_utils.mappers.session import SessionMapper
 from proto_utils.mappers.slice_profile import SliceProfileMapper
 from proto_utils.mappers.slice_settings import SliceSettingsMapper
 from proto_utils.mappers.user import UserMapper
@@ -20,6 +21,7 @@ __all__ = [
     "PrinterMapper",
     "PrinterQueueMapper",
     "PrinterTypeMapper",
+    "SessionMapper",
     "SliceProfileMapper",
     "SliceSettingsMapper",
     "UserMapper",

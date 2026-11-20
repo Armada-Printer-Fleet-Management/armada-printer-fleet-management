@@ -7,6 +7,7 @@ from core_domain.ids.file_id import FileId
 from core_domain.ids.print_job_id import PrintJobId
 from core_domain.ids.printer_id import PrinterId
 from core_domain.ids.printer_queue_id import PrinterQueueId
+from core_domain.ids.session_id import SessionId
 from core_domain.ids.slice_profile_id import SliceProfileId
 from core_domain.ids.user_id import UserId
 
@@ -17,6 +18,7 @@ __all__ = [
     "PrintJobId",
     "PrinterId",
     "PrinterQueueId",
+    "SessionId",
     "SliceProfileId",
     "UserId",
 ]

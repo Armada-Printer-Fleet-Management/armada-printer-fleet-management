@@ -2,6 +2,7 @@ from collections.abc import Iterable
 
 from proto_utils.gen.legal.v1.legal_document_pb2 import LegalDocument
 
+from armada_domains.auth.service import SessionService
 from armada_domains.content_asset.service import FileService
 from armada_domains.fleet.service import PrinterService
 from armada_domains.legal.service import AgreementService
@@ -14,6 +15,7 @@ from armada_ipc.legal import LegalIpc
 from armada_ipc.print_job import PrintJobIpc
 from armada_ipc.printer import PrinterIpc
 from armada_ipc.printer_queue import PrinterQueueIpc
+from armada_ipc.session import SessionIpc
 from armada_ipc.slicer_configuration import SlicerConfigurationIpc
 
 
@@ -32,6 +34,7 @@ class Ipc:
         agreements: AgreementService,
         legal_documents: Iterable[LegalDocument],
         slicer_configuration: SlicerConfigurationService,
+        sessions: SessionService,
     ) -> None:
         self.application_info = ApplicationInfo()
         self.print_job = PrintJobIpc(print_jobs)
@@ -40,3 +43,4 @@ class Ipc:
         self.file = FileIpc(files)
         self.legal = LegalIpc(agreements, legal_documents)
         self.slicer_configuration = SlicerConfigurationIpc(slicer_configuration)
+        self.session = SessionIpc(sessions)

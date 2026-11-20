@@ -7,6 +7,7 @@ this instead of duplicating it.
 
 Usage:
     python scripts/generate_proto.py <template> [--node-modules <dir>]
+    python scripts/generate_proto.py --all
 Examples:
     uv run --project packages/proto/utils python scripts/generate_proto.py buf.gen.python.yaml
     uv run --project apps/server python scripts/generate_proto.py buf.gen.server.yaml
@@ -19,8 +20,26 @@ import os
 import pathlib
 import re
 import subprocess
+import sys
 
 _OUT = re.compile(r"^\s*out:\s*(\S+)", re.MULTILINE)
+_ROOT = pathlib.Path(__file__).resolve().parent.parent
+_SCRIPT = pathlib.Path(__file__).resolve()
+
+# Every template, with the environment it needs: a uv project whose plugins buf runs, or the
+# node_modules holding its npm plugin. Python's shared output goes first; the others import it.
+_ALL: list[tuple[str, list[str]]] = [
+    ("buf.gen.python.yaml", ["uv", "run", "--project", "packages/proto/utils", "python"]),
+    ("buf.gen.server.yaml", ["uv", "run", "--project", "apps/server", "python"]),
+    ("buf.gen.desktop_ts.yaml", [sys.executable]),
+    ("buf.gen.web_ts.yaml", [sys.executable]),
+    ("buf.gen.slicer_ts.yaml", [sys.executable]),
+]
+_NODE_MODULES = {
+    "buf.gen.desktop_ts.yaml": "apps/desktop/frontend/node_modules",
+    "buf.gen.web_ts.yaml": "apps/web/node_modules",
+    "buf.gen.slicer_ts.yaml": "packages/slicer/node_modules",
+}
 
 
 def make_python_package(out_dir: pathlib.Path) -> None:
@@ -43,11 +62,35 @@ def make_python_package(out_dir: pathlib.Path) -> None:
             path.write_text(rewritten, encoding="utf-8")
 
 
+def generate_all() -> None:
+    """Runs this script once per template, each in the environment it needs. A TypeScript
+    template whose node_modules is not installed is skipped, as onboarding does."""
+    for template, interpreter in _ALL:
+        command = [*interpreter, str(_SCRIPT), template]
+        node_modules = _NODE_MODULES.get(template)
+        if node_modules:
+            if not (_ROOT / node_modules).is_dir():
+                print(f"skipped  {template}: {node_modules} is missing; run pnpm install")
+                continue
+            command += ["--node-modules", node_modules]
+        print(f"generate {template}", flush=True)
+        subprocess.run(command, check=True, cwd=_ROOT)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("template", help="e.g. buf.gen.python.yaml")
+    parser.add_argument("template", nargs="?", help="e.g. buf.gen.python.yaml")
     parser.add_argument("--node-modules", help="dir whose .bin/ is prepended to PATH")
+    parser.add_argument("--all", action="store_true", help="generate every template")
     args = parser.parse_args()
+
+    if args.all:
+        if args.template or args.node_modules:
+            parser.error("--all takes no template or --node-modules")
+        generate_all()
+        return
+    if not args.template:
+        parser.error("give a template, or --all")
 
     env = os.environ.copy()
     if args.node_modules:

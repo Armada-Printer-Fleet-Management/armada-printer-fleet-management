@@ -8,6 +8,8 @@ from core_domain.ddd import EntityNotFound, RuleViolation, TypedId, Unavailable
 from google.protobuf.message import Message
 from proto_utils import ProtoMapper
 
+from armada_domains.auth.errors import SignInRequired
+
 
 class ApplicationServerClient[IdT: TypedId, IdMessageT: Message]:
     """Base for the adapters that implement a domain's repository port over the application
@@ -34,4 +36,6 @@ class ApplicationServerClient[IdT: TypedId, IdMessageT: Message]:
                 raise RuleViolation(error.message) from error
             if error.code is Code.UNAVAILABLE:
                 raise Unavailable("application server") from error
+            if error.code is Code.UNAUTHENTICATED:
+                raise SignInRequired("This needs you to be signed in.") from error
             raise

@@ -199,7 +199,7 @@ importers:
         version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
       vitest:
         specifier: ^5
-        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
+        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0))
 
   apps/web:
     dependencies:
@@ -288,7 +288,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^5
-        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
+        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0))
 
   packages/organization-info:
     dependencies:
@@ -316,7 +316,7 @@ importers:
         version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
       vitest:
         specifier: ^5
-        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
+        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0))
 
   packages/slicer:
     dependencies:
@@ -350,7 +350,7 @@ importers:
         version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
       vitest:
         specifier: ^5
-        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
+        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0))
 
   packages/slicer-engine:
     devDependencies:
@@ -365,7 +365,7 @@ importers:
         version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
       vitest:
         specifier: ^5
-        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
+        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0))
 
   packages/ui-kit:
     dependencies:
@@ -382,15 +382,30 @@ importers:
         specifier: ^3
         version: 3.7.0
     devDependencies:
+      '@testing-library/dom':
+        specifier: ^10.4.2
+        version: 10.4.2
+      '@testing-library/react':
+        specifier: ^16.3.3
+        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@testing-library/user-event':
+        specifier: ^14.6.8
+        version: 14.6.8(@testing-library/dom@10.4.2)
       '@types/react':
         specifier: ^19
         version: 19.3.0
       '@types/react-dom':
         specifier: ^19
         version: 19.3.0(@types/react@19.3.0)
+      jsdom:
+        specifier: ^29.1.1
+        version: 29.1.1
       typescript:
         specifier: ^5
         version: 5.9.3
+      vitest:
+        specifier: ^5
+        version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0))
 
 packages:
 
@@ -3423,7 +3438,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/mocker@5.0.3(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))':
+  '@vitest/mocker@5.0.3(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.0.3
@@ -4873,10 +4888,10 @@ snapshots:
       jiti: 2.7.0
       lightningcss: 1.32.0
 
-  vitest@5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)):
+  vitest@5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.0.3(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
+      '@vitest/mocker': 5.0.3(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0))
       chai: 6.3.0
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
