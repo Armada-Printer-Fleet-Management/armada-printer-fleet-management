@@ -36,11 +36,11 @@ class User(Entity[UserId]):
     """A person who signs in to the system. Shared by every app; only the remote server persists
     a change to one, so on a client these rules are advisory.
 
-    identity_provider_subject is the identity provider's ID for this person, the subject of their
+    identity_provider_ref is the identity provider's ID for this person, the subject of their
     access token. It links a sign-in to this user and never leaves the server."""
 
     id: UserId
-    identity_provider_subject: str
+    identity_provider_ref: str
     email: str
     first_name: str
     last_name: str
@@ -55,7 +55,7 @@ class User(Entity[UserId]):
     @classmethod
     def create(
         cls,
-        identity_provider_subject: str,
+        identity_provider_ref: str,
         email: str,
         first_name: str,
         last_name: str,
@@ -65,8 +65,8 @@ class User(Entity[UserId]):
     ) -> Self:
         """A new, active user. A guest's access must end at a time still to come; every other
         role's access does not expire."""
-        if not identity_provider_subject.strip():
-            raise RuleViolation("A user cannot be created without an identity provider subject")
+        if not identity_provider_ref.strip():
+            raise RuleViolation("A user cannot be created without an identity provider reference")
         email = _valid_email(email)
         _require_name_length("first name", first_name)
         _require_name_length("last name", last_name)
@@ -79,7 +79,7 @@ class User(Entity[UserId]):
             raise RuleViolation(f"A {role.name} user cannot have an expiry")
         return cls(
             UserId.new(),
-            identity_provider_subject,
+            identity_provider_ref,
             email,
             first_name,
             last_name,

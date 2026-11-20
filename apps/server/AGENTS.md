@@ -137,7 +137,7 @@ Naming, checked against every migration by `tests/unit/test_column_names.py`:
   `print_job_id`, `fleet_section_id`. No prefixes (`assigned_printer_id`, `owner_user_id` are
   wrong). A second column pointing at the same entity is usually duplicated data; find its
   source instead.
-- **An identifier from outside the database is `<name>_ref`**, such as `keycloak_user_ref` or
+- **An identifier from outside the database is `<name>_ref`**, such as `identity_provider_ref` or
   `external_printer_ref`. `_id` always means a row in this schema.
 - **The one exception** is a polymorphic pair, `target_type` beside `target_id`.
 - **Each fact is stored once.** Who did something and when lives in the domain's event table,

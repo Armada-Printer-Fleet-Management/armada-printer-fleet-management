@@ -29,10 +29,10 @@ class UserMapper(ProtoMapper[User, user_pb2.User]):
         )
 
     def to_entity(self, message: user_pb2.User) -> User:
-        """identity_provider_subject is never sent, so the entity comes back with it empty."""
+        """identity_provider_ref is never sent, so the entity comes back with it empty."""
         return User(
             id=self.id_from_proto(ids.UserId, message.id),
-            identity_provider_subject="",
+            identity_provider_ref="",
             email=message.email,
             first_name=message.first_name,
             last_name=message.last_name,

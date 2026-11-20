@@ -3,8 +3,6 @@
 # already exist are left alone, so it is safe to rerun.
 """Seed the development database. Reads the DB_* environment variables."""
 
-from uuid import UUID
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import insert
 
@@ -39,9 +37,10 @@ def _table(name: str, *columns: str) -> sa.TableClause:
 _users = _table(
     "users",
     "id",
-    "keycloak_user_ref",
+    "identity_provider_ref",
     "email",
-    "display_name",
+    "first_name",
+    "last_name",
     "role",
     "status",
     "created_at",
@@ -91,14 +90,14 @@ _print_jobs = _table(
 )
 
 
-# Bridged onto the columns as SqlUserRepository does, until the users table is migrated.
 def _user_rows() -> Rows:
     return [
         {
             "id": user.id.value,
-            "keycloak_user_ref": UUID(user.identity_provider_subject),
+            "identity_provider_ref": user.identity_provider_ref,
             "email": user.email,
-            "display_name": user.first_name,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
             "role": USER_ROLE_IDS[user.role],
             "status": USER_STATUS_IDS[user.status],
             "created_at": user.created_at,

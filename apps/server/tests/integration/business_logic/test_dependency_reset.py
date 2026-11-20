@@ -26,7 +26,7 @@ def test_database_changes_do_not_survive(database_engine: sa.Engine, run: str) -
             count = connection.execute(sa.select(sa.func.count()).select_from(table)).scalar()
             assert count == len(rows), table.name
         name = connection.execute(
-            sa.text("SELECT display_name FROM users WHERE id = :id"),
+            sa.text("SELECT first_name FROM users WHERE id = :id"),
             {"id": STUB_STUDENT_ID.value},
         ).scalar()
         assert name == _student_name()
@@ -39,7 +39,7 @@ def test_database_changes_do_not_survive(database_engine: sa.Engine, run: str) -
             {"id": uuid4(), "access_policy": FLEET_ACCESS_POLICY_STAFF_ONLY_ID},
         )
         connection.execute(
-            sa.text("UPDATE users SET display_name = 'Changed by a test' WHERE id = :id"),
+            sa.text("UPDATE users SET first_name = 'Changed by a test' WHERE id = :id"),
             {"id": STUB_STUDENT_ID.value},
         )
         connection.execute(sa.text("DELETE FROM print_jobs"))
