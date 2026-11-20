@@ -7,6 +7,7 @@ _ALL_REAL_DEPENDENCIES_PASS = {
     "database": "pass",
     "file_storage": "pass",
     "identity_provider": "pass",
+    "identity_provider_accounts": "pass",
 }
 
 

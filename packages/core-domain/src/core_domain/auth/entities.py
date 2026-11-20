@@ -52,6 +52,31 @@ class User(Entity[UserId]):
     last_login_at: datetime | None = None
     deleted_at: datetime | None = None
 
+    @staticmethod
+    def check_new(
+        email: str,
+        first_name: str,
+        last_name: str,
+        role: UserRole,
+        expires_at: datetime | None,
+        now: datetime,
+    ) -> str:
+        """Checks a new user against every rule create applies apart from the identity provider
+        reference, so a caller can refuse one before making their account there. Returns the email
+        as it is stored: trimmed and lower-cased. A guest's access must end at a time still to
+        come; every other role's access does not expire."""
+        email = _valid_email(email)
+        _require_name_length("first name", first_name)
+        _require_name_length("last name", last_name)
+        if role is UserRole.GUEST:
+            if expires_at is None:
+                raise RuleViolation("A guest cannot be created without an expiry")
+            if expires_at <= now:
+                raise RuleViolation("A guest cannot be created with an expiry that has passed")
+        elif expires_at is not None:
+            raise RuleViolation(f"A {role.name} user cannot have an expiry")
+        return email
+
     @classmethod
     def create(
         cls,
@@ -63,20 +88,11 @@ class User(Entity[UserId]):
         expires_at: datetime | None,
         now: datetime,
     ) -> Self:
-        """A new, active user. A guest's access must end at a time still to come; every other
-        role's access does not expire."""
+        """A new, active user, refused as check_new refuses one, or without an identity provider
+        reference."""
         if not identity_provider_ref.strip():
             raise RuleViolation("A user cannot be created without an identity provider reference")
-        email = _valid_email(email)
-        _require_name_length("first name", first_name)
-        _require_name_length("last name", last_name)
-        if role is UserRole.GUEST:
-            if expires_at is None:
-                raise RuleViolation("A guest cannot be created without an expiry")
-            if expires_at <= now:
-                raise RuleViolation("A guest cannot be created with an expiry that has passed")
-        elif expires_at is not None:
-            raise RuleViolation(f"A {role.name} user cannot have an expiry")
+        email = cls.check_new(email, first_name, last_name, role, expires_at, now)
         return cls(
             UserId.new(),
             identity_provider_ref,

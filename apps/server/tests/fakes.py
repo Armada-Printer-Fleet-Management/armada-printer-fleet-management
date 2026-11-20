@@ -1,11 +1,18 @@
 """Fakes of the plugin ports for tests: an in-memory FileStore, keeping the port's promise that a
-failed write stores nothing, and a TokenVerifier that answers as it is told."""
+failed write stores nothing, a TokenVerifier that answers as it is told, and an in-memory
+IdentityDirectory."""
 
 from collections.abc import AsyncIterable, AsyncIterator
 from types import TracebackType
 from typing import Self
+from uuid import uuid4
 
 from plugin_api.file_store import FileStoreError, StoredFileNotFoundError
+from plugin_api.identity_directory import (
+    AccountExistsError,
+    IdentityDirectoryError,
+    NewAccount,
+)
 from plugin_api.token_verifier import VerifiedToken
 
 
@@ -83,3 +90,42 @@ class FakeTokenVerifier:
     async def health_check(self) -> None:
         if self.error is not None:
             raise self.error
+
+
+class MemoryIdentityDirectory:
+    """Accounts held in memory, keeping the port's promises: a duplicate email is refused, and a
+    failed call leaves nothing behind. Set `healthy` to False to make every call fail."""
+
+    def __init__(self) -> None:
+        self.accounts: dict[str, NewAccount] = {}
+        self.healthy = True
+
+    def _fail_if_unhealthy(self) -> None:
+        if not self.healthy:
+            raise IdentityDirectoryError("localhost:8080 refused the connection")
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        return None
+
+    async def create_account(self, account: NewAccount) -> str:
+        self._fail_if_unhealthy()
+        if any(existing.email == account.email for existing in self.accounts.values()):
+            raise AccountExistsError("An account with this email already exists")
+        subject = str(uuid4())
+        self.accounts[subject] = account
+        return subject
+
+    async def delete_account(self, subject: str) -> None:
+        self._fail_if_unhealthy()
+        self.accounts.pop(subject, None)
+
+    async def health_check(self) -> None:
+        self._fail_if_unhealthy()

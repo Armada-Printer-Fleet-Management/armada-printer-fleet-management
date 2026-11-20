@@ -15,6 +15,9 @@ variables:
   - name: printerQueueId
     value: 00000000-0000-4000-8000-000000000401
     description: "The seeded open queue."
+  - name: userId
+    value: 00000000-0000-4000-8000-000000000101
+    description: "The seeded staff user, so Get User runs without editing. Create User replaces it with the user it creates."
   - name: webAppUrl
     value: http://localhost:5174
     description: "Where the web app serves Keycloak under /auth. The collection's OAuth 2.0 auth signs in through it."

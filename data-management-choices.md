@@ -31,7 +31,7 @@ Runs on university infrastructure. Dispatches jobs to printers and reports print
 
 **Notes on decisions already made:**
 
-*   The system will not integrate with the existing Makerspace database. Users create separate credentials, stored in this system's own database, holding only what's needed for user-print-management.
+*   The system will not integrate with the existing Makerspace database. Users get separate accounts in this system's own identity provider (Keycloak), holding only what's needed for user-print-management.
 *   Fleet partitioning uses Fleet Sections, and each printer belongs to exactly one section (e.g. self-service, general use).
 
 3\. Core data entities
@@ -53,7 +53,7 @@ These are described at a conceptual level.
 
 ### 4.1 Account creation and auth
 
-Web App → Backend → Database. Backend issues and validates credentials against its own user store.
+Web App → Backend → Keycloak, then Database. Staff create a user through the backend, which creates the sign-in account in Keycloak and then the user's row in its own database. Keycloak checks passwords and issues tokens; the backend validates the tokens.
 
 ### 4.2 Print submission
 

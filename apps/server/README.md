@@ -65,6 +65,16 @@ It also needs where to check access tokens, against the dev stack's Keycloak:
 | `AUTH_ROLES_CLAIM` | Optional; defaults to `realm_access.roles`, where Keycloak puts realm roles |
 | `AUTH_ENFORCE` | Optional; `false` by default. See "Access tokens" in [`AGENTS.md`](AGENTS.md) |
 
+To create users, it signs in to the same Keycloak as the realm's `armada-server` service account:
+
+| Variable | Value |
+|---|---|
+| `IDENTITY_BASE_URL` | `http://localhost:8080/auth` |
+| `IDENTITY_SERVICE_ACCOUNT_SECRET` | `KEYCLOAK_SERVICE_ACCOUNT_SECRET` from `config/compose.dev.env` |
+| `IDENTITY_BACKEND` | Optional; `keycloak` is the default and the only plugin today |
+| `IDENTITY_REALM` | Optional; defaults to `armada` |
+| `IDENTITY_CLIENT_ID` | Optional; defaults to `armada-server` |
+
 ## Database
 
 The dev stack migrates and seeds itself on start. After adding a migration or seed data, apply it
