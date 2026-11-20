@@ -147,7 +147,14 @@ jobs:
           sudo -u "$SUDO_USER" git fetch --quiet --depth 1 origin tag v0.0.1
           production=$(mktemp -d)
           sudo -u "$SUDO_USER" git archive v0.0.1 infra/deploy | tar -x -C "$production"
+          # That compose.yaml also predates settings this build's server requires, so its image
+          # carries them. The secret is a placeholder: the server only needs it to create users.
+          docker build --quiet -t armada-server:built - <<EOF
+          FROM armada-server:good
+          ENV IDENTITY_BASE_URL=http://keycloak:8080/auth IDENTITY_SERVICE_ACCOUNT_SECRET=deploy-test
+          EOF
           publish_preview "$OLD_ARMADA" "$production/infra/deploy"
+          docker tag armada-server:good armada-server:built
 
           # The broken build's server never reports healthy, so updating to it must return to the
           # previous version.

@@ -100,6 +100,115 @@ window.OPENAPI_SPEC = {
         "title": "ValidationError",
         "type": "object"
       },
+      "auth.v1.User": {
+        "additionalProperties": false,
+        "description": "A person who signs in to the system.",
+        "properties": {
+          "deletedAt": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/google.protobuf.Timestamp"
+              }
+            ],
+            "description": "When the user was deleted. Unset unless status is USER_STATUS_DELETED.",
+            "title": "deleted_at"
+          },
+          "email": {
+            "description": "Sign-in email address, unique and lower case.",
+            "title": "email",
+            "type": "string"
+          },
+          "expiresAt": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/google.protobuf.Timestamp"
+              }
+            ],
+            "description": "When temporary access ends. Unset for accounts that do not expire.",
+            "title": "expires_at"
+          },
+          "firstName": {
+            "description": "Given name.",
+            "title": "first_name",
+            "type": "string"
+          },
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.UserId"
+              }
+            ],
+            "description": "This user.",
+            "title": "id"
+          },
+          "lastLoginAt": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/google.protobuf.Timestamp"
+              }
+            ],
+            "description": "When the user last signed in. Unset if they never have.",
+            "title": "last_login_at"
+          },
+          "lastName": {
+            "description": "Family name.",
+            "title": "last_name",
+            "type": "string"
+          },
+          "role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/auth.v1.UserRole"
+              }
+            ],
+            "description": "What this user may do.",
+            "title": "role"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/auth.v1.UserStatus"
+              }
+            ],
+            "description": "Whether the account can be used.",
+            "title": "status"
+          },
+          "timeStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.TimeStatus"
+              }
+            ],
+            "description": "When the user was created and last changed.",
+            "title": "time_status"
+          }
+        },
+        "title": "User",
+        "type": "object"
+      },
+      "auth.v1.UserRole": {
+        "description": "What a user may do, from least to most access. Permissions are enforced by the server,\n never by the client.",
+        "enum": [
+          "USER_ROLE_UNSPECIFIED",
+          "USER_ROLE_GUEST",
+          "USER_ROLE_STUDENT",
+          "USER_ROLE_STAFF",
+          "USER_ROLE_ADMIN"
+        ],
+        "title": "UserRole",
+        "type": "string"
+      },
+      "auth.v1.UserStatus": {
+        "description": "Whether a user's account can be used.",
+        "enum": [
+          "USER_STATUS_UNSPECIFIED",
+          "USER_STATUS_ACTIVE",
+          "USER_STATUS_SUSPENDED",
+          "USER_STATUS_DELETED"
+        ],
+        "title": "UserStatus",
+        "type": "string"
+      },
       "common.v1.PageRequest": {
         "additionalProperties": false,
         "description": "Asks for one page of a list. Every List RPC request carries this as its page field.",
@@ -1075,6 +1184,64 @@ window.OPENAPI_SPEC = {
         "title": "CreatePrintJobUploadResponse",
         "type": "object"
       },
+      "server.v1.CreateUserRequest": {
+        "additionalProperties": false,
+        "description": "The details of a new user.",
+        "properties": {
+          "email": {
+            "description": "Sign-in email address.",
+            "title": "email",
+            "type": "string"
+          },
+          "expiresAt": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/google.protobuf.Timestamp"
+              }
+            ],
+            "description": "When their access ends. Required for a guest; unset for accounts that do not expire.",
+            "title": "expires_at"
+          },
+          "firstName": {
+            "description": "Given name.",
+            "title": "first_name",
+            "type": "string"
+          },
+          "lastName": {
+            "description": "Family name.",
+            "title": "last_name",
+            "type": "string"
+          },
+          "role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/auth.v1.UserRole"
+              }
+            ],
+            "description": "What the new user may do.",
+            "title": "role"
+          }
+        },
+        "title": "CreateUserRequest",
+        "type": "object"
+      },
+      "server.v1.CreateUserResponse": {
+        "additionalProperties": false,
+        "description": "The user that was created.",
+        "properties": {
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/auth.v1.User"
+              }
+            ],
+            "description": "The new user.",
+            "title": "user"
+          }
+        },
+        "title": "CreateUserResponse",
+        "type": "object"
+      },
       "server.v1.DeletePrintJobFileRequest": {
         "additionalProperties": false,
         "description": "Deletes a job's file.",
@@ -1363,6 +1530,40 @@ window.OPENAPI_SPEC = {
           }
         },
         "title": "GetSliceSettingsResponse",
+        "type": "object"
+      },
+      "server.v1.GetUserRequest": {
+        "additionalProperties": false,
+        "description": "Asks for one user.",
+        "properties": {
+          "userId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.UserId"
+              }
+            ],
+            "description": "The user to get.",
+            "title": "user_id"
+          }
+        },
+        "title": "GetUserRequest",
+        "type": "object"
+      },
+      "server.v1.GetUserResponse": {
+        "additionalProperties": false,
+        "description": "The requested user.",
+        "properties": {
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/auth.v1.User"
+              }
+            ],
+            "description": "The user.",
+            "title": "user"
+          }
+        },
+        "title": "GetUserResponse",
         "type": "object"
       },
       "server.v1.HealthCheckRequest": {
@@ -1669,6 +1870,48 @@ window.OPENAPI_SPEC = {
           }
         },
         "title": "ListPrintersResponse",
+        "type": "object"
+      },
+      "server.v1.ListUsersRequest": {
+        "additionalProperties": false,
+        "description": "Asks for a page of users.",
+        "properties": {
+          "page": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.PageRequest"
+              }
+            ],
+            "description": "Which page to return.",
+            "title": "page"
+          }
+        },
+        "title": "ListUsersRequest",
+        "type": "object"
+      },
+      "server.v1.ListUsersResponse": {
+        "additionalProperties": false,
+        "description": "One page of users.",
+        "properties": {
+          "page": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/common.v1.PageResponse"
+              }
+            ],
+            "description": "How to fetch the next page.",
+            "title": "page"
+          },
+          "users": {
+            "description": "The users on this page.",
+            "items": {
+              "$ref": "#/components/schemas/auth.v1.User"
+            },
+            "title": "users",
+            "type": "array"
+          }
+        },
+        "title": "ListUsersResponse",
         "type": "object"
       },
       "server.v1.SubmitPrintJobRequest": {
@@ -2072,6 +2315,392 @@ window.OPENAPI_SPEC = {
           }
         },
         "title": "TransitionPrinterResponse",
+        "type": "object"
+      },
+      "server.v1.TransitionUserRoleRequest": {
+        "anyOf": [
+          {
+            "properties": {
+              "makeAdmin": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/server.v1.TransitionUserRoleRequest.MakeAdmin"
+                  }
+                ],
+                "description": "Make an admin.",
+                "title": "make_admin"
+              }
+            },
+            "title": "make_admin",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "makeGuest": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/server.v1.TransitionUserRoleRequest.MakeGuest"
+                  }
+                ],
+                "description": "Make a guest until a set time.",
+                "title": "make_guest"
+              }
+            },
+            "title": "make_guest",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "makeStaff": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/server.v1.TransitionUserRoleRequest.MakeStaff"
+                  }
+                ],
+                "description": "Make staff.",
+                "title": "make_staff"
+              }
+            },
+            "title": "make_staff",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "makeStudent": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/server.v1.TransitionUserRoleRequest.MakeStudent"
+                  }
+                ],
+                "description": "Make a student.",
+                "title": "make_student"
+              }
+            },
+            "title": "make_student",
+            "type": "object"
+          }
+        ],
+        "description": "Changes a user's role through one action.",
+        "not": {
+          "allOf": [
+            {
+              "anyOf": [
+                {
+                  "required": [
+                    "makeAdmin"
+                  ]
+                },
+                {
+                  "required": [
+                    "makeGuest"
+                  ]
+                },
+                {
+                  "required": [
+                    "makeStaff"
+                  ]
+                },
+                {
+                  "required": [
+                    "makeStudent"
+                  ]
+                }
+              ]
+            },
+            {
+              "not": {
+                "oneOf": [
+                  {
+                    "required": [
+                      "makeAdmin"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "makeGuest"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "makeStaff"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "makeStudent"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "properties": {
+          "userId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.UserId"
+              }
+            ],
+            "description": "The user to change.",
+            "title": "user_id"
+          }
+        },
+        "title": "TransitionUserRoleRequest",
+        "type": "object",
+        "unevaluatedProperties": false
+      },
+      "server.v1.TransitionUserRoleRequest.MakeAdmin": {
+        "additionalProperties": false,
+        "description": "Makes the user an admin.",
+        "title": "MakeAdmin",
+        "type": "object"
+      },
+      "server.v1.TransitionUserRoleRequest.MakeGuest": {
+        "additionalProperties": false,
+        "description": "Makes the user a guest, whose access ends at a set time.",
+        "properties": {
+          "expiresAt": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/google.protobuf.Timestamp"
+              }
+            ],
+            "description": "When their access ends. Required.",
+            "title": "expires_at"
+          }
+        },
+        "title": "MakeGuest",
+        "type": "object"
+      },
+      "server.v1.TransitionUserRoleRequest.MakeStaff": {
+        "additionalProperties": false,
+        "description": "Makes the user a member of staff.",
+        "title": "MakeStaff",
+        "type": "object"
+      },
+      "server.v1.TransitionUserRoleRequest.MakeStudent": {
+        "additionalProperties": false,
+        "description": "Makes the user a student.",
+        "title": "MakeStudent",
+        "type": "object"
+      },
+      "server.v1.TransitionUserRoleResponse": {
+        "additionalProperties": false,
+        "description": "The user after the change.",
+        "properties": {
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/auth.v1.User"
+              }
+            ],
+            "description": "The updated user.",
+            "title": "user"
+          }
+        },
+        "title": "TransitionUserRoleResponse",
+        "type": "object"
+      },
+      "server.v1.TransitionUserStatusRequest": {
+        "anyOf": [
+          {
+            "properties": {
+              "delete": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/server.v1.TransitionUserStatusRequest.Delete"
+                  }
+                ],
+                "description": "Delete.",
+                "title": "delete"
+              }
+            },
+            "title": "delete",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "reactivate": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/server.v1.TransitionUserStatusRequest.Reactivate"
+                  }
+                ],
+                "description": "Reactivate.",
+                "title": "reactivate"
+              }
+            },
+            "title": "reactivate",
+            "type": "object"
+          },
+          {
+            "properties": {
+              "suspend": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/server.v1.TransitionUserStatusRequest.Suspend"
+                  }
+                ],
+                "description": "Suspend.",
+                "title": "suspend"
+              }
+            },
+            "title": "suspend",
+            "type": "object"
+          }
+        ],
+        "description": "Changes a user's status through one action.",
+        "not": {
+          "allOf": [
+            {
+              "anyOf": [
+                {
+                  "required": [
+                    "delete"
+                  ]
+                },
+                {
+                  "required": [
+                    "reactivate"
+                  ]
+                },
+                {
+                  "required": [
+                    "suspend"
+                  ]
+                }
+              ]
+            },
+            {
+              "not": {
+                "oneOf": [
+                  {
+                    "required": [
+                      "delete"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "reactivate"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "suspend"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "properties": {
+          "userId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.UserId"
+              }
+            ],
+            "description": "The user to change.",
+            "title": "user_id"
+          }
+        },
+        "title": "TransitionUserStatusRequest",
+        "type": "object",
+        "unevaluatedProperties": false
+      },
+      "server.v1.TransitionUserStatusRequest.Delete": {
+        "additionalProperties": false,
+        "description": "Soft deletes an ACTIVE or SUSPENDED user, moving them to DELETED and setting deleted_at.",
+        "title": "Delete",
+        "type": "object"
+      },
+      "server.v1.TransitionUserStatusRequest.Reactivate": {
+        "additionalProperties": false,
+        "description": "Lets a SUSPENDED or DELETED user sign in again, moving them to ACTIVE.",
+        "title": "Reactivate",
+        "type": "object"
+      },
+      "server.v1.TransitionUserStatusRequest.Suspend": {
+        "additionalProperties": false,
+        "description": "Blocks an ACTIVE user from signing in, moving them to SUSPENDED.",
+        "title": "Suspend",
+        "type": "object"
+      },
+      "server.v1.TransitionUserStatusResponse": {
+        "additionalProperties": false,
+        "description": "The user after the change.",
+        "properties": {
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/auth.v1.User"
+              }
+            ],
+            "description": "The updated user.",
+            "title": "user"
+          }
+        },
+        "title": "TransitionUserStatusResponse",
+        "type": "object"
+      },
+      "server.v1.UpdateUserRequest": {
+        "additionalProperties": false,
+        "description": "The changes to make to a user. Only the fields that are set are changed.",
+        "properties": {
+          "email": {
+            "description": "New email address. Unset leaves it unchanged.",
+            "title": "email",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "firstName": {
+            "description": "New given name. Unset leaves it unchanged.",
+            "title": "first_name",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastName": {
+            "description": "New family name. Unset leaves it unchanged.",
+            "title": "last_name",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "userId": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/id.v1.UserId"
+              }
+            ],
+            "description": "The user to change.",
+            "title": "user_id"
+          }
+        },
+        "title": "UpdateUserRequest",
+        "type": "object"
+      },
+      "server.v1.UpdateUserResponse": {
+        "additionalProperties": false,
+        "description": "The user after the change.",
+        "properties": {
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/auth.v1.User"
+              }
+            ],
+            "description": "The updated user.",
+            "title": "user"
+          }
+        },
+        "title": "UpdateUserResponse",
         "type": "object"
       }
     }
@@ -3595,6 +4224,378 @@ window.OPENAPI_SPEC = {
           "server.v1.SlicerConfigurationService"
         ]
       }
+    },
+    "/api/server.v1.UserService/CreateUser": {
+      "post": {
+        "description": "Creates a user.",
+        "operationId": "server.v1.UserService.CreateUser",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.CreateUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.CreateUserResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "CreateUser",
+        "tags": [
+          "server.v1.UserService"
+        ]
+      }
+    },
+    "/api/server.v1.UserService/GetUser": {
+      "post": {
+        "description": "Gets a user by ID.",
+        "operationId": "server.v1.UserService.GetUser",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.GetUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.GetUserResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "GetUser",
+        "tags": [
+          "server.v1.UserService"
+        ]
+      }
+    },
+    "/api/server.v1.UserService/ListUsers": {
+      "post": {
+        "description": "Lists users, one page at a time.",
+        "operationId": "server.v1.UserService.ListUsers",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.ListUsersRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.ListUsersResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "ListUsers",
+        "tags": [
+          "server.v1.UserService"
+        ]
+      }
+    },
+    "/api/server.v1.UserService/TransitionUserRole": {
+      "post": {
+        "description": "Changes what a user may do. Each action carries exactly the fields its role needs.",
+        "operationId": "server.v1.UserService.TransitionUserRole",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.TransitionUserRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.TransitionUserRoleResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "TransitionUserRole",
+        "tags": [
+          "server.v1.UserService"
+        ]
+      }
+    },
+    "/api/server.v1.UserService/TransitionUserStatus": {
+      "post": {
+        "description": "Suspends, reactivates or deletes a user.",
+        "operationId": "server.v1.UserService.TransitionUserStatus",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.TransitionUserStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.TransitionUserStatusResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "TransitionUserStatus",
+        "tags": [
+          "server.v1.UserService"
+        ]
+      }
+    },
+    "/api/server.v1.UserService/UpdateUser": {
+      "post": {
+        "description": "Changes the details a user manages themselves.",
+        "operationId": "server.v1.UserService.UpdateUser",
+        "parameters": [
+          {
+            "description": "Define the version of the Connect protocol",
+            "example": 1,
+            "in": "header",
+            "name": "Connect-Protocol-Version",
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "description": "Define the timeout, in ms",
+            "example": 1000,
+            "in": "header",
+            "name": "Connect-Timeout-Ms",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.v1.UpdateUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.v1.UpdateUserResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "UpdateUser",
+        "tags": [
+          "server.v1.UserService"
+        ]
+      }
     }
   },
   "tags": [
@@ -3625,6 +4626,10 @@ window.OPENAPI_SPEC = {
     {
       "description": "How the slicer is configured for a print, decided by the server so its slice profiles are enforced\n in one place.",
       "name": "server.v1.SlicerConfigurationService"
+    },
+    {
+      "description": "Manages the users who can sign in to the system.",
+      "name": "server.v1.UserService"
     }
   ]
 };

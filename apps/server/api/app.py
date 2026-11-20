@@ -20,6 +20,7 @@ from proto_utils.gen.server.v1.printer_service_connect import PrinterServiceASGI
 from proto_utils.gen.server.v1.slicer_configuration_service_connect import (
     SlicerConfigurationServiceASGIApplication,
 )
+from proto_utils.gen.server.v1.user_service_connect import UserServiceASGIApplication
 
 from api.common.access_policy import ACCESS, AccessPolicy
 from api.common.authentication import Caller
@@ -48,6 +49,7 @@ from api.services.print_job_service import PrintJobServiceImplementation
 from api.services.printer_queue_service import PrinterQueueServiceImplementation
 from api.services.printer_service import PrinterServiceImplementation
 from api.services.slicer_configuration_service import SlicerConfigurationServiceImplementation
+from api.services.user_service import UserServiceImplementation
 
 
 @dataclass(frozen=True)
@@ -137,4 +139,5 @@ def build_app(parts: AppParts) -> FastAPI:
             )
         ),
     )
+    mount_rpc(app, UserServiceASGIApplication(UserServiceImplementation(services.users)))
     return app

@@ -1,0 +1,34 @@
+info:
+  name: Create User
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/server.v1.UserService/CreateUser"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "email": "user-{{$timestamp}}@example.com",
+        "firstName": "New",
+        "lastName": "User",
+        "role": "USER_ROLE_STUDENT"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        bru.setVar("userId", res.body.user.id.value);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

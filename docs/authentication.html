@@ -99,6 +99,19 @@
           exactly which calls would break.
         </p>
 
+        <h2 id="creating-users">Creating a user</h2>
+        <p>
+          Staff create users through the server, which keeps Keycloak and its own
+          database in step. It makes the person's Keycloak account first, with their
+          role, because the user it then saves is linked to that account. If the user
+          cannot be saved, the account is removed again, so a failure leaves neither.
+        </p>
+        <p>
+          The server signs in to Keycloak as its own service account, which may manage
+          the realm's users and nothing else. A new account has no password yet, so
+          the person cannot sign in until one is set in Keycloak.
+        </p>
+
         <h2 id="dev-users">Signing in on the development stack</h2>
         <p>
           A fresh development stack comes with one user per role, so nobody has

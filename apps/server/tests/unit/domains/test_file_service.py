@@ -7,8 +7,8 @@ from core_domain.ddd import EntityNotFound, InvalidValue
 from core_domain.ids import FileId, UserId
 
 from api.domains.content_asset.service import FileService
+from api.infrastructure.content_asset.file_store_files import FileStoreFiles
 from api.infrastructure.file_memory import InMemoryFileRepository
-from api.infrastructure.file_store_files import FileStoreFiles
 from tests.fakes import MemoryFileStore
 from tests.samples import NOW
 

@@ -9,6 +9,9 @@ variables:
   - name: fileId
     value: 00000000-0000-0000-0000-000000000000
     description: ""
+  - name: userId
+    value: 00000000-0000-0000-0000-000000000000
+    description: "Deployments are not seeded. Create User sets it to the user it creates."
   - name: webAppUrl
     value: https://testing.armada-dev.com
     description: ""

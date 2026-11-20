@@ -22,6 +22,7 @@ dependencies = [
   "sqlalchemy[asyncio]>=2.1,<2.2", # https://github.com/sqlalchemy/sqlalchemy, MIT -- required by Alembic; Core builds the tables and the dev seed, and is the server's async connection (asyncio adds greenlet)
   "psycopg[binary]>=3.3,<4", # https://github.com/psycopg/psycopg, LGPL-3.0 -- the Postgres driver, sync and async
   "auth-oidc",          # plugins/auth-oidc -- the TokenVerifier plugin for OpenID Connect providers
+  "identity-keycloak",  # plugins/identity-keycloak -- the IdentityDirectory plugin for Keycloak
 ]
 
 [tool.uv.sources]
@@ -33,6 +34,7 @@ core-domain = { path = "../../packages/core-domain", editable = true }
 plugin-api = { path = "../../packages/plugin-api", editable = true }
 s3-file-store = { path = "../../plugins/s3-file-store", editable = true }
 auth-oidc = { path = "../../plugins/auth-oidc", editable = true }
+identity-keycloak = { path = "../../plugins/identity-keycloak", editable = true }
 
 [dependency-groups]
 dev = [
@@ -76,7 +78,7 @@ disable_warnings = ["module-not-imported"]
 
 [tool.importlinter]
 # The plugin packages are listed so the contracts below can check their imports too.
-root_packages = ["api", "plugin_api", "s3_file_store", "auth_oidc"]
+root_packages = ["api", "plugin_api", "s3_file_store", "auth_oidc", "identity_keycloak"]
 include_external_packages = true
 
 # A domain is pure: it sees only core_domain and the standard library. Plugins reach it through
@@ -108,6 +110,7 @@ forbidden_modules = [
   "alembic",
   "psycopg",
   "auth_oidc",
+  "identity_keycloak",
   "jwt",
   "httpx2",
 ]
@@ -127,7 +130,7 @@ source_modules = [
   "api.routers",
   "api.services",
 ]
-forbidden_modules = ["plugin_api", "s3_file_store", "auth_oidc"]
+forbidden_modules = ["plugin_api", "s3_file_store", "auth_oidc", "identity_keycloak"]
 
 # Everything else in the server builds on api/common, so it must not reach back up into them.
 [[tool.importlinter.contracts]]
@@ -151,12 +154,12 @@ forbidden_modules = [
 name = "Ports depend on no plugin or app"
 type = "forbidden"
 source_modules = ["plugin_api"]
-forbidden_modules = ["api", "s3_file_store", "auth_oidc"]
+forbidden_modules = ["api", "s3_file_store", "auth_oidc", "identity_keycloak"]
 
 [[tool.importlinter.contracts]]
 name = "Plugins import no app"
 type = "forbidden"
-source_modules = ["s3_file_store", "auth_oidc"]
+source_modules = ["s3_file_store", "auth_oidc", "identity_keycloak"]
 forbidden_modules = ["api"]
 
 [[tool.importlinter.contracts]]
@@ -168,4 +171,4 @@ modules = ["api.domains.*"]
 name = "Inside a domain, the service sits above its ports"
 type = "layers"
 containers = ["api.domains.*"]
-layers = ["service", "(storage) | repository"]
+layers = ["service", "(storage) | (accounts) | repository"]

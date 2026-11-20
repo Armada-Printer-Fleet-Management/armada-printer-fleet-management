@@ -8,7 +8,7 @@ from core_domain.ddd import EntityNotFound, Unavailable
 from core_domain.ids import UserId
 from plugin_api.file_store import FileStoreError
 
-from api.infrastructure.file_store_files import FileStoreFiles
+from api.infrastructure.content_asset.file_store_files import FileStoreFiles
 from tests.fakes import MemoryFileStore
 from tests.samples import NOW
 
