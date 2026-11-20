@@ -9,7 +9,7 @@ from api.app import AppParts, AppServices, build_app
 from api.common.clock import clock
 from api.common.health import raising_probe
 from api.common.models import DependencyCheck
-from api.common.settings import AuthSettings, FileStoreSettings, database_url
+from api.common.settings import database_url
 from api.domains.auth.service import UserService
 from api.domains.content_asset.service import FileService
 from api.domains.fleet.service import PrinterService
@@ -18,6 +18,12 @@ from api.domains.print_job.service import PrintJobService
 from api.domains.print_preparation.service import SlicerConfigurationService
 from api.domains.queue.service import PrinterQueueService
 from api.infrastructure.agreement_sql import SqlAgreementRepository
+from api.infrastructure.auth.identity_directory_accounts import IdentityDirectoryAccounts
+from api.infrastructure.auth.identity_directory_settings import IdentitySettings
+from api.infrastructure.auth.oidc_access_tokens import OidcAccessTokens
+from api.infrastructure.auth.token_verifier_settings import AuthSettings
+from api.infrastructure.content_asset.file_store_files import FileStoreFiles
+from api.infrastructure.content_asset.file_store_settings import FileStoreSettings
 from api.infrastructure.dev_data import (
     STUB_FAULTY_PRINTER_ID,
     STUB_STUDENT_ID,
@@ -25,15 +31,13 @@ from api.infrastructure.dev_data import (
     stub_printers,
 )
 from api.infrastructure.file_sql import SqlFileRepository
-from api.infrastructure.file_store_files import FileStoreFiles
-from api.infrastructure.oidc_access_tokens import OidcAccessTokens
 from api.infrastructure.postgres_database import PostgresDatabase
 from api.infrastructure.print_job_sql import SqlPrintJobRepository
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
 from api.infrastructure.printer_server_mock import MockPrinterServer
 from api.infrastructure.slice_profile_stub import StubSliceProfiles
 from api.infrastructure.user_sql import SqlUserRepository
-from api.plugins import build_file_store, build_token_verifier
+from api.plugins import build_file_store, build_identity_directory, build_token_verifier
 from api.services.printer_poller import PrinterPoller
 
 
@@ -44,6 +48,9 @@ def production_parts() -> AppParts:
     database = PostgresDatabase(lambda: create_async_engine(database_url()))  # Built at lifespan
     access_tokens = OidcAccessTokens(
         lambda: build_token_verifier(AuthSettings())
+    )  # Built at lifespan
+    accounts = IdentityDirectoryAccounts(
+        lambda: build_identity_directory(IdentitySettings())
     )  # Built at lifespan
 
     # Services (note difference from an RPC service, this is the domain service)
@@ -58,7 +65,7 @@ def production_parts() -> AppParts:
     printer_queue_service = PrinterQueueService(
         InMemoryPrinterQueueRepository(stub_printer_queues())
     )
-    user_service = UserService(SqlUserRepository(database), clock)
+    user_service = UserService(SqlUserRepository(database), accounts, clock)
     printer_poller = PrinterPoller(printer_service, print_job_service, timedelta(seconds=1))
     agreement_service = AgreementService(
         SqlAgreementRepository(database),
@@ -77,6 +84,11 @@ def production_parts() -> AppParts:
         "identity_provider": DependencyCheck(
             raising_probe(access_tokens.health_check), critical=False
         ),
+        # The provider's account management, signed in with the server's own client. Only
+        # creating users needs it, so everything else works while it is down.
+        "identity_provider_accounts": DependencyCheck(
+            raising_probe(accounts.health_check), critical=False
+        ),
     }
 
     return AppParts(
@@ -94,7 +106,7 @@ def production_parts() -> AppParts:
         verify=access_tokens.verify,
         enforce=AuthSettings().enforce,
         dependency_checks=dependency_checks,
-        resources=[files, database, access_tokens],
+        resources=[files, database, access_tokens, accounts],
         background=[printer_poller.run],
     )
 

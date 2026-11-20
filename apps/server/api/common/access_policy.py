@@ -58,6 +58,7 @@ ACCESS: Mapping[Endpoint, Allowed] = {
     # Students choose what to slice for. A type names no printer, so the fleet stays hidden.
     Endpoint("POST", f"{API_PREFIX}/server.v1.PrinterService/ListPrinterTypes"): STUDENTS_AND_STAFF,
     rpc_service("PrinterQueueService"): STAFF,
+    rpc_service("UserService"): STAFF,
     # Students slice their own prints; the server decides what they may slice with.
     rpc_service("SlicerConfigurationService"): STUDENTS_AND_STAFF,
     Endpoint("GET", f"{API_PREFIX}{FILES_PATH}/{{file_id}}"): STUDENTS_AND_STAFF,

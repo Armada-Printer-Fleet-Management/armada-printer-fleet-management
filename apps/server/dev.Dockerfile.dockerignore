@@ -11,6 +11,7 @@
 !packages/plugin-api/
 !plugins/s3-file-store/
 !plugins/auth-oidc/
+!plugins/identity-keycloak/
 
 # Re-excluded inside the allowed paths: host-built or host-specific state.
 **/.venv

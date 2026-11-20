@@ -315,6 +315,8 @@ exited with code 0, and read `docker compose -p armada-dev logs migrate` if it d
 If it fails with "Ports are not available" on 5432, a Postgres installed natively on the machine
 holds that port. Set `DB_PORT` to a free port in `config/compose.dev.env` and run it again.
 
+If Keycloak misbehaves, its volume may hold a stale realm: delete it and start again, as "Realm" in `infra/dev/README.md` shows.
+
 ## 7b. Check for stale domain directories
 
 Before running tests, inspect the immediate subdirectories of these roots when they exist:
@@ -372,7 +374,7 @@ Skip this step if `--skip-app` was passed.
 
 | App | Condition | Command |
 |---|---|---|
-| Server | `infra/dev/compose.yaml` exists | Already running from step 7: `http://127.0.0.1:8000`; check `/api/health_check`. If Docker can't run, `python apps/server/dev_run.py` is the native fallback; set the `FILE_STORE_*`, `DB_*` and `AUTH_*` variables from `apps/server/README.md` ("Running natively") first. Without the dev stack's Garage, Postgres or Keycloak the server still starts, but its dependency check reports `file_storage`, `database` or `identity_provider` as `fail` |
+| Server | `infra/dev/compose.yaml` exists | Already running from step 7: `http://127.0.0.1:8000`; check `/api/health_check`. If Docker can't run, `python apps/server/dev_run.py` is the native fallback; set the `FILE_STORE_*`, `DB_*`, `AUTH_*` and `IDENTITY_*` variables from `apps/server/README.md` ("Running natively") first. Without the dev stack's Garage, Postgres or Keycloak the server still starts, but its dependency check reports `file_storage`, `database`, or `identity_provider` and `identity_provider_accounts`, as `fail` |
 | Web | `infra/dev/compose.yaml` exists | Already running from step 7: `http://127.0.0.1:5174` |
 | Keycloak | `infra/dev/compose.yaml` exists | Already running from step 7: the admin console is `http://localhost:5174/auth/admin`, signing in with `KEYCLOAK_ADMIN_USERNAME` and `KEYCLOAK_ADMIN_PASSWORD` from `config/compose.dev.env`. Always use it through 5174, not its debug port 8080; see `infra/dev/README.md` |
 | Desktop | `apps/desktop/backend/pyproject.toml` exists | `python apps/desktop/dev_run.py` |
