@@ -8,7 +8,7 @@ differ only in their environment file.
 | `compose.yaml` | The six services: `web` (Caddy plus the built frontend), `server`, `db` (Postgres), `garage-s3-storage` (S3 file storage), `keycloak` (identity provider) and `keycloak-db` (Keycloak's own Postgres). Images are pulled, never built here |
 | `Caddyfile` | Baked into the web image. Serves the frontend, forwards `/api` to the server and Keycloak's sign-in paths under `/auth` to Keycloak, and obtains HTTPS certificates for `DOMAIN` |
 | `garage.toml` | Garage's configuration, mounted into its container. Single node, sqlite metadata, no replication |
-| `armada-realm.json` | Keycloak's `armada` realm: the web client and the roles, with no users. Imported on Keycloak's first start only |
+| `armada-realm.json` | Keycloak's `armada` realm: the web client, the `armada-server` client whose service account the server creates users with, and the roles, with no people. Imported on Keycloak's first start only |
 | `install.sh` | Sets up a machine once, then hands over to `armada` |
 | `armada` | The command an operator uses for everything after installing: updates, rollback, status, settings |
 | `systemd/` | The timer that runs `armada check-for-updates --scheduled` |

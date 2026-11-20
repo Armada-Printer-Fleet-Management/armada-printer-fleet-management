@@ -53,6 +53,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?}
       AUTH_ISSUER: http://localhost:5174/auth/realms/armada
       AUTH_JWKS_URL: http://keycloak:8080/auth/realms/armada/protocol/openid-connect/certs
+      IDENTITY_BASE_URL: http://keycloak:8080/auth
+      IDENTITY_SERVICE_ACCOUNT_SECRET: ${KEYCLOAK_SERVICE_ACCOUNT_SECRET:?}
     ports:
       - 127.0.0.1:8000:8000
     develop:
@@ -250,6 +252,8 @@ services:
       KC_HEALTH_ENABLED: 'true'
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?}
+      # Read by the realm import, which sets it as the armada-server client's secret.
+      KEYCLOAK_SERVICE_ACCOUNT_SECRET: ${KEYCLOAK_SERVICE_ACCOUNT_SECRET:?}
     ports:
       - 127.0.0.1:8080:8080
     volumes:
