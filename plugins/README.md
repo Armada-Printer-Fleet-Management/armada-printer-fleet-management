@@ -6,6 +6,7 @@ system to an interface the domain defined.
 | Directory | What it adapts |
 |---|---|
 | `auth-oidc/` | Verifies access tokens from an OpenID Connect provider (`TokenVerifier`) |
+| `identity-keycloak/` | Creates and deletes accounts in Keycloak (`IdentityDirectory`) |
 | `identity-local/` | User and role lookup |
 | `s3-file-store/` | File storage on any S3-compatible store, such as Garage |
 | `theme-default/` | Branding and theme tokens |
