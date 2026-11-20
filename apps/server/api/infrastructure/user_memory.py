@@ -25,10 +25,8 @@ class InMemoryUserRepository(UserRepository):
         others = [user for user in self._users.values() if user.id != entity.id]
         if any(user.email == entity.email for user in others):
             raise AlreadyExists("user", "email")
-        if any(
-            user.identity_provider_subject == entity.identity_provider_subject for user in others
-        ):
-            raise AlreadyExists("user", "identity provider subject")
+        if any(user.identity_provider_ref == entity.identity_provider_ref for user in others):
+            raise AlreadyExists("user", "identity provider reference")
         self._users[entity.id] = replace(entity)
 
     async def page(self, page_size: int, page_token: str) -> Page[User]:

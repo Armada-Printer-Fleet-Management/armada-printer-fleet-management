@@ -157,11 +157,11 @@
         <h2 id="conventions">Conventions the schema follows</h2>
         <div class="notes">
           <div class="note"><h3>Domains link by ID only</h3><p>Solid lines are real foreign keys inside a domain. Dashed lines cross a domain and carry only an ID, so the ledger can store a <code>print_job_id</code> without knowing anything about jobs.</p></div>
-          <div class="note"><h3>An ID is named after what it points at</h3><p>A column holding one of our IDs is <code>&lt;entity&gt;_id</code>, with no prefix: <code>printer_id</code>, never <code>assigned_printer_id</code>. Identifiers from outside, such as Keycloak's, end in <code>_ref</code>. The one exception is the audit log's and broadcast's <code>target_type</code> + <code>target_id</code> pair, which can point at several kinds of thing.</p></div>
+          <div class="note"><h3>An ID is named after what it points at</h3><p>A column holding one of our IDs is <code>&lt;entity&gt;_id</code>, with no prefix: <code>printer_id</code>, never <code>assigned_printer_id</code>. Identifiers from outside, such as the identity provider's, end in <code>_ref</code>. The one exception is the audit log's and broadcast's <code>target_type</code> + <code>target_id</code> pair, which can point at several kinds of thing.</p></div>
           <div class="note"><h3>One source for each fact</h3><p>Who did something and when lives in the event and audit tables, not copied onto every row. Timestamps are kept to a small shared set: <code>created_at</code>, <code>updated_at</code>, <code>deleted_at</code> and <code>expires_at</code>.</p></div>
           <div class="note"><h3>History is append-only</h3><p>AuditLog, PrintJobEvent, PrinterEvent and FilamentLedgerEntry are never updated or deleted. Balances come from the ledger, and a job's actual time and filament are the sum of its PrinterEvent attempts.</p></div>
           <div class="note"><h3>Enums are fixed UUIDs</h3><p>An <code>enum</code> column stores a UUID that never changes, never a number or a name, so renaming a value can't change what existing rows mean. Lists that differ between institutions, such as queue types, are data instead.</p></div>
-          <div class="note"><h3>Secrets stay out</h3><p>Keycloak holds passwords, sessions and tokens. Queue join codes are hashed. File storage keys are opaque, and download links are never stored.</p></div>
+          <div class="note"><h3>Secrets stay out</h3><p>The identity provider holds passwords, sessions and tokens. Queue join codes are hashed. File storage keys are opaque, and download links are never stored.</p></div>
         </div>
 
         <h2 id="gaps">Open questions</h2>
@@ -212,20 +212,21 @@
         const SHORT = { PrintServerInstance: 'ServerInstance' };
         // [name, type, mark, ref/ext, note]
         const T = {
-          User: { d: 'auth', b: ['core'], f: ['unique: keycloak_user_ref, email'], c: [
+          User: { d: 'auth', b: ['core'], f: ['unique: identity_provider_ref, email'], c: [
             ['id', 'uuid', 'pk', '', 'Primary key.'],
-            ['keycloak_user_ref', 'uuid', 'ext', 'Keycloak', 'Unique. The user’s ID in Keycloak. The row is created the first time the user signs in.'],
-            ['email', 'text', '', '', 'Unique and lower-cased. Copied from Keycloak at sign-in.'],
-            ['display_name', 'text', '', ''],
-            ['role', 'enum', '', '', 'Guest, Student, Staff, Admin. A copy of the Keycloak role, which is the source of truth.'],
-            ['status', 'enum', '', '', 'active, suspended, deleted. Mirrors the Keycloak account.'],
+            ['identity_provider_ref', 'text', 'ext', 'Identity provider', 'Unique. The user’s ID in the identity provider. Text, as not every provider uses UUIDs. The server creates that account before the row.'],
+            ['email', 'text', '', '', 'Unique and lower-cased. Also the account’s username in the identity provider.'],
+            ['first_name', 'text', '', ''],
+            ['last_name', 'text', '', ''],
+            ['role', 'enum', '', '', 'Guest, Student, Staff, Admin. A copy of the identity provider’s role, which is the source of truth.'],
+            ['status', 'enum', '', '', 'active, suspended, deleted. Mirrors the identity provider’s account status.'],
             ['expires_at', 'timestamp?', '', '', 'Used for Guest accounts.'],
             ['last_login_at', 'timestamp?', '', ''],
             ['deleted_at', 'timestamp?', '', '', 'Soft delete.']] },
           AuditLog: { d: 'auth', b: ['append-only'], c: [
             ['id', 'uuid', 'pk', ''],
             ['user_id', 'uuid?', 'fk', 'User', 'Who acted, when it was a person.'],
-            ['client_ref', 'text?', 'ext', 'Keycloak client', 'Which service acted, such as the printer server.'],
+            ['client_ref', 'text?', 'ext', 'Identity provider client', 'Which service acted, such as the printer server.'],
             ['action', 'enum', '', '', 'For example role_changed, filament_adjusted, mass_email_sent, job_cancelled.'],
             ['target_type', 'text', '', '', 'Names the kind of thing target_id points at.'],
             ['target_id', 'uuid', '', '', 'Polymorphic, read with target_type, so no line is drawn. The one exception to the ID naming rule.'],
@@ -291,7 +292,7 @@
             ['from_status', 'enum?', '', '', 'Unset on the event that creates the job.'],
             ['to_status', 'enum', '', ''],
             ['user_id', 'uuid?', 'ref', 'User', 'Who made the change, when it was a person.'],
-            ['client_ref', 'text?', 'ext', 'Keycloak client', 'Set when a service made the change.'],
+            ['client_ref', 'text?', 'ext', 'Identity provider client', 'Set when a service made the change.'],
             ['note', 'text?', '', ''],
             ['created_at', 'timestamp', '', '', 'When the job reached to_status.']] },
           FleetSection: { d: 'fleet', c: [
@@ -341,7 +342,7 @@
             ['actual_time_s', 'int?', '', '', 'Time this attempt took.'],
             ['actual_filament_g', 'numeric?', '', '', 'Filament this attempt used.'],
             ['user_id', 'uuid?', 'ref', 'User', 'The staff member who recorded it, when entered by hand.'],
-            ['client_ref', 'text?', 'ext', 'Keycloak client', 'The printer server, when reported automatically.'],
+            ['client_ref', 'text?', 'ext', 'Identity provider client', 'The printer server, when reported automatically.'],
             ['notes', 'text?', '', ''],
             ['created_at', 'timestamp', '', '', 'Rows are never updated or deleted.']] },
           Period: { d: 'filament', f: ['allocations usually reset per period'], c: [
