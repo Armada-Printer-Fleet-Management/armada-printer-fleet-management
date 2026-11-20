@@ -82,6 +82,9 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?}
       AUTH_ISSUER: ${AUTH_ISSUER:-https://${DOMAIN:?}/auth/realms/armada}
       AUTH_JWKS_URL: http://keycloak:8080/auth/realms/armada/protocol/openid-connect/certs
+      IDENTITY_BASE_URL: http://keycloak:8080/auth
+      # Optional, so a machine installed before the server created users still updates.
+      IDENTITY_SERVICE_ACCOUNT_SECRET: ${KEYCLOAK_SERVICE_ACCOUNT_SECRET:-}
 
   db:
     image: postgres:17-alpine
@@ -158,6 +161,8 @@ services:
       KC_HEALTH_ENABLED: 'true'
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?}
+      # Read by the realm import, which sets it as the armada-server client's secret.
+      KEYCLOAK_SERVICE_ACCOUNT_SECRET: ${KEYCLOAK_SERVICE_ACCOUNT_SECRET:-}
     # Caddy serves only the armada realm, so operators reach the admin console through an SSH
     # tunnel to this port.
     ports:

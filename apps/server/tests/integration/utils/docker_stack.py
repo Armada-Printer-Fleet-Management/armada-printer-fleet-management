@@ -56,6 +56,7 @@ class DockerStack:
         self._database_password = secrets.token_hex(16)
         self._file_store_access_key = "GK" + secrets.token_hex(16)
         self._file_store_secret_key = secrets.token_hex(32)
+        self._service_account_secret = secrets.token_hex(32)
         # Compose reads every ${VAR:?} in the file for any command, including down.
         self._compose_environment = {
             **os.environ,
@@ -66,6 +67,7 @@ class DockerStack:
             "GARAGE_DEFAULT_BUCKET": FILE_STORE_BUCKET,
             "KEYCLOAK_ADMIN_USERNAME": "admin",
             "KEYCLOAK_ADMIN_PASSWORD": secrets.token_hex(16),
+            "KEYCLOAK_SERVICE_ACCOUNT_SECRET": self._service_account_secret,
         }
 
     def start(self) -> dict[str, str]:
@@ -130,6 +132,8 @@ class DockerStack:
             "FILE_STORE_SECRET_KEY": self._file_store_secret_key,
             "AUTH_ISSUER": realm,
             "AUTH_JWKS_URL": f"{realm}/protocol/openid-connect/certs",
+            "IDENTITY_BASE_URL": f"{identity_provider}/auth",
+            "IDENTITY_SERVICE_ACCOUNT_SECRET": self._service_account_secret,
         }
 
     def _port(self, service: str, container_port: int) -> str:

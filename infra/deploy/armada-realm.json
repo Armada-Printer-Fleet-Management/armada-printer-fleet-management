@@ -35,6 +35,26 @@
                     }
                 }
             ]
+        },
+        {
+            "clientId": "armada-server",
+            "publicClient": false,
+            "clientAuthenticatorType": "client-secret",
+            "secret": "${KEYCLOAK_SERVICE_ACCOUNT_SECRET}",
+            "serviceAccountsEnabled": true,
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false
+        }
+    ],
+    "users": [
+        {
+            "username": "service-account-armada-server",
+            "enabled": true,
+            "serviceAccountClientId": "armada-server",
+            "clientRoles": {
+                "realm-management": ["manage-users", "view-users", "view-realm"]
+            }
         }
     ]
 }
