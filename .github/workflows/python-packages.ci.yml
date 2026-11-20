@@ -18,6 +18,7 @@ jobs:
           - packages/plugin-api
           - plugins/s3-file-store
           - plugins/auth-oidc
+          - plugins/identity-keycloak
     runs-on: ubuntu-latest
     defaults:
       run:
