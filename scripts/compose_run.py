@@ -57,6 +57,7 @@ GENERATED: dict[str, Callable[[], str]] = {
     "GARAGE_DEFAULT_SECRET_KEY": lambda: secrets.token_hex(32),
     "KEYCLOAK_DB_PASSWORD": lambda: secrets.token_hex(16),
     "KEYCLOAK_ADMIN_PASSWORD": lambda: secrets.token_hex(16),
+    "KEYCLOAK_SERVICE_ACCOUNT_SECRET": lambda: secrets.token_hex(32),
 }
 DEFAULTS = {"GARAGE_DEFAULT_BUCKET": "armada", "KEYCLOAK_ADMIN_USERNAME": "admin"}
 DEPLOY_DEFAULTS = {"GHCR_OWNER": "local", "VERSION": "dev"}
