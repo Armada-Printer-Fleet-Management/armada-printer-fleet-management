@@ -4,11 +4,12 @@ from core_domain.ddd import Page, Service, Unavailable
 from core_domain.fleet import Printer, PrinterType, printer_types
 from core_domain.ids import PrinterId, PrintJobId
 
+from api.common.paging import PageSizes
 from api.domains.fleet.repository import PrinterRepository
 
-_PAGE_SIZE = 100
+PAGE_SIZES = PageSizes(default=50, maximum=100)
 # Bounds on reading the whole fleet, so a repository that keeps returning pages, or answers
-# slowly, cannot hold the request open: 50 pages is 5,000 printers.
+# slowly, cannot hold the request open: 50 pages of the largest page size.
 _MAX_PAGES = 50
 _TIMEOUT_S = 10.0
 
@@ -18,7 +19,7 @@ class PrinterService(Service[PrinterRepository]):
         return await self._repository.get(printer_id)
 
     async def page(self, page_size: int, page_token: str) -> Page[Printer]:
-        return await self._repository.page(page_size, page_token)
+        return await self._repository.page(PAGE_SIZES.size(page_size), page_token)
 
     async def types(self) -> list[PrinterType]:
         """The distinct kinds of printer in the fleet, which is all a student may learn of it.
@@ -28,7 +29,7 @@ class PrinterService(Service[PrinterRepository]):
         try:
             async with asyncio.timeout(_TIMEOUT_S):
                 for _ in range(_MAX_PAGES):
-                    page = await self._repository.page(_PAGE_SIZE, token)
+                    page = await self._repository.page(PAGE_SIZES.maximum, token)
                     printers.extend(page.items)
                     if not page.next_page_token:
                         return printer_types(printers)

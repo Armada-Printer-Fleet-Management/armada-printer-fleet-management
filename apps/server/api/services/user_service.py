@@ -4,6 +4,7 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from core_domain.ids import UserId
+from proto_utils.gen.common.v1.page_pb2 import PageResponse
 from proto_utils.gen.server.v1.user_service_pb2 import (
     CreateUserRequest,
     CreateUserResponse,
@@ -70,7 +71,12 @@ class UserServiceImplementation:
         ctx: RequestContext[ListUsersRequest, ListUsersResponse],
         /,
     ) -> ListUsersResponse:
-        raise _not_implemented()
+        with domain_errors_as_connect():
+            page = await self._users.page(request.page.page_size, request.page.page_token)
+        return ListUsersResponse(
+            users=[self._mapper.to_proto(user) for user in page.items],
+            page=PageResponse(next_page_token=page.next_page_token),
+        )
 
     async def update_user(
         self,
@@ -86,7 +92,18 @@ class UserServiceImplementation:
         ctx: RequestContext[TransitionUserStatusRequest, TransitionUserStatusResponse],
         /,
     ) -> TransitionUserStatusResponse:
-        raise _not_implemented()
+        user_id = request_id(UserId, request.user_id)
+        with domain_errors_as_connect():
+            match request.WhichOneof("action"):
+                case "suspend":
+                    user = await self._users.suspend(user_id)
+                case "reactivate":
+                    user = await self._users.activate(user_id)
+                case "delete":
+                    user = await self._users.delete(user_id)
+                case _:
+                    raise ConnectError(Code.INVALID_ARGUMENT, "action must be set")
+        return TransitionUserStatusResponse(user=self._mapper.to_proto(user))
 
     async def transition_user_role(
         self,

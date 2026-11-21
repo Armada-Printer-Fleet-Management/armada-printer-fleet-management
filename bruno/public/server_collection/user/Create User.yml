@@ -20,12 +20,6 @@ http:
       }
   auth: inherit
 
-runtime:
-  scripts:
-    - type: after-response
-      code: |-
-        bru.setVar("userId", res.body.user.id.value);
-
 settings:
   encodeUrl: true
   timeout: 0

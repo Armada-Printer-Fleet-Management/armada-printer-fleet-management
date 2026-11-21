@@ -26,9 +26,10 @@ type Handler = Callable[[httpx2.Request], httpx2.Response]
 
 class FakeKeycloak:
     """One realm's users, roles and role mappings, behind the parts of the token endpoint and the
-    Admin REST API the directory uses. Assign `on_create`, `on_map_role`, `on_delete` or
-    `on_admin` to answer differently. Set `omit_location` to create accounts without saying
-    where, and `hidden_from_lookup` to keep them out of the user lookup."""
+    Admin REST API the directory uses. Assign `on_create`, `on_map_role`, `on_delete`,
+    `on_update`, `on_logout` or `on_admin` to answer differently. Set `omit_location` to create
+    accounts without saying where, and `hidden_from_lookup` to keep them out of the user lookup.
+    An update changes only the fields it sends, as Keycloak's does."""
 
     def __init__(self) -> None:
         self.roles = {"staff": {"id": "role-staff", "name": "staff"}}
@@ -40,7 +41,10 @@ class FakeKeycloak:
         self.on_create: Handler | None = None
         self.on_map_role: Handler | None = None
         self.on_delete: Handler | None = None
+        self.on_update: Handler | None = None
+        self.on_logout: Handler | None = None
         self.on_admin: Handler | None = None
+        self.logged_out: list[str] = []
         self.omit_location = False
         self.hidden_from_lookup = False
 
@@ -109,6 +113,21 @@ class FakeKeycloak:
                 if self.users.pop(subject, None) is None:
                     return httpx2.Response(404)
                 self.role_mappings.pop(subject, None)
+                return httpx2.Response(204)
+            case "PUT", ["users", subject]:
+                if self.on_update is not None:
+                    return self.on_update(request)
+                user = self.users.get(subject)
+                if user is None:
+                    return httpx2.Response(404)
+                user.update(json.loads(request.content))
+                return httpx2.Response(204)
+            case "POST", ["users", subject, "logout"]:
+                if self.on_logout is not None:
+                    return self.on_logout(request)
+                if subject not in self.users:
+                    return httpx2.Response(404)
+                self.logged_out.append(subject)
                 return httpx2.Response(204)
             case _:
                 return httpx2.Response(404)
@@ -318,3 +337,87 @@ def test_a_refused_deletion_is_a_directory_error() -> None:
 
     with pytest.raises(IdentityDirectoryError):
         run(keycloak, lambda directory: directory.delete_account(str(uuid4())))
+
+
+# Enabling and disabling an account
+
+
+def change_access_after_create(keycloak: FakeKeycloak, enabled: bool) -> str:
+    async def use(directory: KeycloakIdentityDirectory) -> str:
+        subject = await directory.create_account(ACCOUNT)
+        if enabled:
+            await directory.enable_account(subject)
+        else:
+            await directory.disable_account(subject)
+        return subject
+
+    return run(keycloak, use)
+
+
+def test_disable_disables_the_account_and_ends_its_sessions() -> None:
+    keycloak = FakeKeycloak()
+
+    subject = change_access_after_create(keycloak, enabled=False)
+
+    assert keycloak.users[subject]["enabled"] is False
+    assert keycloak.logged_out == [subject]
+
+
+def test_disable_keeps_the_rest_of_the_account() -> None:
+    keycloak = FakeKeycloak()
+
+    subject = change_access_after_create(keycloak, enabled=False)
+
+    assert keycloak.users[subject]["email"] == ACCOUNT.email
+    assert keycloak.role_mappings[subject] == [ACCOUNT.role]
+
+
+def test_enable_enables_the_account_without_ending_sessions() -> None:
+    keycloak = FakeKeycloak()
+
+    async def use(directory: KeycloakIdentityDirectory) -> str:
+        subject = await directory.create_account(ACCOUNT)
+        await directory.disable_account(subject)
+        keycloak.logged_out.clear()
+        await directory.enable_account(subject)
+        return subject
+
+    subject = run(keycloak, use)
+
+    assert keycloak.users[subject]["enabled"] is True
+    assert keycloak.logged_out == []
+
+
+def test_disabling_an_account_that_does_not_exist_succeeds() -> None:
+    run(FakeKeycloak(), lambda directory: directory.disable_account(str(uuid4())))
+
+
+def test_disabling_an_account_whose_sessions_are_already_gone_succeeds() -> None:
+    keycloak = FakeKeycloak()
+    keycloak.on_logout = lambda _: httpx2.Response(404)
+
+    subject = change_access_after_create(keycloak, enabled=False)
+
+    assert keycloak.users[subject]["enabled"] is False
+
+
+def test_enabling_an_account_that_does_not_exist_is_a_directory_error() -> None:
+    with pytest.raises(IdentityDirectoryError):
+        run(FakeKeycloak(), lambda directory: directory.enable_account(str(uuid4())))
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_a_refused_update_is_a_directory_error(enabled: bool) -> None:
+    keycloak = FakeKeycloak()
+    keycloak.on_update = lambda _: httpx2.Response(403)
+
+    with pytest.raises(IdentityDirectoryError):
+        change_access_after_create(keycloak, enabled)
+
+
+def test_a_refused_logout_is_a_directory_error() -> None:
+    keycloak = FakeKeycloak()
+    keycloak.on_logout = lambda _: httpx2.Response(403)
+
+    with pytest.raises(IdentityDirectoryError):
+        change_access_after_create(keycloak, enabled=False)

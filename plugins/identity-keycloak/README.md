@@ -1,7 +1,8 @@
 # `plugins/identity-keycloak/` — Keycloak accounts
 
 Implements the `IdentityDirectory` port against Keycloak's Admin REST API.
-`KeycloakIdentityDirectory` creates an account with a realm role, and deletes one.
+`KeycloakIdentityDirectory` creates an account with a realm role, enables or disables one
+(disabling also ends its sessions), and deletes one.
 
 It signs in as a confidential client's service account, using the client credentials grant. That
 account needs the `realm-management` roles `manage-users`, `view-users` and `view-realm`.
