@@ -15,3 +15,13 @@ class IdentityAccounts(Protocol):
     async def delete(self, identity_provider_ref: str) -> None:
         """Removes the account, if there is one."""
         ...
+
+    async def enable(self, identity_provider_ref: str) -> None:
+        """Lets the account sign in. Raises Unavailable if the identity provider cannot, including
+        when there is no such account."""
+        ...
+
+    async def disable(self, identity_provider_ref: str) -> None:
+        """Stops the account signing in and ends its sessions; succeeds when there is no account.
+        Raises Unavailable if the identity provider cannot."""
+        ...

@@ -5,10 +5,10 @@ from core_domain.ddd import Page, Service, change_async
 from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserId
 from core_domain.print_job import PrintJob
 
+from api.common.paging import PageSizes
 from api.domains.print_job.repository import PrintJobRepository
 
-DEFAULT_PAGE_SIZE = 50
-MAX_PAGE_SIZE = 100
+PAGE_SIZES = PageSizes(default=50, maximum=100)
 
 
 class PrintJobService(Service[PrintJobRepository]):
@@ -20,8 +20,7 @@ class PrintJobService(Service[PrintJobRepository]):
         return await self._repository.get(print_job_id)
 
     async def page(self, page_size: int, page_token: str) -> Page[PrintJob]:
-        size = min(page_size, MAX_PAGE_SIZE) if page_size > 0 else DEFAULT_PAGE_SIZE
-        return await self._repository.page(size, page_token)
+        return await self._repository.page(PAGE_SIZES.size(page_size), page_token)
 
     async def create(self, user_id: UserId, user_notes: str) -> PrintJob:
         print_job = PrintJob.create(user_id, user_notes, self._clock())

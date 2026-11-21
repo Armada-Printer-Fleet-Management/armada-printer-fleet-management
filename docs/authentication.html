@@ -112,6 +112,18 @@
           the person cannot sign in until one is set in Keycloak.
         </p>
 
+        <h2 id="suspending-users">Suspending and deleting a user</h2>
+        <p>
+          Keycloak, not the database, decides who can sign in, so the server keeps the
+          two in step: a user's Keycloak account is enabled exactly while they are
+          active. Suspending or deleting someone disables their account and ends their
+          sessions; reactivating them enables it again, as the same account. A deleted
+          user is kept, so their history still has a name.
+        </p>
+        <p>
+          An access token issued before the change still works until it expires.
+        </p>
+
         <h2 id="dev-users">Signing in on the development stack</h2>
         <p>
           A fresh development stack comes with one user per role, so nobody has

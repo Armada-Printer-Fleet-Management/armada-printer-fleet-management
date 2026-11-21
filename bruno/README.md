@@ -78,8 +78,8 @@ python scripts/upload_metadata.py path/to/part.gcode
 Add `--file-type cgcode` for compressed or binary G-code, such as `.bgcode`.
 
 1. Paste the printed JSON into the body of **Create Print Job Upload** and send it. It attaches
-   the file to `{{printJobId}}`, a DRAFT job, and saves the returned `fileId` for the requests in
-   `file/`.
+   the file to `{{printJobId}}`, a DRAFT job. To use the requests in `file/` on it, set the
+   environment's `fileId` to the slot's `fileId` in the response.
 2. In **Upload Print Job File**, set the body to **File** and pick the same file, then send it.
    It uploads to `{{printJobId}}`'s file, so the job must still be a DRAFT.
 

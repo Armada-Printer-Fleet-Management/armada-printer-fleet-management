@@ -1,4 +1,4 @@
-from collections.abc import Callable, Generator, Mapping
+from collections.abc import Awaitable, Callable, Generator, Mapping
 from contextlib import AsyncExitStack, contextmanager
 from types import TracebackType
 from typing import Self
@@ -74,6 +74,40 @@ class IdentityDirectoryAccounts:
         account = NewAccount(email, first_name, last_name, _DIRECTORY_ROLES[role].value)
         with _directory_errors():
             return await self._identity_directory().create_account(account)
+
+    async def enable(self, identity_provider_ref: str) -> None:
+        await self._change_access(
+            identity_provider_ref,
+            "enable",
+            lambda directory: directory.enable_account(identity_provider_ref),
+        )
+
+    async def disable(self, identity_provider_ref: str) -> None:
+        await self._change_access(
+            identity_provider_ref,
+            "disable",
+            lambda directory: directory.disable_account(identity_provider_ref),
+        )
+
+    async def _change_access(
+        self,
+        identity_provider_ref: str,
+        action: str,
+        change: Callable[[IdentityDirectory], Awaitable[None]],
+    ) -> None:
+        try:
+            with _directory_errors():
+                await change(self._identity_directory())
+        except Unavailable:
+            # Logged here, because a caller restoring an account after another failure reports
+            # that failure instead.
+            logger.warning(
+                "identity provider account access not changed",
+                action=action,
+                identity_provider_ref=identity_provider_ref,
+                exc_info=True,
+            )
+            raise
 
     async def delete(self, identity_provider_ref: str) -> None:
         try:

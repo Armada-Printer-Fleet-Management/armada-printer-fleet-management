@@ -3,7 +3,7 @@ from core_domain.ddd import EntityNotFound, RuleViolation
 from core_domain.ids import FileId, PrinterId, PrinterQueueId, PrintJobId, UserId
 from core_domain.print_job import PrintJobStatus
 
-from api.domains.print_job.service import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, PrintJobService
+from api.domains.print_job.service import PAGE_SIZES, PrintJobService
 from api.infrastructure.dev_data import (
     STUB_APPROVED_JOB_ID,
     STUB_DRAFT_JOB_ID,
@@ -249,12 +249,12 @@ async def test_move_to_queue_refused_by_the_rule_saves_nothing(service: PrintJob
 
 @pytest.mark.parametrize(
     ("requested", "applied"),
-    [(0, DEFAULT_PAGE_SIZE), (2, 2), (MAX_PAGE_SIZE + 1, MAX_PAGE_SIZE)],
+    [(0, PAGE_SIZES.default), (2, 2), (PAGE_SIZES.maximum + 1, PAGE_SIZES.maximum)],
 )
 async def test_page_applies_the_default_and_the_cap(requested: int, applied: int) -> None:
     repository = InMemoryPrintJobRepository()
     service = PrintJobService(repository, clock=lambda: NOW)
-    for _ in range(MAX_PAGE_SIZE + 1):
+    for _ in range(PAGE_SIZES.maximum + 1):
         await service.create(UserId.new(), "")
 
     assert len((await service.page(requested, "")).items) == applied

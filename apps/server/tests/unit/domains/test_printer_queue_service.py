@@ -4,7 +4,7 @@ from core_domain.ids import PrinterQueueId
 from core_domain.queue import PrinterQueue
 
 from api.domains.queue.repository import PrinterQueueRepository
-from api.domains.queue.service import PrinterQueueService
+from api.domains.queue.service import PAGE_SIZES, PrinterQueueService
 from api.infrastructure.printer_queue_memory import InMemoryPrinterQueueRepository
 from tests.samples import printer_queue
 
@@ -26,6 +26,31 @@ class PagedQueues(PrinterQueueRepository):
         index = int(page_token or 0)
         last = index == len(self._pages) - 1
         return Page(self._pages[index], "" if last else str(index + 1))
+
+
+class SizeRecordingQueues(InMemoryPrinterQueueRepository):
+    """The in-memory queues, which return every queue whatever size is asked for, noting the
+    size each page was asked for."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.requested_sizes: list[int] = []
+
+    async def page(self, page_size: int, page_token: str) -> Page[PrinterQueue]:
+        self.requested_sizes.append(page_size)
+        return await super().page(page_size, page_token)
+
+
+@pytest.mark.parametrize(
+    ("requested", "applied"),
+    [(0, PAGE_SIZES.default), (2, 2), (PAGE_SIZES.maximum + 1, PAGE_SIZES.maximum)],
+)
+async def test_page_applies_the_default_and_the_cap(requested: int, applied: int) -> None:
+    repository = SizeRecordingQueues()
+
+    await PrinterQueueService(repository).page(requested, "")
+
+    assert repository.requested_sizes == [applied]
 
 
 async def open_queue(repository: PrinterQueueRepository) -> PrinterQueueId:

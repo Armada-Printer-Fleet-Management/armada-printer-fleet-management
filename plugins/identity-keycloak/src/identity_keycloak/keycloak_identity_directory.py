@@ -197,5 +197,33 @@ class KeycloakIdentityDirectory:
         if response.status_code not in (HTTPStatus.NO_CONTENT, HTTPStatus.NOT_FOUND):
             raise IdentityDirectoryError(f"Keycloak refused the deletion ({response.status_code})")
 
+    async def _update_enabled(self, subject: str, enabled: bool) -> httpx2.Response:
+        # Keycloak changes only the fields an update sends, so the rest of the account is kept.
+        return await self._request(
+            "PUT", f"{_KEYCLOAK_USERS_URL}/{_segment(subject)}", {"enabled": enabled}
+        )
+
+    async def enable_account(self, subject: str) -> None:
+        response = await self._update_enabled(subject, True)
+        if response.status_code != HTTPStatus.NO_CONTENT:
+            raise IdentityDirectoryError(
+                f"Keycloak refused to enable the account ({response.status_code})"
+            )
+
+    async def disable_account(self, subject: str) -> None:
+        response = await self._update_enabled(subject, False)
+        if response.status_code == HTTPStatus.NOT_FOUND:
+            return
+        if response.status_code != HTTPStatus.NO_CONTENT:
+            raise IdentityDirectoryError(
+                f"Keycloak refused to disable the account ({response.status_code})"
+            )
+        # Disabling stops new sign-ins; ending the sessions stops their refresh tokens too.
+        response = await self._request("POST", f"{_KEYCLOAK_USERS_URL}/{_segment(subject)}/logout")
+        if response.status_code not in (HTTPStatus.NO_CONTENT, HTTPStatus.NOT_FOUND):
+            raise IdentityDirectoryError(
+                f"Keycloak refused to end the account's sessions ({response.status_code})"
+            )
+
     async def health_check(self) -> None:
         await self._fetch_token()

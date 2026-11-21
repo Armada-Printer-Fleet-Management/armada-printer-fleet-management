@@ -53,7 +53,7 @@ These are described at a conceptual level.
 
 ### 4.1 Account creation and auth
 
-Web App → Backend → Keycloak, then Database. Staff create a user through the backend, which creates the sign-in account in Keycloak and then the user's row in its own database. Keycloak checks passwords and issues tokens; the backend validates the tokens.
+Web App → Backend → Keycloak, then Database. Staff create a user through the backend, which creates the sign-in account in Keycloak and then the user's row in its own database. Keycloak checks passwords and issues tokens; the backend validates the tokens. Suspending or deleting a user disables their Keycloak account, and reactivating them enables it again; deleted users stay in the database as a soft delete.
 
 ### 4.2 Print submission
 
