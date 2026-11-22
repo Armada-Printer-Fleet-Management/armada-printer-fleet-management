@@ -45,8 +45,11 @@ builds its URLs and token issuer from the address it is reached on, so going thr
   operating Keycloak itself; switch to the `armada` realm with the dropdown at the top left.
 - **Users:** `keycloak-dev-users` runs `keycloak-dev-users.sh` once Keycloak is ready and exits.
   It creates `admin`, `staff` and `student` in the `armada` realm, each with its realm role and
-  `DEV_USER_PASSWORD` from `config/compose.dev.env`, and skips any that already exist. It is part
-  of this stack only. Sign-in details: `docs/authentication.html#dev-users`.
+  `DEV_USER_PASSWORD` from `config/compose.dev.env`. Each has a fixed ID, the
+  `identity_provider_ref` of the matching user in `apps/server/api/infrastructure/dev_data.py`;
+  change both together. A user that already exists with its ID is skipped, and one with any other
+  ID, from a Keycloak volume made before IDs were fixed, is deleted and re-created. It is part of
+  this stack only. Sign-in details: `docs/authentication.html#dev-users`.
 - **Realm:** `infra/deploy/armada-realm.json` is imported on Keycloak's first start, and skipped
   once the `armada` realm exists. To load a changed file, delete only Keycloak's data and start
   again:
