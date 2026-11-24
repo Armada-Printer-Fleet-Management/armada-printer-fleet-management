@@ -34,3 +34,8 @@ lists every pair.
 - A literal that must stay carries `theme-check: allow <reason>` on its line.
 - Controls are keyboard reachable with a visible focus ring. `apps/web/AGENTS.md` has the
   interactive-control rules.
+- `pnpm lint` runs eslint-plugin-jsx-a11y's recommended rules on every frontend (pre-push and CI):
+  alt text, label association, ARIA roles, keyboard handlers on clickable elements. A component
+  that wraps a heading or label renders `children` explicitly so the rules can see its content.
+  The one option, in `eslint.config.mjs`, lets a scrollable `<pre>` take focus so a keyboard can
+  scroll it.
