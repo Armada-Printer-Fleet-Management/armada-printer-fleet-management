@@ -29,7 +29,8 @@ BIN=/usr/local/bin/armada
 
 # Colour only for a person at a terminal, as in armada.
 colour() { [ -t "$1" ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != dumb ]; }
-if colour 1; then BOLD=$'\e[1m' RESET=$'\e[0m'; else BOLD="" RESET=""; fi
+# Bright blue, since plain blue is hard to read on a dark background.
+if colour 1; then BOLD=$'\e[1m' BLUE=$'\e[94m' RESET=$'\e[0m'; else BOLD="" BLUE="" RESET=""; fi
 if colour 2; then ERR_RED=$'\e[31m' ERR_RESET=$'\e[0m'; else ERR_RED="" ERR_RESET=""; fi
 
 die() {
@@ -246,9 +247,9 @@ cat <<EOF
 
 ${BOLD}Armada $("$BIN" version) is running at $address${RESET}
 
-  Updates   $policy_text
+  ${BOLD}${BLUE}Updates${RESET}   $policy_text
             change with: armada config update-policy <notify|auto|off>
-  Status    armada status
-  Logs      armada logs
-  Help      armada help
+  ${BOLD}${BLUE}Status${RESET}    armada status
+  ${BOLD}${BLUE}Logs${RESET}      armada logs
+  ${BOLD}${BLUE}Help${RESET}      armada help
 EOF
