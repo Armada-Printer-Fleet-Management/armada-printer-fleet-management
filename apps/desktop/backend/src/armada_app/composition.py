@@ -28,6 +28,7 @@ from armada_infrastructure.temp_user import temp_user_id
 from armada_ipc import Ipc
 from armada_runtime.environment import Environment
 from armada_runtime.settings import DEV_AUTH_ISSUER, DEV_SERVER_URL, load_settings
+from armada_runtime.theme import ThemeFile
 
 
 def build_ipc() -> Ipc:
@@ -61,4 +62,5 @@ def build_ipc() -> Ipc:
             ApplicationServerSlicerConfiguration(server)
         ),
         sessions=SessionService(sessions),
+        theme_file=ThemeFile(Environment.theme_path()),
     )

@@ -72,6 +72,7 @@ COPY buf.yaml buf.gen.python.yaml buf.gen.server.yaml ./
 COPY packages/proto packages/proto
 COPY scripts/generate_proto.py scripts/check_legal_documents.py scripts/
 COPY LICENSE ./
+COPY packages/ui-kit/src/fonts/OFL-*.txt packages/ui-kit/src/fonts/
 COPY apps/server apps/server
 
 # Refuses to build if a legal document no longer matches organization.json. Then writes the shared

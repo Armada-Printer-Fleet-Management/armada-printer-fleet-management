@@ -17,6 +17,8 @@ from armada_ipc.printer import PrinterIpc
 from armada_ipc.printer_queue import PrinterQueueIpc
 from armada_ipc.session import SessionIpc
 from armada_ipc.slicer_configuration import SlicerConfigurationIpc
+from armada_ipc.theme import ThemeIpc
+from armada_runtime.theme import ThemeFile
 
 
 class Ipc:
@@ -35,6 +37,7 @@ class Ipc:
         legal_documents: Iterable[LegalDocument],
         slicer_configuration: SlicerConfigurationService,
         sessions: SessionService,
+        theme_file: ThemeFile,
     ) -> None:
         self.application_info = ApplicationInfo()
         self.print_job = PrintJobIpc(print_jobs)
@@ -44,3 +47,4 @@ class Ipc:
         self.legal = LegalIpc(agreements, legal_documents)
         self.slicer_configuration = SlicerConfigurationIpc(slicer_configuration)
         self.session = SessionIpc(sessions)
+        self.theme = ThemeIpc(theme_file)

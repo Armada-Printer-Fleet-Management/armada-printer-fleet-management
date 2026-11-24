@@ -32,6 +32,15 @@ export {
   type LegalDocumentView,
 } from './components/legal-agreement-gate';
 export {
+  OrganizationLogo,
+  type OrganizationLogoProps,
+} from './components/organization-logo';
+export {
+  SegmentedControl,
+  type SegmentedControlOption,
+  type SegmentedControlProps,
+} from './components/segmented-control';
+export {
   SignInControls,
   type SignInControlsProps,
   type SignInStatus,
@@ -40,7 +49,20 @@ export {
   SignInDialog,
   type SignInDialogProps,
 } from './components/sign-in-dialog';
+export {
+  ThemeSwitcher,
+  type ThemeSwitcherProps,
+} from './components/theme-switcher';
 export { Tooltip, type TooltipProps } from './components/tooltip';
+export {
+  isThemePreference,
+  ThemeProvider,
+  themePreferences,
+  useTheme,
+  type Theme,
+  type ThemePreference,
+  type ThemeProviderProps,
+} from './theme/theme-provider';
 export { ActivityIcon } from './icons/activity-icon';
 export { BookOpenIcon } from './icons/book-open-icon';
 export { ChevronLeftIcon } from './icons/chevron-left-icon';
@@ -52,10 +74,13 @@ export { HelpCircleIcon } from './icons/help-circle-icon';
 export { HomeIcon } from './icons/home-icon';
 export { LogInIcon } from './icons/log-in-icon';
 export { LogOutIcon } from './icons/log-out-icon';
+export { MonitorIcon } from './icons/monitor-icon';
+export { MoonIcon } from './icons/moon-icon';
 export { PrinterIcon } from './icons/printer-icon';
 export { QueuesIcon } from './icons/queues-icon';
 export { SettingsIcon } from './icons/settings-icon';
 export { StatisticsIcon } from './icons/statistics-icon';
+export { SunIcon } from './icons/sun-icon';
 export { UserIcon } from './icons/user-icon';
 export { UsersIcon } from './icons/users-icon';
 export { cn } from './lib/utils';

@@ -19,6 +19,7 @@
 # Legal documents, checked against organization.json during the build.
 !scripts/check_legal_documents.py
 !LICENSE
+!packages/ui-kit/src/fonts/OFL-*.txt
 
 # Re-excluded inside the allowed paths: host-built or host-specific state. Unlike the dev image,
 # generated code stays out: this image generates its own.

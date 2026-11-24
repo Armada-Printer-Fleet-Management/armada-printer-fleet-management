@@ -12,6 +12,8 @@ enum LegalDocumentKind {
   LEGAL_DOCUMENT_KIND_TERMS_OF_SERVICE = 2;
   // The privacy policy users accept before using the software.
   LEGAL_DOCUMENT_KIND_PRIVACY_POLICY = 3;
+  // A licence for third-party material the apps ship, such as a font. A notice, never accepted.
+  LEGAL_DOCUMENT_KIND_THIRD_PARTY_LICENSE = 4;
 }
 
 // One version of a legal document, as organization.json lists it.

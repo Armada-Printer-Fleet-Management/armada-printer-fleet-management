@@ -1,0 +1,34 @@
+{
+  "fonts": [
+    {
+      "file": "Figtree-Variable.woff2",
+      "family": "Figtree",
+      "licence": "OFL-Figtree.txt",
+      "source": "https://raw.githubusercontent.com/erikdkennedy/figtree/be6cb018f2f93a9b1195f3dfd077123f718c65f8/fonts/variable/Figtree%5Bwght%5D.woff2",
+      "sourceRelease": "v2.0.3",
+      "gitBlob": "223b86f8457f438efaa41efb8f146037a78cd1c7",
+      "sha256": "f80864f632039e7c94f4ec471de1f029b2c8bef05e894c559044c6dee6580d8a"
+    },
+    {
+      "file": "OFL-Figtree.txt",
+      "source": "https://raw.githubusercontent.com/erikdkennedy/figtree/be6cb018f2f93a9b1195f3dfd077123f718c65f8/OFL.txt",
+      "gitBlob": "80b12bb3d0c0942676657ef6d125daf4a1e1346d",
+      "sha256": "140d37233e7f3ce7313798befa9600893bcceaf41a55fa0fa5ad52f7f657a268"
+    },
+    {
+      "file": "JetBrainsMono-Variable.woff2",
+      "family": "JetBrains Mono",
+      "licence": "OFL-JetBrainsMono.txt",
+      "source": "https://raw.githubusercontent.com/JetBrains/JetBrainsMono/02bb50b082dad9ef8a0f33ac393839202b760223/fonts/webfonts/JetBrainsMono%5Bwght%5D.woff2",
+      "sourceRelease": "none: the variable woff2 is built on master after v2.304, so it is pinned to that commit",
+      "gitBlob": "856547f84b0365f4db7bfee3ac88f558a117410e",
+      "sha256": "31ec365b93e4bad6f202ce23352a56d01ca4462b2afc782ed2cf6fa42ca9ac0e"
+    },
+    {
+      "file": "OFL-JetBrainsMono.txt",
+      "source": "https://raw.githubusercontent.com/JetBrains/JetBrainsMono/02bb50b082dad9ef8a0f33ac393839202b760223/OFL.txt",
+      "gitBlob": "8bee4148c1d54dbf5dae6d6c117fc80414266abb",
+      "sha256": "30f0c136e3c88e422d0791acd97238870f9054a9729bc34cf2ff0d4ed8cac4ad"
+    }
+  ]
+}

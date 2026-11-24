@@ -26,6 +26,22 @@
       "path": "packages/organization-info/legal/privacy-policy.md",
       "effectiveDate": "2026-11-16",
       "sha256": "39c6e850d73f5d3e08dbb78e0c58a88a20d42178fa692e05a5dc3a475ac0f316"
+    },
+    {
+      "kind": "LEGAL_DOCUMENT_KIND_THIRD_PARTY_LICENSE",
+      "title": "Figtree font, SIL Open Font License 1.1",
+      "spdx": "OFL-1.1",
+      "path": "packages/ui-kit/src/fonts/OFL-Figtree.txt",
+      "effectiveDate": "2026-11-20",
+      "sha256": "140d37233e7f3ce7313798befa9600893bcceaf41a55fa0fa5ad52f7f657a268"
+    },
+    {
+      "kind": "LEGAL_DOCUMENT_KIND_THIRD_PARTY_LICENSE",
+      "title": "JetBrains Mono font, SIL Open Font License 1.1",
+      "spdx": "OFL-1.1",
+      "path": "packages/ui-kit/src/fonts/OFL-JetBrainsMono.txt",
+      "effectiveDate": "2026-11-20",
+      "sha256": "30f0c136e3c88e422d0791acd97238870f9054a9729bc34cf2ff0d4ed8cac4ad"
     }
   ]
 }

@@ -5,6 +5,8 @@ import {
   DevToolsIcon,
   LogInIcon,
   LogOutIcon,
+  OrganizationLogo,
+  ThemeSwitcher,
   type IconProps,
 } from '@armada/ui-kit';
 import { type ComponentType, useState } from 'react';
@@ -126,7 +128,8 @@ export function Sidebar({ onNewPrint }: { onNewPrint?: () => void }) {
       aria-label="Main navigation"
       className="flex w-60 shrink-0 flex-col gap-6 border-r border-border bg-card p-4"
     >
-      <div className="pt-4 text-center">
+      <div className="flex flex-col items-center pt-4 text-center">
+        <OrganizationLogo alt="" className="mb-2 size-12" />
         <p className="text-4xl leading-none font-black text-primary uppercase">
           {name}
         </p>
@@ -162,6 +165,9 @@ export function Sidebar({ onNewPrint }: { onNewPrint?: () => void }) {
           />
         )}
         <AccountItem />
+        <li className="mt-2">
+          <ThemeSwitcher iconOnly />
+        </li>
       </ul>
     </nav>
   );
