@@ -134,6 +134,7 @@ class DockerStack:
             "AUTH_JWKS_URL": f"{realm}/protocol/openid-connect/certs",
             "IDENTITY_BASE_URL": f"{identity_provider}/auth",
             "IDENTITY_SERVICE_ACCOUNT_SECRET": self._service_account_secret,
+            "DEV_DATA": "true",
         }
 
     def _port(self, service: str, container_port: int) -> str:

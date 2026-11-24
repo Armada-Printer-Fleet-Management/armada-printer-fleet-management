@@ -107,6 +107,49 @@ async def test_a_printer_fault_leaves_the_job_for_staff_and_ready_clears_it() ->
     assert (await printers.release(STUB_IDLE_PRINTER_ID)).status is PrinterStatus.IDLE
 
 
+def printer_with_unknown_job(clock: Clock) -> Printer:
+    """A printer reporting a job no repository holds. Its name sorts it ahead of the stub printers,
+    so the poller reaches it first."""
+    return Printer(
+        PrinterId.new(),
+        "Stub printer 0",
+        "Unknown job printer",
+        stub_printers()[0].capabilities,
+        PrinterStatus.PRINTING,
+        clock.now,
+        clock.now,
+        print_job_id=PrintJobId.new(),
+        progress_percent=0,
+    )
+
+
+async def test_poll_skips_a_printer_reporting_an_unknown_job() -> None:
+    clock = Clock()
+    printers = PrinterService(
+        MockPrinterServer([printer_with_unknown_job(clock), *stub_printers()], clock)
+    )
+    print_jobs = PrintJobService(InMemoryPrintJobRepository(stub_print_jobs()), clock)
+
+    await PrinterPoller(printers, print_jobs, timedelta(seconds=1)).poll()
+
+
+async def test_an_unknown_job_does_not_stop_the_other_printers_being_applied() -> None:
+    clock = Clock()
+    printers = PrinterService(
+        MockPrinterServer([printer_with_unknown_job(clock), *stub_printers()], clock)
+    )
+    print_jobs = PrintJobService(InMemoryPrintJobRepository(stub_print_jobs()), clock)
+
+    async def dispatch() -> bool:
+        printer = await printers.dispatch(STUB_IDLE_PRINTER_ID, STUB_APPROVED_JOB_ID)
+        return printer.print_job_id == STUB_APPROVED_JOB_ID
+
+    await print_jobs.assign(STUB_APPROVED_JOB_ID, STUB_IDLE_PRINTER_ID, dispatch)
+    await PrinterPoller(printers, print_jobs, timedelta(seconds=1)).poll()
+
+    assert (await print_jobs.print_job(STUB_APPROVED_JOB_ID)).status is PrintJobStatus.PRINTING
+
+
 class TwoPagePrinterServer(MockPrinterServer):
     """Serves the seeded printers as two pages, the first three by name and then the rest."""
 

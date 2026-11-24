@@ -1,7 +1,7 @@
 """Development data: what the in-memory repositories start with, what the tests work against, and
 what dev_seed.py writes into the development database. One set, so every route to it agrees."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -188,4 +188,13 @@ def stub_printers() -> list[Printer]:
         stub(4, STUB_FINISHED_PRINTER_ID, _MK4S, PrinterStatus.FINISHED, STUB_FINISHED_JOB_ID, 100),
         stub(5, STUB_OFFLINE_PRINTER_ID, _XL, PrinterStatus.OFFLINE),
         stub(6, STUB_FAULTY_PRINTER_ID, _CORE_ONE, PrinterStatus.IDLE),
+    ]
+
+
+def stub_idle_printers() -> list[Printer]:
+    """The stub printers, every one idle and holding no job. For a deployment, whose database has
+    none of the seeded jobs a busy stub printer would point at."""
+    return [
+        replace(printer, status=PrinterStatus.IDLE, print_job_id=None, progress_percent=None)
+        for printer in stub_printers()
     ]

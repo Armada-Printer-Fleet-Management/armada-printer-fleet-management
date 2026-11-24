@@ -22,6 +22,14 @@ class DatabaseSettings(BaseSettings):
         return f"postgresql+psycopg://{user}:{password}@{self.host}:{self.port}/{self.name}"
 
 
+class DevDataSettings(BaseSettings):
+    """Whether the stub printers start as the development data has them, some holding seeded jobs.
+    Off unless DEV_DATA is set, so a deployment's printers never point at jobs it does not have.
+    Needed while we still have in memory repositories."""
+
+    dev_data: bool = False
+
+
 def database_url() -> str:
     # Fields are filled from DB_* environment variables, which pyright cannot see.
     return DatabaseSettings().url()  # pyright: ignore[reportCallIssue]

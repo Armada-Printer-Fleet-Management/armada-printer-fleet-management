@@ -41,6 +41,7 @@ services:
         condition: service_healthy
     environment:
       LOG_FORMAT: console
+      DEV_DATA: 'true'
       FILE_STORE_BACKEND: ${FILE_STORE_BACKEND:-s3}
       FILE_STORE_ENDPOINT_URL: http://garage-s3-storage:3900
       FILE_STORE_REGION: garage

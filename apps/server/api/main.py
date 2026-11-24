@@ -9,7 +9,7 @@ from api.app import AppParts, AppServices, build_app
 from api.common.clock import clock
 from api.common.health import raising_probe
 from api.common.models import DependencyCheck
-from api.common.settings import database_url
+from api.common.settings import DevDataSettings, database_url
 from api.domains.auth.service import UserService
 from api.domains.content_asset.service import FileService
 from api.domains.fleet.service import PrinterService
@@ -27,6 +27,7 @@ from api.infrastructure.content_asset.file_store_settings import FileStoreSettin
 from api.infrastructure.dev_data import (
     STUB_FAULTY_PRINTER_ID,
     STUB_STUDENT_ID,
+    stub_idle_printers,
     stub_printer_queues,
     stub_printers,
 )
@@ -55,16 +56,22 @@ def production_parts() -> AppParts:
 
     # Services (note difference from an RPC service, this is the domain service)
 
-    # Domains without a SQL repository keep their state in memory, starting from the dev data.
-    # Moving one to the database means constructing its SQL adapter here; nothing else changes.
     print_job_service = PrintJobService(SqlPrintJobRepository(database), clock)
     file_service = FileService(SqlFileRepository(database), files, clock)
+
+    # In memory services need to seeded directly unlike the SQL databases.
+    dev_data = DevDataSettings().dev_data
     printer_service = PrinterService(
-        MockPrinterServer(stub_printers(), clock, faulty_printer_ids=[STUB_FAULTY_PRINTER_ID])
+        MockPrinterServer(
+            stub_printers() if dev_data else stub_idle_printers(),
+            clock,
+            faulty_printer_ids=[STUB_FAULTY_PRINTER_ID],
+        )
     )
     printer_queue_service = PrinterQueueService(
         InMemoryPrinterQueueRepository(stub_printer_queues())
     )
+
     user_service = UserService(SqlUserRepository(database), accounts, clock)
     printer_poller = PrinterPoller(printer_service, print_job_service, timedelta(seconds=1))
     agreement_service = AgreementService(
