@@ -1,0 +1,40 @@
+/* Colours Armada fixes so a fault, a model and a toolpath look the same at every site. Nothing here
+   reads a --brand-* variable, so no brand file can change them. Each is light-dark(Frost, Graphite). */
+:root {
+  /* Status: the solid colour (text and markers), text on a solid fill, and a tint background. */
+  --error: light-dark(#b02f45, #ff8a8a);
+  --error-foreground: light-dark(#ffffff, #1b1c1f);
+  --error-tint: light-dark(#f2e7eb, #4a3d42);
+  --warning: light-dark(#865808, #f5c451);
+  --warning-foreground: light-dark(#ffffff, #1b1c1f);
+  --warning-tint: light-dark(#eeebe5, #49443b);
+  --success: light-dark(#2b6f53, #62d692);
+  --success-foreground: light-dark(#ffffff, #1b1c1f);
+  --success-tint: light-dark(#e4edec, #374743);
+  --info: light-dark(#2f5d8a, #86b6ff);
+  --info-foreground: light-dark(#ffffff, #1b1c1f);
+  --info-tint: light-dark(#e5ebf2, #3b4350);
+
+  /* Marks development-only UI. Use sparingly so it stays a reminder, not decoration. */
+  --dev-highlight: #f59e0b;
+  --dev-highlight-foreground: #1c1917;
+
+  /* The 3D viewport. */
+  --viewport-background: light-dark(#e7edf3, #232428);
+  --plate: light-dark(#dce4ed, #36383d);
+  --plate-grid: light-dark(#c5d1de, #474a51);
+  --model-face: light-dark(#ffffff, #d3d9df);
+  --model-side: light-dark(#d4dde7, #a5adb7);
+  --model-shade: light-dark(#b8c5d3, #89929d);
+  --heat: light-dark(#c8506a, #ff5a5a);
+  --build-volume: light-dark(#8a9bb0, #767b84);
+
+  /* One colour per toolpath line type. */
+  --line-outer-wall: light-dark(#c8506a, #ff5a4f);
+  --line-inner-wall: light-dark(#d99a3e, #62d692);
+  --line-infill: light-dark(#3f7cb8, #f5a623);
+  --line-top-bottom: light-dark(#b59a2a, #f5e050);
+  --line-support: light-dark(#4a9a7a, #4cc3ff);
+  --line-skirt: light-dark(#8a6ab8, #c9a5ff);
+  --line-travel: light-dark(#a3b1c2, #767b84);
+}

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="1024" height="1024" role="img">
+  <title>Armada logo (dark)</title>
+  <defs>
+    <linearGradient id="g0" gradientUnits="userSpaceOnUse" x1="37.18" y1="12.68" x2="51.81" y2="34.78"><stop offset="0" stop-color="#5c97ff"/><stop offset="1" stop-color="#86b6ff"/></linearGradient>
+    <linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="46.39" y1="45.89" x2="17.37" y2="45.64"><stop offset="0" stop-color="#5c97ff"/><stop offset="1" stop-color="#86b6ff"/></linearGradient>
+    <linearGradient id="g2" gradientUnits="userSpaceOnUse" x1="12.11" y1="34.09" x2="26.82" y2="12.68"><stop offset="0" stop-color="#5c97ff"/><stop offset="1" stop-color="#86b6ff"/></linearGradient>
+    <g id="jet">
+      <path fill="#eceef1" stroke="#eceef1" stroke-width="0.3" stroke-linejoin="round" d="M32 5.2 L33.1 6.4 L33.8 8 L34.6 10 L34.9 12.5 L35.8 13.6 L40.4 20.3 L41.1 21.9 L38.6 21 L35.4 19.7 L34.8 22.2 L34.5 25 L33.6 26.4 L33.1 27.2 L33.1 29.6 L32 30 L30.9 29.6 L30.9 27.2 L30.4 26.4 L29.5 25 L29.2 22.2 L28.6 19.7 L25.4 21 L22.9 21.9 L23.6 20.3 L28.2 13.6 L29.1 12.5 L29.4 10 L30.2 8 L30.9 6.4 Z"/>
+      <path fill="#232428" d="M31.3 9.8 L32.7 9.8 L32.8 13.4 L32.3 16.6 L31.7 16.6 L31.2 13.4 Z"/>
+      <path fill="#232428" d="M31.3 22.8 L32.7 22.8 L32.5 25.6 L31.5 25.6 Z"/>
+    </g>
+  </defs>
+  <circle cx="32" cy="32" r="32" fill="#232428"/>
+  <path d="M37.18 12.68 A20 20 0 0 1 51.81 34.78" fill="none" stroke="url(#g0)" stroke-width="1.7"/>
+  <path d="M46.39 45.89 A20 20 0 0 1 17.37 45.64" fill="none" stroke="url(#g1)" stroke-width="1.7"/>
+  <path d="M12.11 34.09 A20 20 0 0 1 26.82 12.68" fill="none" stroke="url(#g2)" stroke-width="1.7"/>
+  <use href="#jet"/>
+  <use href="#jet" transform="translate(34.30 33.60) scale(0.95) rotate(117.3) translate(-32 -32)"/>
+  <use href="#jet" transform="translate(29.70 33.60) scale(0.95) rotate(-117.3) translate(-32 -32)"/>
+</svg>

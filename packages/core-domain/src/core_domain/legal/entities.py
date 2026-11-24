@@ -14,6 +14,11 @@ class LegalDocumentKind(Enum):
     LICENSE = auto()
     TERMS_OF_SERVICE = auto()
     PRIVACY_POLICY = auto()
+    THIRD_PARTY_LICENSE = auto()
+
+
+# Notices are shown, never accepted: no licence asks anyone to accept it to use the software.
+_NOTICES = {LegalDocumentKind.LICENSE, LegalDocumentKind.THIRD_PARTY_LICENSE}
 
 
 @dataclass(frozen=True)
@@ -25,8 +30,7 @@ class LegalDocument:
     effective_date: date
 
     def requires_acceptance(self) -> bool:
-        """A licence is a notice: the AGPL asks no one to accept it to use the software."""
-        return self.kind is not LegalDocumentKind.LICENSE
+        return self.kind not in _NOTICES
 
 
 @dataclass(eq=False)

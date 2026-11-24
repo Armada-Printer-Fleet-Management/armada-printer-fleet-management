@@ -3,6 +3,8 @@ import {
   cn,
   DevToolsIcon,
   type IconProps,
+  OrganizationLogo,
+  ThemeSwitcher,
 } from '@armada/ui-kit';
 import { type ComponentType, useState } from 'react';
 import { NavLink } from 'react-router';
@@ -71,19 +73,26 @@ export function DesktopNavRail() {
         expanded ? 'w-48' : 'w-16 items-center',
       )}
     >
-      <button
-        type="button"
-        aria-expanded={expanded}
-        aria-label="Navigation labels"
-        onClick={() => setExpanded(!expanded)}
+      <div
         className={cn(
-          'mb-2 flex size-12 items-center justify-center self-end rounded-md text-foreground/70 hover:bg-foreground/5 hover:text-foreground',
-          focusRing,
-          !expanded && 'self-center',
+          'mb-2 flex items-center',
+          expanded ? 'justify-between pl-1' : 'flex-col gap-2',
         )}
       >
-        <ChevronLeftIcon className={cn(!expanded && 'rotate-180')} />
-      </button>
+        <OrganizationLogo />
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-label="Navigation labels"
+          onClick={() => setExpanded(!expanded)}
+          className={cn(
+            'flex size-12 items-center justify-center rounded-md text-foreground/70 hover:bg-foreground/5 hover:text-foreground',
+            focusRing,
+          )}
+        >
+          <ChevronLeftIcon className={cn(!expanded && 'rotate-180')} />
+        </button>
+      </div>
       <ul className="flex flex-col gap-1">
         {navRoutes
           .filter((route) => route.nav === 'main')
@@ -116,6 +125,12 @@ export function DesktopNavRail() {
               className={standardItem}
             />
           ))}
+        <li className={cn('mt-2', expanded ? 'px-1' : 'self-center')}>
+          <ThemeSwitcher
+            iconOnly
+            orientation={expanded ? 'horizontal' : 'vertical'}
+          />
+        </li>
         <li className="mt-2">
           <ProfileMenu expanded={expanded} />
         </li>

@@ -4,7 +4,10 @@ import { useEffect, useState } from 'react';
 
 import { OrganizationInfoSchema } from '../gen/organization/v1/organization_info_pb';
 import { version } from '../ipc/application-info';
-import { aboutLegalDocuments } from '../legal/documents';
+import {
+  aboutLegalDocuments,
+  aboutThirdPartyLicences,
+} from '../legal/documents';
 import { routePaths } from '../routes';
 
 type VersionState =
@@ -40,6 +43,7 @@ export function AboutPage() {
       <AboutBox
         organization={read(OrganizationInfoSchema)}
         legalDocuments={aboutLegalDocuments}
+        thirdPartyLicences={aboutThirdPartyLicences}
         version={state.status === 'ready' ? state.version : undefined}
       />
       {state.status === 'loading' && <p>Loading backend version…</p>}

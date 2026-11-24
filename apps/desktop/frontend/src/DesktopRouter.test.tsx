@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { ThemeProvider } from '@armada/ui-kit';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router';
@@ -17,12 +18,23 @@ function LocationProbe() {
   return <output data-testid="location">{useLocation().pathname}</output>;
 }
 
+// jsdom has no matchMedia; the theme provider asks it whether the OS is in dark mode.
+window.matchMedia = (query: string) =>
+  ({
+    matches: false,
+    media: query,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }) as unknown as MediaQueryList;
+
 function renderApp() {
   render(
-    <MemoryRouter>
-      <DesktopRoutes />
-      <LocationProbe />
-    </MemoryRouter>,
+    <ThemeProvider initialPreference="system">
+      <MemoryRouter>
+        <DesktopRoutes />
+        <LocationProbe />
+      </MemoryRouter>
+    </ThemeProvider>,
   );
 }
 

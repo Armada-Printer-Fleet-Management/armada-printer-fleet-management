@@ -29,6 +29,7 @@ export interface AboutBoxProps {
     repositoryUrl: string;
   };
   legalDocuments: AboutLegalDocument[];
+  thirdPartyLicences?: AboutLegalDocument[];
   version?: {
     major: number;
     minor: number;
@@ -39,9 +40,25 @@ export interface AboutBoxProps {
 
 const row = 'grid grid-cols-[8rem_minmax(0,1fr)] gap-x-4';
 
+function DocumentText({ document }: { document: AboutLegalDocument }) {
+  if (document.text === undefined) {
+    return <p>This copy does not include the text of this version.</p>;
+  }
+  return (
+    <pre
+      tabIndex={0}
+      aria-label={`${document.title} text`}
+      className="max-h-80 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border bg-background p-4 font-mono text-xs focus-visible:outline-2 focus-visible:outline-primary"
+    >
+      {document.text}
+    </pre>
+  );
+}
+
 export function AboutBox({
   organization,
   legalDocuments,
+  thirdPartyLicences = [],
   version,
 }: AboutBoxProps) {
   const versionText = version
@@ -75,24 +92,40 @@ export function AboutBox({
                     </span>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    {document.text === undefined ? (
-                      <p>
-                        This copy does not include the text of this version.
-                      </p>
-                    ) : (
-                      <pre
-                        tabIndex={0}
-                        aria-label={`${document.title} text`}
-                        className="max-h-80 overflow-y-auto whitespace-pre-wrap rounded-lg border bg-background p-4 font-mono text-xs focus-visible:outline-2 focus-visible:outline-primary"
-                      >
-                        {document.text}
-                      </pre>
-                    )}
+                    <DocumentText document={document} />
                   </CollapsibleContent>
                 </Collapsible>
               </dd>
             </div>
           ))}
+          {thirdPartyLicences.length > 0 && (
+            <div className={row}>
+              <dt className="text-xs font-medium text-foreground/70">
+                Third-party licences
+              </dt>
+              <dd className="min-w-0">
+                <Collapsible>
+                  <CollapsibleTrigger className="py-2 text-xs">
+                    <span className="flex-1">
+                      {thirdPartyLicences.length} included
+                    </span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="grid grid-cols-[minmax(0,1fr)] gap-2 text-xs">
+                    {thirdPartyLicences.map((licence) => (
+                      <Collapsible key={licence.title}>
+                        <CollapsibleTrigger className="py-2 text-xs">
+                          <span className="flex-1">{licence.title}</span>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <DocumentText document={licence} />
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+              </dd>
+            </div>
+          )}
           <div className={row}>
             <dt className="font-medium text-foreground/70">Source</dt>
             <dd className="min-w-0">

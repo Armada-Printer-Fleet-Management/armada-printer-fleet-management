@@ -1,31 +1,9 @@
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-border: var(--border);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-dev-highlight: var(--dev-highlight);
-  --color-dev-highlight-foreground: var(--dev-highlight-foreground);
-  --radius-lg: var(--radius);
-}
-
-:root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --border: #cbd5e1;
-  --primary: #2563eb;
-  --primary-foreground: #ffffff;
-  --accent: #ffa300;
-  --accent-foreground: #26211e;
-  --radius: 0.75rem;
-
-  /* Marks development-only UI. Use sparingly so it stays a reminder, not decoration. */
-  --dev-highlight: #f59e0b;
-  --dev-highlight-foreground: #1c1917;
-}
+/* The shared theme. Each app imports this after Tailwind. The layers, in order:
+   fonts.css     Armada's fonts, fixed in every theme and brand
+   defaults.css  the tokens a brand may set (Graphite dark, Frost light), each reading --brand-*
+   fixed.css     status, viewport and line-type colours no brand can change
+   tailwind.css  the utility mappings */
+@import './theme/fonts.css';
+@import './theme/defaults.css';
+@import './theme/fixed.css';
+@import './theme/tailwind.css';

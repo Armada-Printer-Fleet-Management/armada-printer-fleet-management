@@ -1,0 +1,77 @@
+/* Maps every token to a Tailwind utility (bg-card, text-error, border-border, font-mono, ...). */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-hover: var(--accent-hover);
+
+  --color-error: var(--error);
+  --color-error-foreground: var(--error-foreground);
+  --color-error-tint: var(--error-tint);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-tint: var(--warning-tint);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-tint: var(--success-tint);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-tint: var(--info-tint);
+  --color-dev-highlight: var(--dev-highlight);
+  --color-dev-highlight-foreground: var(--dev-highlight-foreground);
+
+  --color-viewport-background: var(--viewport-background);
+  --color-plate: var(--plate);
+  --color-plate-grid: var(--plate-grid);
+  --color-model-face: var(--model-face);
+  --color-model-side: var(--model-side);
+  --color-model-shade: var(--model-shade);
+  --color-heat: var(--heat);
+  --color-build-volume: var(--build-volume);
+  --color-line-outer-wall: var(--line-outer-wall);
+  --color-line-inner-wall: var(--line-inner-wall);
+  --color-line-infill: var(--line-infill);
+  --color-line-top-bottom: var(--line-top-bottom);
+  --color-line-support: var(--line-support);
+  --color-line-skirt: var(--line-skirt);
+  --color-line-travel: var(--line-travel);
+
+  --font-sans:
+    'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --radius-lg: var(--radius);
+  --radius-sm: var(--radius-small);
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+
+  /* Tailwind 4 draws an unstyled border in the text colour; every border here uses the token. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+}

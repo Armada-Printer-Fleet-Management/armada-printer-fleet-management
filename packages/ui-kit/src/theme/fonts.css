@@ -1,0 +1,17 @@
+/* Armada's fonts, the same in every theme and every brand. Their licences sit beside the files and
+   are shown in the about box; fonts.json records where each file came from. */
+@font-face {
+  font-family: 'Figtree';
+  src: url('../fonts/Figtree-Variable.woff2') format('woff2');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../fonts/JetBrainsMono-Variable.woff2') format('woff2');
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
