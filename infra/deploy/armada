@@ -16,8 +16,9 @@ UNIT_DIR=/etc/systemd/system
 TIMER=armada-update.timer
 SERVICE=armada-update.service
 LOCK_FILE=/run/armada.lock
-HEALTH_TIMEOUT="${ARMADA_HEALTH_TIMEOUT:-180}"
+HEALTH_TIMEOUT="${ARMADA_HEALTH_TIMEOUT:-600}"
 MIGRATION_SECONDS="${ARMADA_MIGRATION_TIMEOUT:-600}"
+RUN_LOG="$ARMADA_HOME/last-run.log"
 
 # Compose settings must come from the installation's .env only. A variable of the same name in the
 # caller's shell would otherwise override it.
@@ -28,10 +29,12 @@ unset VERSION REGISTRY GHCR_OWNER IMAGE_SUFFIX DOMAIN ADMIN_EMAIL
 # Colour only for a person at a terminal, so the timer's journal and captured output stay plain.
 colour() { [ -t "$1" ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != dumb ]; }
 if colour 1; then
-  BOLD=$'\e[1m' RED=$'\e[31m' GREEN=$'\e[32m' YELLOW=$'\e[33m' RESET=$'\e[0m'
+  # Bright blue, since plain blue is hard to read on a dark background.
+  BOLD=$'\e[1m' DIM=$'\e[2m' RED=$'\e[31m' GREEN=$'\e[32m' YELLOW=$'\e[33m' BLUE=$'\e[94m' RESET=$'\e[0m'
 else
-  BOLD="" RED="" GREEN="" YELLOW="" RESET=""
+  BOLD="" DIM="" RED="" GREEN="" YELLOW="" BLUE="" RESET=""
 fi
+heading() { printf '%s%s%s' "$BOLD$BLUE" "$1" "$RESET"; }
 if colour 2; then ERR_YELLOW=$'\e[33m' ERR_RED=$'\e[31m' ERR_RESET=$'\e[0m'; else ERR_YELLOW="" ERR_RED="" ERR_RESET=""; fi
 
 say() { printf '%s\n' "$*"; }
@@ -51,7 +54,7 @@ usage() {
   cat <<EOF
 Usage: armada <command> [arguments]
 
-Versions
+$(heading Versions)
   update <version|latest> [--force]
                               Move to a version; latest is the newest available to this machine.
                               Migrates the database first. Returns to the previous version if the
@@ -65,14 +68,14 @@ Versions
   check-for-updates           Say whether a newer version is available
   version                     Print the running version
 
-Running
+$(heading Running)
   status                      What is running and whether it is healthy
   logs [service] [lines]      Follow the logs, of every service or just one
   restart                     Restart every service
   stop                        Stop every service; data is kept
   start                       Start every service again
 
-Settings
+$(heading Settings)
   reconfigure                 Answer the installation questions again
   config <key> [value]        Show one setting, or change it when a value is given:
                                 domain, admin-email,${track} update-policy,
@@ -81,9 +84,11 @@ Settings
                               Remove Armada. Data is kept unless --delete-data is given.
   help                        Show this list
 
-Time limits, in seconds, for update, rollback, start and restart
+$(heading "Time limits, in seconds, for update, rollback, start and restart")
   ARMADA_MIGRATION_TIMEOUT    How long the database migration may take (default 600)
-  ARMADA_HEALTH_TIMEOUT       How long the services may take to become healthy after it (default 180)
+  ARMADA_HEALTH_TIMEOUT       How long the services may take to become healthy after it (default 600)
+
+Docker's output from the last update, rollback, start, restart or stop is kept in $RUN_LOG.
 EOF
 }
 
@@ -177,8 +182,8 @@ in_window() {
 compose_at() {
   local version=$1
   shift
-  # The migrate service's health check allows a migration this long, the same limit
-  # wait_for_migration uses.
+  # The migrate service's health check allows a migration this long, the same limit bring_up
+  # waits for.
   MIGRATION_TIMEOUT="${MIGRATION_SECONDS}s" docker compose --project-directory "$RELEASES/$version" \
     -f "$RELEASES/$version/compose.yaml" --env-file "$ENV_FILE" "$@"
 }
@@ -191,7 +196,7 @@ compose() {
 }
 
 # migrate is a step that runs on every start, not a service: a reboot leaves it stopped, so it is
-# left out here and waited for by wait_for_migration instead. Every other service declares a
+# left out here and waited for by bring_up instead. Every other service declares a
 # health check, so the stack is up when all of them report healthy.
 all_healthy() {
   local expected lines
@@ -212,41 +217,422 @@ migration_state() {
   line=$(compose ps --all --format '{{.Service}}|{{.State}}|{{.Health}}|{{.ExitCode}}' 2>/dev/null |
     grep '^migrate|' || true)
   IFS='|' read -r _ state health code <<<"$line"
-  case "$state $health" in
+  migration_from "$state" "$health" "$code"
+}
+
+# The same, from the migrate container's state, health and exit code as compose ps reports them.
+migration_from() {
+  case "$1 $2" in
     "running healthy") printf migrated ;;
     "running unhealthy") printf timed-out ;;
     running* | restarting* | created* | " ") printf migrating ;;
     *)
       # A signal's exit code (128 + signal) means it was stopped, not that the migration failed.
-      if [ "${code:-1}" -ge 128 ]; then printf stopped; else printf failed; fi
+      if [ "${3:-1}" -ge 128 ]; then printf stopped; else printf failed; fi
       ;;
   esac
 }
 
-# The migration runs before the server starts and may take far longer than starting does, so it
-# gets its own limit.
-wait_for_migration() {
-  local deadline=$((SECONDS + MIGRATION_SECONDS)) said=false
-  while [ "$SECONDS" -lt "$deadline" ]; do
-    case "$(migration_state)" in
-      none | migrated) return 0 ;;
-      failed | timed-out) return 1 ;;
-    esac
-    $said || say "Migrating the database..."
-    said=true
-    sleep 3
-  done
+# ── progress ─────────────────────────────────────────────────────────────────────────────────────
+
+# Docker's own output goes to the run log rather than the screen. Each command that changes the
+# stack starts it afresh, and a failure prints its end.
+begin_run_log() { : >"$RUN_LOG"; }
+quietly() { "$@" >>"$RUN_LOG" 2>&1; }
+show_run_log() {
+  [ -s "$RUN_LOG" ] || return 0
+  warn "Docker's output (last 20 lines; all of it in $RUN_LOG):"
+  tail -n 20 "$RUN_LOG" | sed 's/^/  /' >&2
+}
+
+# A short step with nothing to measure, such as stopping.
+quiet_step() {
+  local label=$1
+  shift
+  printf '%s... ' "$label"
+  if quietly "$@"; then
+    say "done"
+    return 0
+  fi
+  say failed
+  show_run_log
   return 1
 }
 
-wait_healthy() {
-  wait_for_migration || return 1
-  local deadline=$((SECONDS + HEALTH_TIMEOUT))
-  while [ "$SECONDS" -lt "$deadline" ]; do
-    all_healthy && return 0
-    sleep 3
+# Redrawing in place needs a terminal. It is decided apart from colour, so NO_COLOR keeps it.
+redraw() { [ -t 1 ] && [ "${TERM:-dumb}" != dumb ]; }
+utf8() { [[ ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} =~ [Uu][Tt][Ff]-?8 ]]; }
+clock() { printf '%d:%02d' $(($1 / 60)) $(($1 % 60)); }
+
+service_label() {
+  case "$1" in
+    migrate) echo "Database migration" ;;
+    db) echo Database ;;
+    garage-s3-storage) echo "File storage" ;;
+    keycloak-db) echo "Sign-in database" ;;
+    keycloak) echo Sign-in ;;
+    server) echo "Application server" ;;
+    web) echo "Web server" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+# The word for how far a service has got: migrate has two stages, every other service three.
+stage_word() {
+  if [ "$1" = migrate ]; then
+    if [ "$2" -ge 2 ]; then echo "done"; else echo migrating; fi
+    return 0
+  fi
+  case "$2" in
+    1) echo created ;;
+    2) echo starting ;;
+    *) echo healthy ;;
+  esac
+}
+
+# 100 parts in 50 cells: a full cell is 2%, and a half cell shows an odd percentage.
+bar() {
+  local pct=$1 colour=$2 fill="█" half="▌" cells="" i
+  utf8 || { fill="#" half="-"; }
+  for ((i = 0; i < pct / 2; i++)); do cells+=$fill; done
+  [ $((pct % 2)) -eq 1 ] && cells+="$half"
+  printf '[%s%s%s%*s]' "$colour" "$cells" "$RESET" $((50 - pct / 2 - pct % 2)) ""
+}
+
+# Away from a terminal, each change is one line.
+progress_line() { printf '  %3d%%  %s\n' "$1" "$2"; }
+
+# Rows mark a spinner with this byte. The list is rebuilt once a second, but paint swaps the
+# spinner in 20 times a second with builtins only, so a weak machine is not loaded by it.
+SPIN=$'\x01'
+TICKS_PER_SECOND=20 # paired with the 0.05s sleep in progress_pause
+TICK=0
+spinner() { printf '%s' "$SPIN"; }
+
+# One row of the list. Colour is applied after padding, which would otherwise count its codes.
+#   step_row <colour> <icon> <label> <word> <time> <note>
+step_row() {
+  printf '   %s%s%s %-*s  %s%-11s%s  %s%5s%s' "$1" "$2" "$RESET" "$width" "$3" "$1" "$4" "$RESET" \
+    "$DIM" "$5" "$RESET"
+  [ -z "$6" ] || printf '  %s%s%s' "$DIM" "$6" "$RESET"
+  printf '\n'
+}
+
+# The list under the bar, one row per step, read from bring_up's variables. Unfinished steps are
+# yellow and finished ones green. After a failure, the steps that failed are red and the ones it
+# kept from starting are dim.
+step_rows() {
+  local service n colour icon word time note ok=✔ bad=✘ idle=·
+  utf8 || { ok=+ bad=x idle=-; }
+  if $download; then
+    if [ "$downloaded" -eq 1 ]; then
+      step_row "$GREEN" "$ok" Download "done" "$(clock "$download_took")" ""
+    elif [ "$BRING_UP_FAILED" = download ]; then
+      step_row "$RED" "$bad" Download failed "$(clock $((SECONDS - begin)))" ""
+    else
+      step_row "$YELLOW" "$(spinner)" Download downloading "$(clock $((SECONDS - begin)))" ""
+    fi
+  fi
+  for service in "${list[@]}"; do
+    n=${count[$service]} note="" time=""
+    [ "$n" -gt 0 ] && time=$(clock $((SECONDS - since[$service])))
+    if [ "$n" -ge "${full[$service]}" ]; then
+      colour=$GREEN icon=$ok word=$(stage_word "$service" "$n") time=$(clock "${took[$service]}")
+    elif [ "$BRING_UP_FAILED" = migration ] && [ "$service" = migrate ]; then
+      colour=$RED icon=$bad word=failed
+    elif [[ $BRING_UP_FAILED =~ ^(health|start)$ ]]; then
+      colour=$RED icon=$bad word="not healthy"
+    elif [ -n "$BRING_UP_FAILED" ]; then
+      colour=$DIM icon=$idle word="not started"
+      [ "$n" -eq 0 ] || word=$(stage_word "$service" "$n")
+    elif [ "$n" -eq 0 ]; then
+      colour=$YELLOW icon=$idle word=waiting
+    else
+      colour=$YELLOW icon=$(spinner) word=$(stage_word "$service" "$n")
+      [ $((SECONDS - since[$service])) -ge 60 ] && note="first start is slow"
+    fi
+    step_row "$colour" "$icon" "$(service_label "$service")" "$word" "$time" "$note"
   done
-  return 1
+}
+
+# Replaces the last frame on a terminal: the bar, the list and, at the end, the outcome.
+PROGRESS_LINES=0
+FRAME_ROWS=()
+draw_frame() {
+  local pct=$1 outcome=${2:-} line
+  FRAME_ROWS=("  $(bar "$pct" "$GREEN")  $BOLD$(printf '%3d%%' "$pct")$RESET  $DIM$(clock $((SECONDS - begin)))$RESET")
+  while IFS= read -r line; do FRAME_ROWS+=("$line"); done < <(step_rows)
+  [ -z "$outcome" ] || FRAME_ROWS+=("" "  $outcome")
+  paint
+}
+
+# Prints the frame over the last one, with the spinners at the current tick. Any frame count
+# makes two full turns a second.
+paint() {
+  local frames=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏) line
+  utf8 || frames=('|' / - "\\")
+  local n=${#frames[@]} now=$((TICK * 1000000 / TICKS_PER_SECOND))
+  # Bash 5's clock, in microseconds, keeps the speed whatever rate the frames are drawn at.
+  [ -z "${EPOCHREALTIME:-}" ] || now=$((10#${EPOCHREALTIME//[.,]/} % 1000000000))
+  local glyph=${frames[now * 2 * n / 1000000 % n]}
+  [ "$PROGRESS_LINES" -eq 0 ] || printf '\e[%dA' "$PROGRESS_LINES"
+  for line in "${FRAME_ROWS[@]}"; do printf '\r\e[2K%s\n' "${line//"$SPIN"/$glyph}"; done
+  PROGRESS_LINES=${#FRAME_ROWS[@]}
+}
+
+# Waits about a second before the next poll, turning the spinners meanwhile on a terminal.
+progress_pause() {
+  local i
+  if ! redraw; then
+    sleep 1
+    return 0
+  fi
+  for ((i = 0; i < TICKS_PER_SECOND; i++)); do
+    sleep 0.05
+    TICK=$((TICK + 1))
+    paint
+  done
+}
+
+# The services in list that have not finished, by name, for a failure message.
+unfinished() {
+  local service names=()
+  for service in "${list[@]}"; do
+    [ "${count[$service]}" -lt "${full[$service]}" ] && names+=("$(service_label "$service")")
+  done
+  local IFS=,
+  printf '%s' "${names[*]}" | sed 's/,/, /g'
+}
+
+# An image reference without Docker Hub's implied prefix, so either spelling matches.
+image_name() {
+  local name=${1#docker.io/}
+  printf '%s' "${name#library/}"
+}
+
+# Brings a version up and shows one bar for it until every service is healthy. The bar counts
+# stages: the download when there is one, the migration's two and every other service's three.
+# The compose command runs in the background, because up does not return until the services
+# others depend on are healthy, the migration included. With a download, VERSION is set to the
+# version once its images are here, so a failed download leaves the installation as it was.
+#   bring_up <version> <download: true|false> <compose command...>
+# BRING_UP_FAILED says what failed: download, migration, start or health.
+BRING_UP_FAILED=""
+bring_up() {
+  local version=$1 download=$2
+  shift 2
+  local services service state health code n total=0 reached=0 downloaded=0 download_took=0 pct=0
+  local job status=0 phase=start begin=$SECONDS migration_deadline=0 health_deadline=0 beat=$SECONDS
+  local failed="" activity elapsed outcome=1 more width=8 label
+  local -a list=() changed=() waiting=()
+  local -A count=() full=() since=() took=() row=() wanted=()
+  local image
+  BRING_UP_FAILED=""
+  PROGRESS_LINES=0
+
+  # A container still running another version's image is about to be replaced, so it counts for
+  # nothing while the compose command runs; otherwise an update would count the old server as
+  # healthy, then drop it back as it is replaced. Once the command ends every container is this
+  # version's, so the rule is lifted then, and an image named two ways cannot stall the bar.
+  while read -r image; do
+    [ -z "$image" ] || wanted[$(image_name "$image")]=1
+  done < <(release_images "$version" || true)
+
+  services=$(VERSION=$version compose_at "$version" config --services) || return 1
+  if grep -qx migrate <<<"$services"; then list+=(migrate); fi
+  while read -r service; do
+    if [ -n "$service" ] && [ "$service" != migrate ]; then list+=("$service"); fi
+  done <<<"$services"
+  for service in "${list[@]}"; do
+    count[$service]=0
+    full[$service]=3
+    [ "$service" = migrate ] && full[$service]=2
+    total=$((total + full[$service]))
+    label=$(service_label "$service")
+    [ ${#label} -gt "$width" ] && width=${#label}
+  done
+  if $download; then
+    phase=download
+    total=$((total + 1))
+  fi
+
+  say "$(heading "Starting Armada $version")"
+  if redraw; then
+    printf '\e[?25l'
+    trap 'printf "\e[?25h"' EXIT
+    say ""
+  fi
+  if [ "$phase" = download ]; then
+    VERSION=$version quietly compose_at "$version" pull --quiet &
+  else
+    VERSION=$version quietly compose_at "$version" "$@" &
+    migration_deadline=$((SECONDS + MIGRATION_SECONDS))
+  fi
+  job=$!
+
+  while :; do
+    changed=()
+    if [ "$phase" = start ]; then
+      row=()
+      while IFS='|' read -r service state health code image; do
+        [ -n "$service" ] || continue
+        if [ -n "$job" ] && [ ${#wanted[@]} -gt 0 ] && [ -z "${wanted[$(image_name "$image")]:-}" ]; then
+          continue
+        fi
+        row[$service]="$state|$health|$code"
+      done < <(VERSION=$version compose_at "$version" ps --all \
+        --format '{{.Service}}|{{.State}}|{{.Health}}|{{.ExitCode}}|{{.Image}}' 2>/dev/null || true)
+      for service in "${list[@]}"; do
+        n=0
+        if [ -n "${row[$service]:-}" ]; then
+          IFS='|' read -r state health code <<<"${row[$service]}"
+          if [ "$service" = migrate ]; then
+            case "$(migration_from "$state" "$health" "$code")" in
+              migrated) n=2 ;;
+              migrating) n=1 ;;
+              failed)
+                n=${count[$service]}
+                failed="Database migration"
+                BRING_UP_FAILED=migration
+                ;;
+              timed-out)
+                n=${count[$service]}
+                failed="Database migration, which took too long"
+                BRING_UP_FAILED=migration
+                ;;
+            esac
+          else
+            case "$state $health" in
+              "running healthy") n=3 ;;
+              "running starting") n=2 ;;
+              created*) n=1 ;;
+              # Unhealthy, restarting or exited: it keeps the stages it reached.
+              *) n=${count[$service]} ;;
+            esac
+          fi
+        fi
+        [ "$n" -gt 0 ] && [ -z "${since[$service]:-}" ] && since[$service]=$SECONDS
+        [ "$n" -gt "${count[$service]}" ] && changed+=("$service")
+        if [ "$n" -ge "${full[$service]}" ]; then
+          [ -n "${took[$service]:-}" ] || took[$service]=$((SECONDS - since[$service]))
+        else
+          unset "took[$service]"
+        fi
+        count[$service]=$n
+      done
+    fi
+
+    if [ -n "$job" ] && ! kill -0 "$job" 2>/dev/null; then
+      if wait "$job"; then status=0; else status=$?; fi
+      job=""
+      if [ "$phase" = download ]; then
+        if [ "$status" -ne 0 ]; then
+          failed="Downloading $version"
+          BRING_UP_FAILED=download
+        else
+          downloaded=1
+          download_took=$((SECONDS - begin))
+          changed+=(download)
+          set_setting VERSION "$version"
+          phase=start
+          VERSION=$version quietly compose_at "$version" "$@" &
+          job=$!
+          migration_deadline=$((SECONDS + MIGRATION_SECONDS))
+        fi
+      elif [ "$status" -ne 0 ] && [ -z "$failed" ]; then
+        failed=$(unfinished)
+        BRING_UP_FAILED=start
+      fi
+    fi
+
+    reached=$downloaded
+    for service in "${list[@]}"; do reached=$((reached + count[$service])); done
+    pct=$((100 * reached / total))
+
+    # Away from a terminal each change is printed now, before the checks below can end the loop,
+    # so the stages reached on the last poll are not lost.
+    if ! redraw; then
+      for service in "${changed[@]}"; do
+        if [ "$service" = download ]; then
+          printf '  %3d%%  Downloaded %s (%s)\n' "$pct" "$version" "$(clock $((SECONDS - begin)))"
+        else
+          printf '  %3d%%  %s: %s (%s)\n' "$pct" "$(service_label "$service")" \
+            "$(stage_word "$service" "${count[$service]}")" \
+            "$(clock "${took[$service]:-$((SECONDS - since[$service]))}")"
+        fi
+        beat=$SECONDS
+      done
+    fi
+
+    # The services get their limit only once the migration is done, as it may take far longer.
+    if [ "$phase" = start ] && [ "$health_deadline" -eq 0 ] &&
+      { [ -z "${count[migrate]+set}" ] || [ "${count[migrate]}" -ge 2 ]; }; then
+      health_deadline=$((SECONDS + HEALTH_TIMEOUT))
+    fi
+    if [ -z "$failed" ] && [ "$phase" = start ]; then
+      if [ -z "$job" ] && [ "$reached" -eq "$total" ]; then
+        outcome=0
+        break
+      fi
+      if [ "$health_deadline" -eq 0 ] && [ "$SECONDS" -ge "$migration_deadline" ]; then
+        failed="Database migration, which took too long"
+        BRING_UP_FAILED=migration
+      elif [ "$health_deadline" -gt 0 ] && [ "$SECONDS" -ge "$health_deadline" ]; then
+        failed=$(unfinished)
+        BRING_UP_FAILED=health
+      fi
+    fi
+    [ -z "$failed" ] || break
+
+    waiting=()
+    for service in "${list[@]}"; do
+      if [ "${count[$service]}" -gt 0 ] && [ "${count[$service]}" -lt "${full[$service]}" ]; then
+        waiting+=("$service")
+      fi
+    done
+    if [ "$phase" = download ]; then
+      activity="${YELLOW}Downloading${RESET} $version"
+    elif [ ${#waiting[@]} -gt 0 ]; then
+      service=${waiting[0]}
+      elapsed=$((SECONDS - since[$service]))
+      more=""
+      [ ${#waiting[@]} -gt 1 ] && more=", and $((${#waiting[@]} - 1)) more"
+      activity="${YELLOW}Waiting for:${RESET} $(service_label "$service") ${DIM}($(clock "$elapsed")"
+      [ "$elapsed" -ge 60 ] && activity+=", first start can take several minutes"
+      activity+=")${RESET}$more"
+    else
+      activity="${YELLOW}Starting services${RESET}"
+    fi
+
+    if redraw; then
+      draw_frame "$pct"
+    elif [ $((SECONDS - beat)) -ge 30 ]; then
+      progress_line "$pct" "$activity"
+      beat=$SECONDS
+    fi
+    progress_pause
+  done
+
+  # A compose command still running when the wait gives up is stopped, children first.
+  if [ -n "$job" ]; then
+    pkill -TERM -P "$job" 2>/dev/null || true
+    kill "$job" 2>/dev/null || true
+    wait "$job" 2>/dev/null || true
+  fi
+  elapsed=$((SECONDS - begin))
+  if [ "$outcome" -eq 0 ]; then
+    activity="${GREEN}Ready${RESET} ${DIM}($(clock "$elapsed"))${RESET}"
+  else
+    activity="${RED}Failed:${RESET} ${failed:-Docker did not finish starting Armada}"
+  fi
+  if redraw; then
+    draw_frame "$pct" "$activity"
+    printf '\e[?25h'
+    trap - EXIT
+  else
+    progress_line "$pct" "$activity"
+  fi
+  return "$outcome"
 }
 
 # What to try when a version did not become healthy, from how its migration ended.
@@ -255,7 +641,7 @@ not_healthy_hint() {
   case "$(migration_state)" in
     failed) say "The database migration failed. See why: armada logs migrate" ;;
     migrating | timed-out) say "The database migration did not finish in time. If it only needs longer, allow it: sudo ARMADA_MIGRATION_TIMEOUT=1800 armada update $version" ;;
-    *) say "If the machine is only slow to start, allow it longer: sudo ARMADA_HEALTH_TIMEOUT=600 armada update $version" ;;
+    *) say "If the machine is only slow to start, allow it longer: sudo ARMADA_HEALTH_TIMEOUT=1200 armada update $version" ;;
   esac
 }
 
@@ -427,6 +813,7 @@ cmd_update() {
     return 0
   fi
 
+  begin_run_log
   say "Updating ${previous:-a new installation} to $target"
   # status reads this only while the lock is held, so one left behind by a crash is never shown.
   set_state UPDATING_TO "$target"
@@ -435,12 +822,10 @@ cmd_update() {
     set_state UPDATING_TO ""
     die "$target cannot read the database schema $previous left behind, so moving to it was refused and nothing was changed. If the database has been restored to suit $target, run: armada update $target --force"
   fi
-  VERSION=$target compose_at "$target" pull --quiet
-  set_setting VERSION "$target"
 
   # up itself fails when a service another one depends on never becomes healthy, so its failure is
   # handled like a timeout rather than ending armada before the previous version is restored.
-  if compose_at "$target" up --detach --remove-orphans && wait_healthy; then
+  if bring_up "$target" true up --detach --remove-orphans; then
     [ -n "$previous" ] && [ "$previous" != "$target" ] && set_state PREVIOUS_VERSION "$previous"
     set_state INSTALLED_AT "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     set_state AVAILABLE_VERSION ""
@@ -453,6 +838,10 @@ cmd_update() {
   fi
 
   set_state UPDATING_TO ""
+  show_run_log
+  if [ "$BRING_UP_FAILED" = download ]; then
+    die "Could not download $target, so nothing was changed. Check the connection and the registry login, then try again."
+  fi
   warn "$target did not become healthy."
   compose ps --all --format '  {{.Service}}: {{.State}} {{.Health}}' >&2 || true
   # Read before any return to the previous version replaces the target's containers.
@@ -468,7 +857,7 @@ cmd_update() {
   warn "$hint"
   warn "Returning to $previous."
   set_setting VERSION "$previous"
-  if ! compose_at "$previous" up --detach --remove-orphans || ! wait_healthy; then
+  if ! bring_up "$previous" false up --detach --remove-orphans; then
     warn "$previous did not come back healthy either. See: armada logs"
   fi
   return 1
@@ -594,26 +983,48 @@ next_check() {
     awk '$1 == "-" || $1 == "n/a" { exit } { print $2, substr($3, 1, 5), $4; exit }'
 }
 
+# The label column of status, in the heading colour, followed by a space.
+field() { printf '  %s%-12s%s ' "$BLUE" "$1" "$RESET"; }
+
+# A container or migration state, padded to a width, coloured by whether it is good, on its way
+# or wrong. A stopped migration is neither: it ran, and a reboot ended its container.
+state_word() {
+  local colour=""
+  case "$1" in
+    running | healthy | migrated) colour=$GREEN ;;
+    created | starting | restarting | migrating | paused) colour=$YELLOW ;;
+    unhealthy | exited | dead | removing | failed | timed-out) colour=$RED ;;
+  esac
+  printf '%s%-*s%s' "$colour" "$2" "$1" "$RESET"
+}
+
 status_updates() {
   local policy window next last_check rolled_back_from downgrade_blocked
   downgrade_blocked=$(state DOWNGRADE_BLOCKED)
-  [ -n "$downgrade_blocked" ] && printf '  %-12s %s%s cannot read this database schema, so the track is not followed back to it%s\n' \
-    Blocked "$YELLOW" "$downgrade_blocked" "$RESET"
+  if [ -n "$downgrade_blocked" ]; then
+    field Blocked
+    printf '%s%s cannot read this database schema, so the track is not followed back to it%s\n' \
+      "$YELLOW" "$downgrade_blocked" "$RESET"
+  fi
   policy=$(setting UPDATE_POLICY notify)
   if [ "$policy" = off ]; then
-    printf '  %-12s off\n' Updates
+    field Updates
+    printf 'off\n'
     return 0
   fi
   window=$(setting UPDATE_WINDOW)
   next=$(next_check)
   last_check=$(state LAST_CHECK)
   rolled_back_from=$(state ROLLED_BACK_FROM)
-  printf '  %-12s %s, checked every %s, %s\n' Updates "$policy" "$(setting UPDATE_INTERVAL 6h)" \
+  field Updates
+  printf '%s, checked every %s, %s\n' "$policy" "$(setting UPDATE_INTERVAL 6h)" \
     "$([ -n "$window" ] && printf 'window %s %s' "$window" "$(date +%Z)" || printf 'window any time')"
-  printf '  %-12s last checked %s, next %s\n' '' \
+  field ''
+  printf 'last checked %s, next %s\n' \
     "$([ -n "$last_check" ] && local_time "$last_check" || printf never)" "${next:-not scheduled}"
   if [ "$policy" = auto ] && [ -n "$rolled_back_from" ]; then
-    printf '  %-12s %spaused for %s, which this machine was rolled back from%s\n' '' \
+    field ''
+    printf '%spaused for %s, which this machine was rolled back from%s\n' \
       "$YELLOW" "$rolled_back_from" "$RESET"
   fi
 }
@@ -622,19 +1033,29 @@ cmd_status() {
   local version available health migration expiry disk root
   version=$(setting VERSION)
   available=$(state AVAILABLE_VERSION)
-  printf '%sArmada  %s%s\n' "$BOLD" "$(setting DOMAIN)" "$RESET"
+  printf '%s  %s\n' "$(heading Armada)" "$BOLD$(setting DOMAIN)$RESET"
   if updating; then
-    printf '  %-12s %s%s -> updating to %s%s\n' Version "$YELLOW" "${version:-none}" "$(state UPDATING_TO)" "$RESET"
-    preview_track && printf '  %-12s %s\n' Track "$(setting TRACK)"
+    field Version
+    printf '%s%s -> updating to %s%s\n' "$YELLOW" "${version:-none}" "$(state UPDATING_TO)" "$RESET"
+    if preview_track; then
+      field Track
+      printf '%s\n' "$(setting TRACK)"
+    fi
     say "Run armada status again once the update finishes."
     return 0
   fi
-  printf '  %-12s %s   (installed %s)\n' Version "${version:-none}" \
-    "$(local_time "$(state INSTALLED_AT unknown)")"
-  preview_track && printf '  %-12s %s\n' Track "$(setting TRACK)"
+  field Version
+  printf '%s   (installed %s)\n' "${version:-none}" "$(local_time "$(state INSTALLED_AT unknown)")"
+  if preview_track; then
+    field Track
+    printf '%s\n' "$(setting TRACK)"
+  fi
   status_updates
-  [ -n "$available" ] && printf '  %-12s %s-> %s is available. To install it: armada update %s%s\n' '' \
-    "$YELLOW" "$available" "$available" "$RESET"
+  if [ -n "$available" ]; then
+    field ''
+    printf '%s-> %s is available. To install it: armada update %s%s\n' \
+      "$YELLOW" "$available" "$available" "$RESET"
+  fi
   [ -n "$version" ] || return 0
 
   if all_healthy; then
@@ -642,22 +1063,28 @@ cmd_status() {
   else
     health="${RED}NOT HEALTHY${RESET}  (see: armada logs)"
   fi
-  printf '  %-12s %s\n' Health "$health"
+  field Health
+  printf '%s\n' "$health"
   migration=$(migration_state)
   compose ps --all --format '{{.Service}} {{.State}} {{.Health}}' |
     while read -r service status condition; do
+      field ''
       # migrate is a step, so its row says how the migration went rather than a container state.
       if [ "$service" = migrate ]; then
-        printf '  %-12s %-20s %s\n' '' "$service" "$migration"
+        printf '%-20s %s\n' "$service" "$(state_word "$migration" 0)"
       else
-        printf '  %-12s %-20s %-10s %s\n' '' "$service" "$status" "${condition:--}"
+        printf '%-20s %s %s\n' "$service" "$(state_word "$status" 10)" "$(state_word "${condition:--}" 0)"
       fi
     done
   expiry=$(certificate_expiry "$(setting DOMAIN)")
-  [ -n "$expiry" ] && printf '  %-12s renewed automatically; this one is valid until %s\n' Certificate "$(local_time "$expiry")"
+  if [ -n "$expiry" ]; then
+    field Certificate
+    printf 'renewed automatically; this one is valid until %s\n' "$(local_time "$expiry")"
+  fi
   root=$(docker info --format '{{.DockerRootDir}}')
   disk=$(df -h --output=used,size "$root" | tail -n 1 | awk '{print $1 " used of " $2}')
-  printf '  %-12s %s\n' Disk "$disk"
+  field Disk
+  printf '%s\n' "$disk"
 }
 
 cmd_logs() {
@@ -671,19 +1098,39 @@ cmd_logs() {
   compose logs --follow --tail "$lines" ${service:+"$service"}
 }
 
+installed_version() {
+  local version
+  version=$(setting VERSION)
+  [ -n "$version" ] || die "No version is installed yet. Run: armada update latest"
+  printf '%s' "$version"
+}
+
 cmd_restart() {
-  compose restart
-  wait_healthy || die "Not healthy after restarting. See: armada logs"
+  local version
+  version=$(installed_version) || exit 1
+  begin_run_log
+  # Stopped first rather than with compose restart, which would leave every service healthy at
+  # the first count and drop each one back as it restarts, so the bar would fall from 100%.
+  quiet_step "Stopping Armada" compose stop || die "Could not stop Armada to restart it."
+  if ! bring_up "$version" false up --detach --remove-orphans; then
+    show_run_log
+    die "Not healthy after restarting. See: armada logs"
+  fi
   say "Restarted."
 }
 
 cmd_stop() {
-  compose down
+  begin_run_log
+  quiet_step "Stopping Armada" compose down || die "Could not stop Armada."
   say "Stopped. Data is kept; start again with: armada start"
 }
 
 cmd_start() {
-  if ! compose up --detach --remove-orphans || ! wait_healthy; then
+  local version
+  version=$(installed_version) || exit 1
+  begin_run_log
+  if ! bring_up "$version" false up --detach --remove-orphans; then
+    show_run_log
     die "Not healthy after starting. See: armada logs"
   fi
   say "Started."
@@ -889,7 +1336,10 @@ cmd_uninstall() {
       die "Nothing was removed."
   fi
 
-  [ -n "$(setting VERSION)" ] && compose down
+  if [ -n "$(setting VERSION)" ]; then
+    begin_run_log
+    quiet_step "Stopping Armada" compose down || die "Could not stop Armada, so nothing was removed."
+  fi
   systemctl disable --now "$TIMER" >/dev/null 2>&1 || true
   rm -rf "${UNIT_DIR:?}/$TIMER" "${UNIT_DIR:?}/$SERVICE" "${UNIT_DIR:?}/$TIMER.d"
   systemctl daemon-reload

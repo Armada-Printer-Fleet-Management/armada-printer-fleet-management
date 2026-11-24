@@ -51,6 +51,7 @@ jobs:
       ADDITIVE: sha-000000000006
       OLD_ARMADA: sha-000000000007
       SLOW_MIGRATION: sha-000000000008
+      NO_IMAGES: sha-000000000009
     steps:
       - uses: actions/checkout@v4
 
@@ -89,6 +90,13 @@ jobs:
           }
           publish_preview "$GOOD_1"
           publish_preview "$GOOD_2"
+
+          # Release files whose images were never pushed, so updating to it fails at the download.
+          files=$(mktemp -d)
+          bash infra/deploy/release.sh preview "$NO_IMAGES" test/armada armada-test "$files"
+          docker build --quiet -f infra/deploy/release.Dockerfile \
+            -t "$IMAGES/armada-release-preview:$NO_IMAGES" "$files"
+          docker push --quiet "$IMAGES/armada-release-preview:$NO_IMAGES"
 
           # Revisions are named by their number, so the newest file names the head.
           head=$(basename "$(ls apps/server/migrations/versions/[0-9]*.py | sort | tail -n 1)" | cut -d _ -f 1)
@@ -215,8 +223,28 @@ jobs:
           # Output is captured before grep reads it: grep -q on a pipe can stop the writer mid-output.
           help=$(bash "$dir/install.sh" --help)
           grep -qF -- '--track testing|staging' <<< "$help"
-          bash "$dir/install.sh" --non-interactive --domain :80 \
-            --admin-email ci@example.invalid --update-policy auto --update-interval 5min
+          if ! out=$(bash "$dir/install.sh" --non-interactive --domain :80 \
+            --admin-email ci@example.invalid --update-policy auto --update-interval 5min 2>&1); then
+            echo "$out"
+            exit 1
+          fi
+          echo "$out"
+          # Captured output is not a terminal, so the progress is plain lines with no escape codes.
+          grep -qF "Starting Armada $GOOD_1" <<< "$out"
+          grep -qF 'Database migration: done' <<< "$out"
+          for service in Database 'File storage' 'Sign-in database' Sign-in 'Application server' 'Web server'; do
+            if ! grep -qF "$service: healthy" <<< "$out"; then
+              echo "::error::The install output has no healthy line for $service"
+              exit 1
+            fi
+          done
+          grep -qE '100%  Ready \([0-9]+:[0-9]{2}\)$' <<< "$out"
+          if grep -q $'\e' <<< "$out"; then
+            echo "::error::Captured install output contains escape codes"
+            exit 1
+          fi
+          # Docker's own output goes to the run log instead of the screen.
+          [ -s /opt/armada/last-run.log ]
           # A fresh install has its first check scheduled, rather than waiting for a reboot.
           timers=$(systemctl list-timers armada-update.timer --all --no-legend)
           echo "$timers"
@@ -276,12 +304,27 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::A build that never becomes healthy is undone"
-          if armada update "$BROKEN"; then
+          if out=$(armada update "$BROKEN" 2>&1); then
+            echo "$out"
             echo "::error::Updating to the broken build reported success"
             exit 1
           fi
+          echo "$out"
+          grep -qE '%  Failed: .*Application server' <<< "$out"
+          grep -qF "Docker's output (last 20 lines; all of it in /opt/armada/last-run.log)" <<< "$out"
           expect "$GOOD_1"
           curl -fsS http://localhost/api/health_check
+          echo "::endgroup::"
+
+          echo "::group::A build whose images cannot be downloaded changes nothing"
+          if out=$(armada update "$NO_IMAGES" 2>&1); then
+            echo "$out"
+            echo "::error::Updating to a build with no images reported success"
+            exit 1
+          fi
+          echo "$out"
+          grep -qF "Could not download $NO_IMAGES, so nothing was changed" <<< "$out"
+          expect "$GOOD_1"
           echo "::endgroup::"
 
           echo "::group::A failing migration is reverted to the previous version"
@@ -319,7 +362,13 @@ jobs:
           echo "$status"
           grep -qE '^  Health +OK' <<< "$status"
           grep -qE '^ +migrate +stopped$' <<< "$status"
+          # Each command starts the run log afresh, so this line must be gone after the restart.
+          echo deploy-test-marker >> /opt/armada/last-run.log
           armada restart
+          if grep -qF deploy-test-marker /opt/armada/last-run.log; then
+            echo "::error::armada restart kept the previous run's log"
+            exit 1
+          fi
           status=$(armada status)
           grep -qE '^ +migrate +migrated$' <<< "$status"
           curl -fsS http://localhost/api/health_check

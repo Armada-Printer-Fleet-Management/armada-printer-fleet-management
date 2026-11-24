@@ -269,7 +269,11 @@ The server waits for `migrate`, a step rather than a service, so every start bri
 up to that version's schema first. This holds whichever `armada` runs the update, including the
 older ones already installed. The server is down while the migration runs. `armada` waits up to
 `ARMADA_MIGRATION_TIMEOUT` seconds (600 by default) for the migration, then
-`ARMADA_HEALTH_TIMEOUT` for the services. After a reboot `migrate` stays stopped, and
+`ARMADA_HEALTH_TIMEOUT` seconds (600 by default) for the services. While it waits, `armada` shows
+one progress bar for the whole update, with a row under it for the download and each service.
+Docker's own output from the
+last update, rollback, start, restart or stop goes to `/opt/armada/last-run.log`, and its end is
+printed when one fails. After a reboot `migrate` stays stopped, and
 `armada status` shows it as `stopped`; the schema it applied stays. A failed migration fails the
 update, and the machine returns to the previous version like any other update that does not
 become healthy. Moving back to an older version never downgrades the database: the older version
