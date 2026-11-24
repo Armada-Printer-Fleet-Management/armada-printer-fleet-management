@@ -46,14 +46,14 @@ pywebview frontends and must not import from `apps/`, `plugins/`, or `packages/a
 ## Styling and theme
 
 - Style with Tailwind CSS utility classes. Use the shared `cn()` helper for class composition.
-- Prefer the semantic theme utilities already mapped in
-  `packages/ui-kit/src/styles.css`, such as `bg-background`, `text-foreground`, `bg-card`,
-  `text-card-foreground`, `bg-primary`, `text-primary-foreground`, and `border-border`.
-  Check that a token exists before using it.
+- Read `packages/ui-kit/AGENTS.md` first: it holds the theme's tokens and the rules
+  `scripts/check_ui_theme.py` enforces on every push.
+- Use the semantic theme utilities mapped in `packages/ui-kit/src/theme/tailwind.css`, such as
+  `bg-background`, `text-foreground`, `bg-card`, `text-muted-foreground`, `bg-primary`,
+  `text-primary-foreground`, and `border-border`. Check that a token exists before using it.
 - Do not hard-code palette colors (for example `text-slate-600` or arbitrary hex values) for
-  component states. If a needed semantic role is missing, add a named CSS variable and its
-  Tailwind `@theme inline` mapping in the shared stylesheet, with appropriate theme values,
-  rather than embedding a one-off color in the component.
+  component states. If a needed semantic role is missing, add a token in the theme as
+  `packages/ui-kit/AGENTS.md` describes, rather than embedding a one-off color in the component.
 - Keep variant classes complete and statically present in source. Tailwind scans source files as
   text, so avoid interpolated fragments such as `bg-${color}-500`. Use a map from each variant
   to its full class string.
