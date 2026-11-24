@@ -3,11 +3,6 @@
 
 @source "../../../packages/ui-kit/src";
 
-/* The web app's brand red, from the design. Overrides the shared blue for this app only. */
-:root {
-  --primary: #cf0722;
-}
-
 html,
 body,
 #root {
@@ -29,14 +24,6 @@ body,
 }
 
 body {
-  font-family:
-    Inter,
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    Arial;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

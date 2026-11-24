@@ -16,12 +16,12 @@
     light-dark(#4b5b6e, #aeb2ba)
   );
   --border: var(--brand-border, light-dark(#d2dbe5, #46494f));
-  --primary: var(--brand-primary, light-dark(#2f5d8a, #6aa0ff));
+  --primary: var(--brand-primary, light-dark(#2f5d8a, #78a9ff));
   --primary-foreground: var(
     --brand-primary-foreground,
     light-dark(#ffffff, #0a1530)
   );
-  --accent: var(--brand-accent, light-dark(#2f5d8a, #6aa0ff));
+  --accent: var(--brand-accent, light-dark(#2f5d8a, #78a9ff));
   --accent-foreground: var(
     --brand-accent-foreground,
     light-dark(#ffffff, #0a1530)
