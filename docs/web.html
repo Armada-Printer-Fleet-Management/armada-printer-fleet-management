@@ -192,11 +192,9 @@
 
         <h2>Colours</h2>
         <p>
-          The web app uses the shared tokens in
-          <code>packages/ui-kit/src/styles.css</code>, with one override:
-          <code>--primary</code> is the design's red in
-          <code>src/index.css</code>. The desktop app keeps the shared blue.
-          Anything that should follow the brand colour must use
+          The web and desktop apps draw with the same shared theme from
+          <code>packages/ui-kit</code>, in its light and dark versions, and
+          neither app overrides it. Anything that should follow the brand colour must use
           <code>bg-primary</code> or <code>text-primary</code>, never a literal
           colour.
         </p>

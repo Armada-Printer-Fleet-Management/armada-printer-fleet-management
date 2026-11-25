@@ -121,7 +121,7 @@ const DialogDescription = React.forwardRef<
     <p
       ref={ref}
       id={descriptionId}
-      className={cn('text-sm text-foreground/70', className)}
+      className={cn('text-sm text-muted-foreground', className)}
       {...props}
     />
   );

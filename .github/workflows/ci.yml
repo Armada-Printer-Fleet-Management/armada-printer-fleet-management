@@ -159,6 +159,25 @@ jobs:
         run: pnpm --dir packages/slicer test
       - name: UI kit tests
         run: pnpm --dir packages/ui-kit test
+      # In this job because the web app's dev server needs the generated code, the slicer engine
+      # and the sample prints fetched above.
+      - name: Install Chromium for the browser tests
+        run: pnpm --dir packages/ui-tests exec playwright install --with-deps chromium
+      - name: Browser tests, ui-kit kitchen sink (Playwright)
+        run: pnpm --dir packages/ui-tests test:browser
+      - name: Browser tests, web app (Playwright)
+        run: pnpm --dir apps/web test:browser
+      - name: Upload the browser test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            packages/ui-tests/playwright-report/
+            packages/ui-tests/test-results/
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
 
   desktop:
     needs: detect

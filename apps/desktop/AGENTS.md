@@ -174,6 +174,10 @@ Picture: `docs/desktop.html#ipc`.
 | Package exe                  | `python apps/desktop/build_run.py`                                            |
 | Build installer              | `python apps/desktop/installer_run.py [--skip-build] [--smoke-test] [--dev-tools]` |
 
+**Browser (Playwright) tests for the frontend go in `frontend/e2e/*.e2e.ts`**, built on the
+shared harness in `@armada/ui-tests`; none exist yet. Read `packages/ui-tests/AGENTS.md`, which
+says how to add a suite. The ui-kit components the frontend draws are already tested there.
+
 CI is `.github/workflows/desktop.ci.yml`; the pre-push check is
 `.githooks/pre-push.d/desktop/check.sh`. Both run the checks above; codegen runs first, once, for
 every Python project.

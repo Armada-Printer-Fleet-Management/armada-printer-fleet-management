@@ -21,7 +21,7 @@ export function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>{routePaths.login.label}</CardTitle>
-          <p className="text-sm text-foreground/70">
+          <p className="text-sm text-muted-foreground">
             Sign in with your organization account. Your browser opens to finish
             signing in.
           </p>
@@ -37,7 +37,7 @@ export function LoginPage() {
 
           <Link
             to={routePaths.dashboard.path}
-            className="justify-self-center rounded-md text-sm text-foreground/70 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="justify-self-center rounded-md text-sm text-muted-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             Continue without signing in
           </Link>

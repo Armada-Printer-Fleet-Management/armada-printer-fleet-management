@@ -240,9 +240,15 @@ importers:
         specifier: 8.5.0
         version: 8.5.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
     devDependencies:
+      '@armada/ui-tests':
+        specifier: workspace:*
+        version: link:../../packages/ui-tests
       '@bufbuild/protoc-gen-es':
         specifier: ^2
         version: 2.15.0(@bufbuild/protobuf@2.15.0)(supports-color@7.2.0)
+      '@playwright/test':
+        specifier: 1.65.1
+        version: 1.65.1
       '@tailwindcss/vite':
         specifier: ^4
         version: 4.3.3(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
@@ -413,6 +419,49 @@ importers:
         specifier: ^5
         version: 5.0.3(@types/node@26.6.3)(jsdom@29.1.1)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0))
 
+  packages/ui-tests:
+    dependencies:
+      '@axe-core/playwright':
+        specifier: 4.14.0
+        version: 4.14.0(playwright-core@1.65.1)
+    devDependencies:
+      '@armada/ui-kit':
+        specifier: workspace:*
+        version: link:../ui-kit
+      '@playwright/test':
+        specifier: 1.65.1
+        version: 1.65.1
+      '@tailwindcss/vite':
+        specifier: ^4
+        version: 4.3.3(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
+      '@types/node':
+        specifier: ^26
+        version: 26.6.3
+      '@types/react':
+        specifier: ^19
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: ^4
+        version: 4.7.0(supports-color@7.2.0)(vite@6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0))
+      react:
+        specifier: ^19
+        version: 19.3.0
+      react-dom:
+        specifier: ^19
+        version: 19.3.0(react@19.3.0)
+      tailwindcss:
+        specifier: ^4
+        version: 4.3.3
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vite:
+        specifier: ^6
+        version: 6.4.3(@types/node@26.6.3)(jiti@2.7.0)(lightningcss@1.32.0)
+
 packages:
 
   '@asamuzakjp/css-color@5.1.11':
@@ -429,6 +478,12 @@ packages:
 
   '@asamuzakjp/nwsapi@2.3.9':
     resolution: {integrity: sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q==}
+
+  '@axe-core/playwright@4.14.0':
+    resolution: {integrity: sha512-SGUhG5PIHd2eMdpgBF2PyQLOhX+qyDR2PT4cmoS4Qk2ak+jX/rrSvst9l0PGv5WTHolKpUMvVmoHpr4cZgf1RQ==}
+    engines: {node: '>=22.12.0'}
+    peerDependencies:
+      playwright-core: '>= 1.0.0'
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -954,6 +1009,11 @@ packages:
 
   '@oxc-project/types@0.148.0':
     resolution: {integrity: sha512-Nm4s/jB+4FpFsPhWGEC4h7rzksesmtnMXomo6rCMcg/b8zLQuOziRgkCS1fxDCXOlJB/6Q8oABOZ/OP6RIPj9A==}
+
+  '@playwright/test@1.65.1':
+    resolution: {integrity: sha512-y+NCIRm2LvY4slUVWvGh1nujJ8RF/hEisIsq2mtUPgdQC4L701bq5hZGMhrpeXjACvwvO9tj5dJqhvM6TP9lbw==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@remix-run/route-pattern@0.22.1':
     resolution: {integrity: sha512-czdGJWh09Lapvcqt7Vb09KlrU2PhRJ8xQaI+AItTuD9aDJ5MAgxnS38lnys6Ll+6RJEqPiaUqTwIQhVLwFvv+w==}
@@ -2275,6 +2335,16 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
+  playwright-core@1.65.1:
+    resolution: {integrity: sha512-hqPpz7blSMPxWVdoeE1yiBSzXsKiVOd2k+kjCvmUywD2GPO2Dd9HfcWnq9NN0GHbNZDFgZ9JfBFr+X5/BLo0qw==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.65.1:
+    resolution: {integrity: sha512-vJ1FuoOrNwOKHUIVEvSt3jT1L+wjjDpwhwIstKtfvTh8XIG4FG4bIFuvNdMxi81LGfAhUgUZleVFaOLY4RIUUw==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
     engines: {node: '>= 0.4'}
@@ -2752,6 +2822,11 @@ snapshots:
 
   '@asamuzakjp/nwsapi@2.3.9': {}
 
+  '@axe-core/playwright@4.14.0(playwright-core@1.65.1)':
+    dependencies:
+      axe-core: 4.14.1
+      playwright-core: 1.65.1
+
   '@babel/code-frame@7.29.7':
     dependencies:
       '@babel/helper-validator-identifier': 7.29.7
@@ -3144,6 +3219,10 @@ snapshots:
 
   '@oxc-project/types@0.148.0':
     optional: true
+
+  '@playwright/test@1.65.1':
+    dependencies:
+      playwright: 1.65.1
 
   '@remix-run/route-pattern@0.22.1': {}
 
@@ -4584,6 +4663,12 @@ snapshots:
   picocolors@1.1.1: {}
 
   picomatch@4.0.7: {}
+
+  playwright-core@1.65.1: {}
+
+  playwright@1.65.1:
+    dependencies:
+      playwright-core: 1.65.1
 
   possible-typed-array-names@1.1.0: {}
 

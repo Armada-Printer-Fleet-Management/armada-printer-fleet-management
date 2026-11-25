@@ -52,7 +52,7 @@ function RailLink({
 function standardItem(isActive: boolean) {
   return isActive
     ? 'bg-primary text-primary-foreground'
-    : 'text-foreground/70 hover:bg-foreground/5 hover:text-foreground';
+    : 'text-muted-foreground hover:bg-secondary-hover hover:text-foreground';
 }
 
 function devItem(isActive: boolean) {
@@ -69,7 +69,7 @@ export function DesktopNavRail() {
     <nav
       aria-label="Main navigation"
       className={cn(
-        'flex shrink-0 flex-col border-r border-border bg-card p-2',
+        'flex shrink-0 flex-col border-r border-border bg-sidebar p-2',
         expanded ? 'w-48' : 'w-16 items-center',
       )}
     >
@@ -86,7 +86,7 @@ export function DesktopNavRail() {
           aria-label="Navigation labels"
           onClick={() => setExpanded(!expanded)}
           className={cn(
-            'flex size-12 items-center justify-center rounded-md text-foreground/70 hover:bg-foreground/5 hover:text-foreground',
+            'flex size-12 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary-hover hover:text-foreground',
             focusRing,
           )}
         >

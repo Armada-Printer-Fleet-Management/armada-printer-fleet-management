@@ -143,6 +143,7 @@ The current expected layout: `.githooks/pre-push` is a thin dispatcher; shared h
 | `apps/server/pyproject.toml` exists | `uv sync --project apps/server` |
 | `apps/desktop/frontend/package.json` exists | included by the root workspace install; run `pnpm approve-builds --all` from the repository root once if pnpm blocks esbuild's postinstall script |
 | `apps/web/package.json` exists | included by the root workspace install; run `pnpm approve-builds --all` from the repository root once if pnpm blocks esbuild's postinstall script |
+| `packages/ui-tests/package.json` exists | after the workspace install, `pnpm --dir packages/ui-tests exec playwright install chromium` once per machine: the browser the Playwright tests drive, about 170 MB, kept in Playwright's own cache outside the repository |
 
 ## 5. Generate API code
 
@@ -358,6 +359,11 @@ pnpm -r test --run
 The server and desktop each have their own project, which the root-level `uv run pytest` does not
 reach. The desktop tests import generated code, so step 5 must have run.
 The web package declares Vitest for its own tests; the workspace install supplies it.
+
+The browser tests are separate, since they need the Chromium installed in step 4 and start their
+own dev servers: `pnpm --dir packages/ui-tests test:browser` for ui-kit and
+`pnpm --dir apps/web test:browser` for the web app. The web suite needs the generated code from
+step 5, the slicer engine and the sample prints, as the web app does.
 
 The server's command runs two suites, which CI runs as separate steps: `tests/unit`, which needs
 no Docker, and `tests/integration`. The pre-push hook runs only `tests/unit` unless

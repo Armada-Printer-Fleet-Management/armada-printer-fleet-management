@@ -85,7 +85,7 @@ export function LegalAgreementGate<Document extends LegalDocumentView>({
 
   if (state.kind === 'checking') {
     return (
-      <p role="status" className="p-6 text-sm text-foreground/70">
+      <p role="status" className="p-6 text-sm text-muted-foreground">
         Checking the agreements for {applicationTitle}…
       </p>
     );

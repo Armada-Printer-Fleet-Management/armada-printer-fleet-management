@@ -45,7 +45,7 @@ const SignInControls = React.forwardRef<HTMLDivElement, SignInControlsProps>(
           onClick={onSignIn}
           disabled={waiting}
           className={cn(
-            'h-11 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70',
+            'h-11 w-full rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary-hover disabled:cursor-wait disabled:opacity-70',
             focusRing,
           )}
         >

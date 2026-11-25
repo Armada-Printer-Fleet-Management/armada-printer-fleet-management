@@ -35,7 +35,7 @@ export function SubmissionFeedback({
         <button
           type="button"
           onClick={onClose}
-          className="min-h-10 rounded-lg bg-primary px-4 font-semibold text-primary-foreground cursor-pointer hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="min-h-10 rounded-lg bg-primary px-4 font-semibold text-primary-foreground cursor-pointer hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           Done
         </button>
@@ -203,8 +203,8 @@ export function NewPrintDialog({
                 className={cn(
                   'block w-full cursor-pointer rounded-lg p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50',
                   'file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-1 file:font-medium file:text-foreground disabled:file:cursor-not-allowed',
-                  editable && 'group-hover/file:file:bg-foreground/10',
-                  file ? 'text-foreground' : 'text-foreground/70',
+                  editable && 'group-hover/file:file:bg-secondary-hover',
+                  file ? 'text-foreground' : 'text-muted-foreground',
                 )}
               />
             </div>
@@ -233,7 +233,7 @@ export function NewPrintDialog({
           {editable && (
             <button
               type="submit"
-              className="min-h-10 rounded-lg bg-primary px-4 font-semibold text-primary-foreground enabled:cursor-pointer enabled:hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              className="min-h-10 rounded-lg bg-primary px-4 font-semibold text-primary-foreground enabled:cursor-pointer enabled:hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               Submit print
             </button>

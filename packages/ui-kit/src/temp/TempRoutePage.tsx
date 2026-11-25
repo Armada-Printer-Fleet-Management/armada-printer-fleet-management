@@ -14,7 +14,7 @@ const TempRoutePage = React.forwardRef<HTMLElement, TempRoutePageProps>(
   ({ heading, description, className, ...props }, ref) => (
     <section ref={ref} className={cn('grid gap-3', className)} {...props}>
       <h1 className="text-3xl font-bold">{heading}</h1>
-      <p className="text-sm text-foreground/70">{description}</p>
+      <p className="text-sm text-muted-foreground">{description}</p>
     </section>
   ),
 );

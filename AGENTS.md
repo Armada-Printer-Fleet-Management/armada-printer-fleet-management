@@ -476,6 +476,7 @@ theme, so a hardcoded colour breaks someone else's brand. **Before writing UI, r
 | Generate slicer TS proto       | `python scripts/generate_proto.py buf.gen.slicer_ts.yaml --node-modules packages/slicer/node_modules` |
 | Slicer tests                   | `pnpm --dir packages/slicer test`                                    |
 | UI kit tests                   | `pnpm --dir packages/ui-kit test`                                    |
+| Browser (Playwright) tests     | `pnpm --dir packages/ui-tests test:browser` (ui-kit), `pnpm --dir apps/web test:browser` (web); once per machine: `pnpm --dir packages/ui-tests exec playwright install chromium` |
 | Regenerate the test G-code     | `pnpm --dir packages/slicer generate:test-gcode` (dev stack up)      |
 | Read a decision               | Atlassian MCP server, configured in `.mcp.json`                       |
 | Desktop Python deps           | `uv sync --project apps/desktop/backend`                              |

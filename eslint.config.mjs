@@ -43,6 +43,7 @@ export default tseslint.config(
       'apps/desktop/frontend/**/*.{ts,tsx}',
       'packages/ui-kit/**/*.{ts,tsx}',
       'packages/slicer/**/*.{ts,tsx}',
+      'packages/ui-tests/**/*.{ts,tsx}',
     ],
     languageOptions: {
       parserOptions: {

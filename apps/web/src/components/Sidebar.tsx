@@ -49,7 +49,7 @@ function SidebarLink({ path, label, icon: Icon, className }: SidebarLinkProps) {
               ? className(isActive)
               : isActive
                 ? 'bg-background font-semibold text-foreground'
-                : 'text-foreground/80 hover:bg-foreground/5 hover:text-foreground',
+                : 'text-muted-foreground hover:bg-secondary-hover hover:text-foreground',
           )
         }
       >
@@ -98,7 +98,7 @@ function AccountItem() {
         onClick={start}
         className={cn(
           itemClass,
-          'w-full cursor-pointer text-foreground/80 hover:bg-foreground/5 hover:text-foreground disabled:cursor-wait',
+          'w-full cursor-pointer text-muted-foreground hover:bg-secondary-hover hover:text-foreground disabled:cursor-wait',
         )}
       >
         <Icon className="size-[18px]" />
@@ -126,7 +126,7 @@ export function Sidebar({ onNewPrint }: { onNewPrint?: () => void }) {
   return (
     <nav
       aria-label="Main navigation"
-      className="flex w-60 shrink-0 flex-col gap-6 border-r border-border bg-card p-4"
+      className="flex w-60 shrink-0 flex-col gap-6 border-r border-border bg-sidebar p-4"
     >
       <div className="flex flex-col items-center pt-4 text-center">
         <OrganizationLogo alt="" className="mb-2 size-12" />
@@ -134,14 +134,14 @@ export function Sidebar({ onNewPrint }: { onNewPrint?: () => void }) {
           {name}
         </p>
         {tagline && (
-          <p className="mt-1 text-xs text-foreground/70">{tagline}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{tagline}</p>
         )}
       </div>
       <button
         type="button"
         onClick={onNewPrint}
         className={cn(
-          'flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:opacity-90',
+          'flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary-hover',
           focusRing,
         )}
       >

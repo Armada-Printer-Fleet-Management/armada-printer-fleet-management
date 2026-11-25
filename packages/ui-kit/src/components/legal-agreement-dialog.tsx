@@ -53,7 +53,7 @@ function DocumentSection({
     <Collapsible>
       <CollapsibleTrigger>
         <span className="flex-1">{document.title}</span>
-        <span className="font-normal text-foreground/70">
+        <span className="font-normal text-muted-foreground">
           Effective {document.effectiveDate}
         </span>
       </CollapsibleTrigger>
@@ -121,7 +121,7 @@ export function LegalAgreementDialog({
               <section aria-labelledby="legal-notices" className="space-y-2">
                 <h3
                   id="legal-notices"
-                  className="text-sm font-medium text-foreground/70"
+                  className="text-sm font-medium text-muted-foreground"
                 >
                   For your information; no acceptance needed
                 </h3>
