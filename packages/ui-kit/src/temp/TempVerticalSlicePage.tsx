@@ -82,7 +82,7 @@ const TempVerticalSlicePage = React.forwardRef<
   <section ref={ref} className={cn('grid gap-6', className)} {...props}>
     <h2 className="text-2xl font-semibold">{heading}</h2>
     {sections.length === 0 && (
-      <p className="text-sm text-foreground/70">No connections wired yet.</p>
+      <p className="text-sm text-muted-foreground">No connections wired yet.</p>
     )}
     {sections.map((section) => (
       <TempSliceSectionCard key={section.title} section={section} />
@@ -98,7 +98,7 @@ function TempSliceSectionCard({ section }: { section: TempSliceSection }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">{section.title}</CardTitle>
-        <CardDescription className="text-foreground/70">
+        <CardDescription className="text-muted-foreground">
           <span className="sr-only">Boundary: </span>
           {section.boundary.join(' → ')}
         </CardDescription>
@@ -168,7 +168,7 @@ function TempSlicePollView({ poll }: { poll: TempSlicePoll }) {
 
 function TempSliceListView({ list }: { list: TempSliceList }) {
   if (list.items.length === 0) {
-    return <p className="text-sm text-foreground/70">Nothing to show.</p>;
+    return <p className="text-sm text-muted-foreground">Nothing to show.</p>;
   }
   return (
     <ul className="grid gap-1">

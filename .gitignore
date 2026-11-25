@@ -28,6 +28,9 @@ apps/web/dist/
 apps/desktop/frontend/dist/
 packages/ui-kit/dist/
 coverage/
+# Playwright's results and HTML report, including screenshots of failed tests.
+**/test-results/
+**/playwright-report/
 
 # ─── Generated code (buf) ────────────────────────────────────────────────────
 # Generated from packages/proto — never hand-edit, never commit.

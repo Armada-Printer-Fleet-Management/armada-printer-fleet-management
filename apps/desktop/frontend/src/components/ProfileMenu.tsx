@@ -7,7 +7,7 @@ import { routePaths } from '../routes';
 import { RailLabel, railItemClass } from './RailLabel';
 
 const menuItem =
-  'block rounded-md px-3 py-2 text-sm hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
+  'block rounded-md px-3 py-2 text-sm hover:bg-secondary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 const menuRoutes = [routePaths.account, routePaths.about];
 
@@ -43,7 +43,7 @@ export function ProfileMenu({ expanded }: { expanded: boolean }) {
             popoverTarget={menuId}
             className={cn(
               railItemClass(expanded),
-              'text-foreground/70 hover:bg-foreground/5 hover:text-foreground',
+              'text-muted-foreground hover:bg-secondary-hover hover:text-foreground',
             )}
           >
             <span className="flex size-8 items-center justify-center rounded-full border border-border bg-background">

@@ -69,19 +69,19 @@ export function AboutBox({
     <Card className="w-full max-w-xl">
       <CardHeader>
         <CardTitle>{organization.title}</CardTitle>
-        <CardDescription className="text-foreground/70">
+        <CardDescription className="text-muted-foreground">
           {organization.description}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <dl className="grid gap-4 text-sm">
           <div className={row}>
-            <dt className="font-medium text-foreground/70">Version</dt>
+            <dt className="font-medium text-muted-foreground">Version</dt>
             <dd>{versionText}</dd>
           </div>
           {legalDocuments.map((document) => (
             <div key={`${document.label}-${document.title}`} className={row}>
-              <dt className="font-medium text-foreground/70">
+              <dt className="font-medium text-muted-foreground">
                 {document.label}
               </dt>
               <dd className="min-w-0">
@@ -100,7 +100,7 @@ export function AboutBox({
           ))}
           {thirdPartyLicences.length > 0 && (
             <div className={row}>
-              <dt className="text-xs font-medium text-foreground/70">
+              <dt className="text-xs font-medium text-muted-foreground">
                 Third-party licences
               </dt>
               <dd className="min-w-0">
@@ -127,7 +127,7 @@ export function AboutBox({
             </div>
           )}
           <div className={row}>
-            <dt className="font-medium text-foreground/70">Source</dt>
+            <dt className="font-medium text-muted-foreground">Source</dt>
             <dd className="min-w-0">
               <a
                 className="break-all text-primary underline-offset-4 hover:underline"

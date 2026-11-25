@@ -32,6 +32,10 @@ lists every pair.
   `SKIPPED_PAIRS` with its reason.
 - Fix a failing pair by changing the token's value. Mockup colours are a guide, not a rule.
 - A literal that must stay carries `theme-check: allow <reason>` on its line.
+- **A new or changed component goes on the kitchen sink**, `packages/ui-tests/kitchen-sink/`, in
+  each of its states. The Playwright suite there checks it in a real browser, in both themes:
+  axe WCAG A/AA including hover and focus, only token colours drawn, nothing overflowing, a
+  visible focus indicator. Read `packages/ui-tests/AGENTS.md`.
 - Controls are keyboard reachable with a visible focus ring. `apps/web/AGENTS.md` has the
   interactive-control rules.
 - `pnpm lint` runs eslint-plugin-jsx-a11y's recommended rules on every frontend (pre-push and CI):

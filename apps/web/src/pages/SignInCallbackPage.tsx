@@ -46,7 +46,7 @@ export function SignInCallbackPage() {
 
   if (!failed) {
     return (
-      <p role="status" className="p-8 text-foreground/70">
+      <p role="status" className="p-8 text-muted-foreground">
         Signing you in…
       </p>
     );
@@ -55,7 +55,7 @@ export function SignInCallbackPage() {
   return (
     <section className="grid gap-3 p-8">
       <h1 className="text-3xl font-bold">We couldn’t sign you in</h1>
-      <p className="text-foreground/80">
+      <p className="text-muted-foreground">
         The sign-in didn’t complete. Go back and try again.
       </p>
       <Link

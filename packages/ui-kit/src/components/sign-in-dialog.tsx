@@ -46,7 +46,7 @@ const SignInDialog = React.forwardRef<HTMLDialogElement, SignInDialogProps>(
       <button
         type="button"
         onClick={onDismiss}
-        className="justify-self-center self-center rounded-md text-sm text-foreground/70 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="justify-self-center self-center rounded-md text-sm text-muted-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {dismissLabel}
       </button>

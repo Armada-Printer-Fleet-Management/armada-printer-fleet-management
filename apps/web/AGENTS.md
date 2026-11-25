@@ -2,6 +2,10 @@
 
 The root `AGENTS.md` applies in full. These rules add web-specific interaction conventions.
 
+**Browser (Playwright) tests are in `e2e/*.e2e.ts`**, run with `pnpm --dir apps/web test:browser`,
+signed out so no server is needed. They use the shared checks in `@armada/ui-tests`: read
+`packages/ui-tests/AGENTS.md` before adding one. Vitest tests stay beside the code in `src/`.
+
 ## Interactive controls
 
 - Make controls recognizable before interaction, including on touch devices. Do not rely on
