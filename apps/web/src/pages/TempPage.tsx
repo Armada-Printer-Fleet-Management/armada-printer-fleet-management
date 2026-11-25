@@ -2,7 +2,10 @@ import { read } from '@armada/organization-info';
 import { OrganizationInfoSchema } from '@armada/api-client/gen/organization/v1/organization_info_pb';
 import { AboutBox } from '@armada/ui-kit';
 
-import { aboutLegalDocuments } from '../legal/documents';
+import {
+  aboutLegalDocuments,
+  aboutThirdPartyLicences,
+} from '../legal/documents';
 import { version } from '../lib/version';
 import { TempVerticalSlice } from '../temp/TempVerticalSlice';
 import { apiClient } from '../lib/api';
@@ -13,6 +16,7 @@ export function TempPage() {
       <AboutBox
         organization={read(OrganizationInfoSchema)}
         legalDocuments={aboutLegalDocuments}
+        thirdPartyLicences={aboutThirdPartyLicences}
         version={version()}
       />
       <TempVerticalSlice

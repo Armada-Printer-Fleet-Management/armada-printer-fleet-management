@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -171,3 +172,97 @@ def test_check_new_refuses_what_create_refuses(
 ) -> None:
     with pytest.raises(RuleViolation):
         User.check_new(email, first_name, last_name, role, expires_at, NOW)
+
+
+# Status transitions
+
+
+def in_status(status: UserStatus) -> User:
+    user = create()
+    user.status = status
+    if status is UserStatus.DELETED:
+        user.deleted_at = NOW
+    return user
+
+
+@pytest.mark.parametrize("status", list(UserStatus))
+def test_only_an_active_user_can_sign_in(status: UserStatus) -> None:
+    assert in_status(status).can_sign_in() is (status is UserStatus.ACTIVE)
+
+
+def test_suspend_moves_an_active_user_to_suspended() -> None:
+    user = in_status(UserStatus.ACTIVE)
+
+    user.suspend(LATER)
+
+    assert user.status is UserStatus.SUSPENDED
+    assert (user.updated_at, user.deleted_at) == (LATER, None)
+
+
+@pytest.mark.parametrize("status", [UserStatus.ACTIVE, UserStatus.SUSPENDED])
+def test_delete_moves_a_user_to_deleted_and_records_when(status: UserStatus) -> None:
+    user = in_status(status)
+
+    user.delete(LATER)
+
+    assert user.status is UserStatus.DELETED
+    assert (user.updated_at, user.deleted_at) == (LATER, LATER)
+
+
+@pytest.mark.parametrize("status", [UserStatus.SUSPENDED, UserStatus.DELETED])
+def test_activate_moves_a_user_to_active_and_clears_deleted_at(status: UserStatus) -> None:
+    user = in_status(status)
+
+    user.activate(LATER)
+
+    assert user.status is UserStatus.ACTIVE
+    assert (user.updated_at, user.deleted_at) == (LATER, None)
+
+
+@pytest.mark.parametrize(
+    ("transition", "status"),
+    [
+        (User.suspend, UserStatus.SUSPENDED),
+        (User.suspend, UserStatus.DELETED),
+        (User.activate, UserStatus.ACTIVE),
+        (User.delete, UserStatus.DELETED),
+    ],
+    ids=["suspend suspended", "suspend deleted", "activate active", "delete deleted"],
+)
+def test_a_refused_transition_changes_nothing(
+    transition: Callable[[User, datetime], None], status: UserStatus
+) -> None:
+    user = in_status(status)
+    before = (user.status, user.updated_at, user.deleted_at)
+
+    with pytest.raises(RuleViolation):
+        transition(user, LATER)
+
+    assert (user.status, user.updated_at, user.deleted_at) == before
+
+
+@pytest.mark.parametrize("status", list(UserStatus))
+@pytest.mark.parametrize(
+    ("hint", "transition"),
+    [
+        (User.can_suspend, User.suspend),
+        (User.can_activate, User.activate),
+        (User.can_delete, User.delete),
+    ],
+    ids=["suspend", "activate", "delete"],
+)
+def test_each_hint_agrees_with_its_rule(
+    hint: Callable[[User], bool],
+    transition: Callable[[User, datetime], None],
+    status: UserStatus,
+) -> None:
+    user = in_status(status)
+    allowed = hint(user)
+
+    try:
+        transition(user, LATER)
+        refused = False
+    except RuleViolation:
+        refused = True
+
+    assert allowed is not refused

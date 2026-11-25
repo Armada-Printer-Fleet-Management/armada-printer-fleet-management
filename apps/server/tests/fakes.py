@@ -98,6 +98,7 @@ class MemoryIdentityDirectory:
 
     def __init__(self) -> None:
         self.accounts: dict[str, NewAccount] = {}
+        self.disabled: set[str] = set()
         self.healthy = True
 
     def _fail_if_unhealthy(self) -> None:
@@ -126,6 +127,18 @@ class MemoryIdentityDirectory:
     async def delete_account(self, subject: str) -> None:
         self._fail_if_unhealthy()
         self.accounts.pop(subject, None)
+        self.disabled.discard(subject)
+
+    async def enable_account(self, subject: str) -> None:
+        self._fail_if_unhealthy()
+        if subject not in self.accounts:
+            raise IdentityDirectoryError("No account has this subject")
+        self.disabled.discard(subject)
+
+    async def disable_account(self, subject: str) -> None:
+        self._fail_if_unhealthy()
+        if subject in self.accounts:
+            self.disabled.add(subject)
 
     async def health_check(self) -> None:
         self._fail_if_unhealthy()

@@ -2,7 +2,10 @@ from core_domain.ddd import Page, RuleViolation, Service
 from core_domain.ids import PrinterQueueId
 from core_domain.queue import PrinterQueue
 
+from api.common.paging import PageSizes
 from api.domains.queue.repository import PrinterQueueRepository
+
+PAGE_SIZES = PageSizes(default=50, maximum=100)
 
 
 class PrinterQueueService(Service[PrinterQueueRepository]):
@@ -10,7 +13,7 @@ class PrinterQueueService(Service[PrinterQueueRepository]):
         return await self._repository.get(printer_queue_id)
 
     async def page(self, page_size: int, page_token: str) -> Page[PrinterQueue]:
-        return await self._repository.page(page_size, page_token)
+        return await self._repository.page(PAGE_SIZES.size(page_size), page_token)
 
     async def open_queue(self) -> PrinterQueueId:
         """The queue a newly submitted job goes in: the oldest that accepts jobs."""

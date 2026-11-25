@@ -58,6 +58,24 @@ class IdentityDirectory(Protocol):
         """
         ...
 
+    async def enable_account(self, subject: str) -> None:
+        """
+        Let the account with this subject sign in.
+
+        Raises IdentityDirectoryError if there is no such account, or if there is an error with
+        the directory itself.
+        """
+        ...
+
+    async def disable_account(self, subject: str) -> None:
+        """
+        Stop the account with this subject signing in, and end its sessions. Disabling an account
+        that does not exist succeeds.
+
+        Raises IdentityDirectoryError if there is an error with the directory itself.
+        """
+        ...
+
     async def health_check(self) -> None:
         """
         Check the health of the directory.

@@ -97,7 +97,7 @@ DialogHeader.displayName = 'DialogHeader';
 const DialogTitle = React.forwardRef<
   HTMLHeadingElement,
   React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => {
+>(({ className, children, ...props }, ref) => {
   const { titleId } = useDialogContext('DialogTitle');
   return (
     <h2
@@ -105,7 +105,9 @@ const DialogTitle = React.forwardRef<
       id={titleId}
       className={cn('text-lg font-semibold', className)}
       {...props}
-    />
+    >
+      {children}
+    </h2>
   );
 });
 DialogTitle.displayName = 'DialogTitle';

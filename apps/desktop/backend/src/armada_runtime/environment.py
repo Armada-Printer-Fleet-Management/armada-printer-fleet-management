@@ -41,6 +41,13 @@ class Environment:
         return Path(app_data) / executable_name() / name
 
     @staticmethod
+    def theme_path() -> Path:
+        """The user's light or dark choice, kept apart from the settings file the app never
+        rewrites."""
+        name = "theme.dev.yaml" if Environment.is_dev else "theme.yaml"
+        return Environment.settings_path().with_name(name)
+
+    @staticmethod
     def temp_user_id_path() -> Path:
         """Where the temporary user ID is kept, beside the settings file. It must outlive a
         launch, and the renderer's own storage is wiped on every one."""

@@ -72,8 +72,10 @@ def new_user(role: str = "USER_ROLE_STAFF") -> Json:
     [
         ("GetUser", {"userId": {"value": str(uuid4())}}, 404),
         ("CreateUser", {}, 400),
+        ("ListUsers", {"page": {"pageToken": "nope"}}, 400),
+        ("TransitionUserStatus", {"userId": {"value": str(uuid4())}, "suspend": {}}, 404),
     ],
-    ids=["GetUser", "CreateUser"],
+    ids=["GetUser", "CreateUser", "ListUsers", "TransitionUserStatus"],
 )
 def test_rpc_is_mounted_on_the_app(
     app_client: TestClient, procedure: str, body: Json, status: int
@@ -118,3 +120,27 @@ def test_a_user_the_rules_refuse_leaves_no_keycloak_account(
     post(app_client, f"{_USERS}/CreateUser", guest_without_expiry, 400)
 
     assert keycloak_users.with_email(guest_without_expiry["email"]) == []
+
+
+def _transition(client: TestClient, user_id: Json, action: str) -> Json:
+    body = post(client, f"{_USERS}/TransitionUserStatus", {"userId": user_id, action: {}})
+    user: Json = body["user"]
+    return user
+
+
+def test_deleting_a_user_disables_their_account_and_reactivating_enables_it(
+    app_client: TestClient, keycloak_users: KeycloakUsers
+) -> None:
+    request = new_user()
+    created = post(app_client, f"{_USERS}/CreateUser", request)["user"]
+
+    deleted = _transition(app_client, created["id"], "delete")
+    [disabled] = keycloak_users.with_email(request["email"])
+    reactivated = _transition(app_client, created["id"], "reactivate")
+    [enabled] = keycloak_users.with_email(request["email"])
+
+    assert deleted["status"] == "USER_STATUS_DELETED"
+    assert disabled["enabled"] is False
+    assert reactivated["status"] == "USER_STATUS_ACTIVE"
+    assert enabled["enabled"] is True
+    assert enabled["id"] == disabled["id"]

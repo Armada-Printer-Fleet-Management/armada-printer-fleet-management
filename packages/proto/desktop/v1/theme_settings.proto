@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package desktop.v1;
+
+// How the operator picks between the light and dark themes on this computer.
+enum ThemePreference {
+  // Not set. Never valid; the desktop reads it as SYSTEM.
+  THEME_PREFERENCE_UNSPECIFIED = 0;
+  // Follow the operating system's light or dark setting.
+  THEME_PREFERENCE_SYSTEM = 1;
+  // Always the light theme.
+  THEME_PREFERENCE_LIGHT = 2;
+  // Always the dark theme.
+  THEME_PREFERENCE_DARK = 3;
+}
+
+// The theme the operator chose, kept by the desktop backend; never sent to a server.
+message ThemeSettings {
+  // The chosen theme.
+  ThemePreference preference = 1;
+}

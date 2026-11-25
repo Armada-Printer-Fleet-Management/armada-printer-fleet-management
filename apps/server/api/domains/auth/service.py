@@ -3,11 +3,14 @@ from contextlib import suppress
 from datetime import datetime
 
 from core_domain.auth import User, UserRole
-from core_domain.ddd import Service, Unavailable
+from core_domain.ddd import Page, Service, Unavailable, change_async
 from core_domain.ids import UserId
 
+from api.common.paging import PageSizes
 from api.domains.auth.accounts import IdentityAccounts
 from api.domains.auth.repository import UserRepository
+
+PAGE_SIZES = PageSizes(default=50, maximum=100)
 
 
 class UserService(Service[UserRepository]):
@@ -23,6 +26,52 @@ class UserService(Service[UserRepository]):
 
     async def user(self, user_id: UserId) -> User:
         return await self._repository.get(user_id)
+
+    async def page(self, page_size: int, page_token: str) -> Page[User]:
+        """Every user, deleted ones included, newest first."""
+        return await self._repository.page(PAGE_SIZES.size(page_size), page_token)
+
+    async def suspend(self, user_id: UserId) -> User:
+        return await self._transition(user_id, User.suspend)
+
+    async def activate(self, user_id: UserId) -> User:
+        return await self._transition(user_id, User.activate)
+
+    async def delete(self, user_id: UserId) -> User:
+        return await self._transition(user_id, User.delete)
+
+    async def _transition(self, user_id: UserId, rule: Callable[[User, datetime], None]) -> User:
+        """Applies a status rule and keeps the account's sign-in in step: enabled exactly while
+        the user is active. The rule runs first, so a refused change never reaches the identity
+        provider. If the user then cannot be saved, the account goes back to how it was."""
+        now = self._clock()
+        # The account and whether it could sign in before the change, once its access changed.
+        restore: tuple[str, bool] | None = None
+
+        async def apply(user: User) -> None:
+            nonlocal restore
+            could_sign_in = user.can_sign_in()
+            rule(user, now)
+            await self._set_access(user.identity_provider_ref, user.can_sign_in())
+            restore = (user.identity_provider_ref, could_sign_in)
+
+        try:
+            return await change_async(self._repository, user_id, apply)
+        except Exception:
+            if restore is not None:
+                # The original error is the one to report; a failed restore is logged by the
+                # adapter.
+                with suppress(Unavailable):
+                    await self._set_access(*restore)
+            raise
+
+    async def _set_access(self, identity_provider_ref: str, can_sign_in: bool) -> None:
+        """Enables or disables the account. Both are idempotent, so setting an account already
+        in step is harmless."""
+        if can_sign_in:
+            await self._accounts.enable(identity_provider_ref)
+        else:
+            await self._accounts.disable(identity_provider_ref)
 
     async def create(
         self,

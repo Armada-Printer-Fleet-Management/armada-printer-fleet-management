@@ -107,6 +107,41 @@ class User(Entity[UserId]):
             expires_at,
         )
 
+    def can_sign_in(self) -> bool:
+        return self.status is UserStatus.ACTIVE
+
+    def can_suspend(self) -> bool:
+        return self.status is UserStatus.ACTIVE
+
+    def suspend(self, now: datetime) -> None:
+        """Blocks an active user from signing in."""
+        if not self.can_suspend():
+            raise RuleViolation(f"A {self.status.name} user cannot be suspended")
+        self.status = UserStatus.SUSPENDED
+        self.updated_at = now
+
+    def can_activate(self) -> bool:
+        return self.status in (UserStatus.SUSPENDED, UserStatus.DELETED)
+
+    def activate(self, now: datetime) -> None:
+        """Lets a suspended or deleted user sign in again."""
+        if not self.can_activate():
+            raise RuleViolation(f"An {self.status.name} user cannot be activated")
+        self.status = UserStatus.ACTIVE
+        self.deleted_at = None
+        self.updated_at = now
+
+    def can_delete(self) -> bool:
+        return self.status in (UserStatus.ACTIVE, UserStatus.SUSPENDED)
+
+    def delete(self, now: datetime) -> None:
+        """Soft deletes the user. They are kept so their history still resolves."""
+        if not self.can_delete():
+            raise RuleViolation(f"A {self.status.name} user cannot be deleted")
+        self.status = UserStatus.DELETED
+        self.deleted_at = now
+        self.updated_at = now
+
 
 @dataclass(eq=False)
 class Session(Entity[SessionId]):

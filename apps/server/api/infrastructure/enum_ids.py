@@ -33,6 +33,7 @@ LEGAL_DOCUMENT_KIND_IDS: dict[LegalDocumentKind, UUID] = {
     LegalDocumentKind.LICENSE: UUID("06735024-bbe8-426e-a56c-14797eea93bc"),
     LegalDocumentKind.TERMS_OF_SERVICE: UUID("a05a6e03-eba0-4df4-ab05-261e8bf08030"),
     LegalDocumentKind.PRIVACY_POLICY: UUID("09f7840c-6c7b-4973-8ee3-fb493e18e04a"),
+    LegalDocumentKind.THIRD_PARTY_LICENSE: UUID("525c8381-7054-4a50-8fca-6428fe282f57"),
 }
 
 USER_ROLE_IDS: dict[UserRole, UUID] = {

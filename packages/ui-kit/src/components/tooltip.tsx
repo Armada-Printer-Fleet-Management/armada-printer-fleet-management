@@ -7,7 +7,8 @@ export interface TooltipProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 // The bubble is hidden from assistive technology, so the wrapped control must carry its own
-// accessible name. It shows on keyboard focus as well as hover.
+// accessible name. It shows on hover and on keyboard focus, but not on the focus a mouse click
+// leaves behind, which would keep it open after the pointer has gone.
 const Tooltip = React.forwardRef<HTMLSpanElement, TooltipProps>(
   ({ label, className, children, ...props }, ref) => (
     <span
@@ -18,7 +19,7 @@ const Tooltip = React.forwardRef<HTMLSpanElement, TooltipProps>(
       {children}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute top-1/2 left-full z-10 ml-2 -translate-y-1/2 rounded-md bg-foreground px-2 py-1 text-xs font-medium whitespace-nowrap text-background opacity-0 transition-opacity group-focus-within/tooltip:opacity-100 group-hover/tooltip:opacity-100"
+        className="pointer-events-none absolute top-1/2 left-full z-10 ml-2 -translate-y-1/2 rounded-md bg-foreground px-2 py-1 text-xs font-medium whitespace-nowrap text-background opacity-0 transition-opacity group-has-[:focus-visible]/tooltip:opacity-100 group-hover/tooltip:opacity-100"
       >
         {label}
       </span>

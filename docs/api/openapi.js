@@ -815,7 +815,8 @@ window.OPENAPI_SPEC = {
           "LEGAL_DOCUMENT_KIND_UNSPECIFIED",
           "LEGAL_DOCUMENT_KIND_LICENSE",
           "LEGAL_DOCUMENT_KIND_TERMS_OF_SERVICE",
-          "LEGAL_DOCUMENT_KIND_PRIVACY_POLICY"
+          "LEGAL_DOCUMENT_KIND_PRIVACY_POLICY",
+          "LEGAL_DOCUMENT_KIND_THIRD_PARTY_LICENSE"
         ],
         "title": "LegalDocumentKind",
         "type": "string"

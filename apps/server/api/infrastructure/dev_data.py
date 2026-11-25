@@ -14,10 +14,12 @@ from core_domain.queue import PrinterQueue
 
 STUB_STUDENT_ID = UserId(UUID("00000000-0000-4000-8000-000000000100"))
 STUB_STAFF_ID = UserId(UUID("00000000-0000-4000-8000-000000000101"))
-# Stub: placeholders for the users' identity provider references. Replace them with real ones
-# once users are created by signing in through Keycloak.
+STUB_ADMIN_ID = UserId(UUID("00000000-0000-4000-8000-000000000102"))
+# The Keycloak IDs that infra/dev/keycloak-dev-users.sh gives the dev users. Change both together;
+# tests/unit/infrastructure/test_dev_data.py fails while they differ.
 _STUB_STUDENT_IDENTITY_PROVIDER_REF = "00000000-0000-4000-8000-000000000110"
 _STUB_STAFF_IDENTITY_PROVIDER_REF = "00000000-0000-4000-8000-000000000111"
+_STUB_ADMIN_IDENTITY_PROVIDER_REF = "00000000-0000-4000-8000-000000000112"
 STUB_DRAFT_JOB_ID = PrintJobId(UUID("00000000-0000-4000-8000-000000000001"))
 STUB_SUBMITTED_JOB_ID = PrintJobId(UUID("00000000-0000-4000-8000-000000000002"))
 STUB_APPROVED_JOB_ID = PrintJobId(UUID("00000000-0000-4000-8000-000000000003"))
@@ -76,6 +78,13 @@ def stub_users() -> list[User]:
             "staff@example.com",
             "Stub Staff",
             UserRole.STAFF,
+        ),
+        stub(
+            STUB_ADMIN_ID,
+            _STUB_ADMIN_IDENTITY_PROVIDER_REF,
+            "admin@example.com",
+            "Stub Admin",
+            UserRole.ADMIN,
         ),
     ]
 

@@ -1,0 +1,54 @@
+/* The brand-settable tokens. Every colour is light-dark(Frost, Graphite): the browser picks one from
+   the root's color-scheme, which data-theme sets, or which follows the OS before it is set.
+
+   Each token reads a --brand-* variable first, so an installed brand file overrides it. Only the
+   tokens in this file may be read from a brand; fixed.css never reads one. */
+:root {
+  color-scheme: light dark;
+
+  --background: var(--brand-background, light-dark(#edf1f5, #2b2d31));
+  --foreground: var(--brand-foreground, light-dark(#172433, #eceef1));
+  --card: var(--brand-card, light-dark(#f9fbfd, #313338));
+  --secondary: var(--brand-secondary, light-dark(#e5ebf1, #3a3d43));
+  --sidebar: var(--brand-sidebar, light-dark(#e3e9f0, #232428));
+  --muted-foreground: var(
+    --brand-muted-foreground,
+    light-dark(#4b5b6e, #aeb2ba)
+  );
+  --border: var(--brand-border, light-dark(#d2dbe5, #46494f));
+  --primary: var(--brand-primary, light-dark(#2f5d8a, #78a9ff));
+  --primary-foreground: var(
+    --brand-primary-foreground,
+    light-dark(#ffffff, #0a1530)
+  );
+  --accent: var(--brand-accent, light-dark(#2f5d8a, #78a9ff));
+  --accent-foreground: var(
+    --brand-accent-foreground,
+    light-dark(#ffffff, #0a1530)
+  );
+
+  /* Derived from the tokens above, so a brand changes them too. */
+  --card-foreground: var(--foreground);
+  --secondary-foreground: var(--foreground);
+  --sidebar-foreground: var(--foreground);
+  --input: var(--border);
+  --ring: var(--primary);
+  --primary-hover: color-mix(in srgb, var(--primary) 85%, var(--foreground));
+  --accent-hover: color-mix(in srgb, var(--accent) 85%, var(--foreground));
+  --secondary-hover: color-mix(
+    in srgb,
+    var(--secondary) 88%,
+    var(--foreground)
+  );
+
+  --radius: 0.5rem;
+  --radius-small: 0.25rem;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}

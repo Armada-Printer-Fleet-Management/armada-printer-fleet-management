@@ -443,7 +443,8 @@ most here:
 - **Accessibility is not optional:** keyboard reachable, visible focus, WCAG AA contrast.
 
 Colours come from the theme's semantic tokens, never literal values: each deployment swaps the
-theme, so a hardcoded colour breaks someone else's brand.
+theme, so a hardcoded colour breaks someone else's brand. **Before writing UI, read
+`packages/ui-kit/AGENTS.md`**: the theme's tokens, and the WCAG checks every push runs.
 
 ---
 
@@ -466,6 +467,7 @@ theme, so a hardcoded colour breaks someone else's brand.
 | Push finished work as PRs     | `/pr-precheck` (runs `/pr-ddd`, the pre-push checks and `/pr-split`)  |
 | Every pre-push check, locally | `PRE_PUSH_ALL=1 PRE_PUSH_EXHAUSTIVE=1 bash .githooks/pre-push` (needs Docker running) |
 | DDD verdict for this commit   | `python scripts/ddd_verdict.py check` (also `scope`, `diff`, `show`)  |
+| UI theme meets WCAG standards | `python scripts/check_ui_theme.py` (`--verbose` lists every pair)      |
 | Repository script tests       | `python -m unittest discover -s scripts/tests` (standard library only) |
 | Fetch the slicer engine        | `python scripts/fetch_slicer_engine.py` (`--check` offline; `--require-attestation` in CI) |
 | Fetch the sample prints (Git LFS) | `git lfs pull`                                                     |
