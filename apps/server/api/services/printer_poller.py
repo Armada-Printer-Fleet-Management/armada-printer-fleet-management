@@ -2,7 +2,9 @@ import asyncio
 from datetime import timedelta
 
 import structlog
-from core_domain.fleet import PrinterStatus
+from core_domain.ddd import EntityNotFound
+from core_domain.fleet import Printer, PrinterStatus
+from core_domain.ids import PrintJobId
 
 from api.domains.fleet.service import PrinterService
 from api.domains.print_job.service import PrintJobService
@@ -28,16 +30,26 @@ class PrinterPoller:
             for printer in page.items:
                 if printer.print_job_id is None:
                     continue
-                print_job = await self._print_jobs.print_job(printer.print_job_id)
-                printing = printer.status in (PrinterStatus.PRINTING, PrinterStatus.FINISHED)
-                if print_job.can_start_printing(printer_printing=printing):
-                    print_job = await self._print_jobs.start_printing(print_job.id, printing)
-                finished = printer.status is PrinterStatus.FINISHED
-                if print_job.can_finish(printer_finished=finished):
-                    await self._print_jobs.finish(print_job.id, finished)
+                try:
+                    await self._apply(printer, printer.print_job_id)
+                except EntityNotFound:
+                    logger.error(
+                        "printer reports an unknown print job",
+                        printer_id=printer.id,
+                        print_job_id=printer.print_job_id,
+                    )
             if not page.next_page_token:
                 return
             page_token = page.next_page_token
+
+    async def _apply(self, printer: Printer, print_job_id: PrintJobId) -> None:
+        print_job = await self._print_jobs.print_job(print_job_id)
+        printing = printer.status in (PrinterStatus.PRINTING, PrinterStatus.FINISHED)
+        if print_job.can_start_printing(printer_printing=printing):
+            print_job = await self._print_jobs.start_printing(print_job.id, printing)
+        finished = printer.status is PrinterStatus.FINISHED
+        if print_job.can_finish(printer_finished=finished):
+            await self._print_jobs.finish(print_job.id, finished)
 
     async def run(self) -> None:
         """Polls until cancelled. A failed poll is logged and retried on the next interval."""

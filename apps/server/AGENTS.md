@@ -19,7 +19,7 @@ implementations in `plugins/`, never here.
 | `api/infrastructure/postgres_database.py` | The connection pool to Postgres, opened by the lifespan and probed by the health check |
 | `api/infrastructure/sql_repository.py` | Base for a domain's SQL repository adapter: a transaction, with database failures as `Unavailable` |
 | `api/infrastructure/enum_ids.py` | The UUID the database stores for each enum member. Never change or reuse one |
-| `api/infrastructure/dev_data.py` | The one set of development data: the in-memory repositories start with it, tests use its IDs, `dev_seed.py` writes it |
+| `api/infrastructure/dev_data.py` | The one set of development data: the in-memory repositories start with it when `DEV_DATA` is set (the dev stack, `dev_run.py` and the integration tests; never a deployment, which gets the stub printers idle and holding no job; every stack gets the stub queue), tests use its IDs, `dev_seed.py` writes it |
 | `migrations/`, `alembic.ini` | Alembic migrations. Foreign keys only inside a domain; enum columns are `uuid` from `enum_ids.py`. `alembic.ini` holds no connection details |
 | `migrate.py`           | The deploy stack's migration entry point, run by its `migrate` service: `alembic upgrade head`, unless the database is ahead of this image |
 | `dev_seed.py`          | Writes `dev_data.py` into the development database, run by the dev stack's `migrate` service. Never run by a deployment |

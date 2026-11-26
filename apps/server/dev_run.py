@@ -39,6 +39,7 @@ def main() -> None:
         cmd += ["--loop", "asyncio:SelectorEventLoop"]
 
     os.environ.setdefault("LOG_FORMAT", "console")
+    os.environ.setdefault("DEV_DATA", "true")
 
     try:
         sys.exit(subprocess.run(cmd, cwd=ROOT).returncode)
