@@ -7,7 +7,7 @@ from organization_info import read
 from proto_utils.gen.organization.v1 import organization_info_pb2
 from proto_utils.mappers import AgreementMapper
 
-from armada_domains.auth.service import SessionService
+from armada_domains.auth.service import SessionService, UserService
 from armada_domains.content_asset.service import FileService
 from armada_domains.fleet.service import PrinterService
 from armada_domains.legal.service import AgreementService
@@ -22,6 +22,7 @@ from armada_infrastructure.application_server.printer_queue import ApplicationSe
 from armada_infrastructure.application_server.slicer_configuration import (
     ApplicationServerSlicerConfiguration,
 )
+from armada_infrastructure.application_server.user import ApplicationServerUsers
 from armada_infrastructure.identity_provider.oidc_sessions import OidcSessions
 from armada_infrastructure.local_agreements import LocalAgreements
 from armada_infrastructure.temp_user import temp_user_id
@@ -63,4 +64,5 @@ def build_ipc() -> Ipc:
         ),
         sessions=SessionService(sessions),
         theme_file=ThemeFile(Environment.theme_path()),
+        users=UserService(ApplicationServerUsers(server)),
     )

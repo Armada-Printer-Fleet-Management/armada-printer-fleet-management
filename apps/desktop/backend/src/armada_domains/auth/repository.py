@@ -1,8 +1,8 @@
 from abc import abstractmethod
 
-from core_domain.auth import Session
-from core_domain.ddd import AbstractReadRepository
-from core_domain.ids import SessionId
+from core_domain.auth import Session, User
+from core_domain.ddd import AbstractReadRepository, Page
+from core_domain.ids import SessionId, UserId
 
 
 class SessionRepository(AbstractReadRepository[SessionId, Session]):
@@ -20,3 +20,11 @@ class SessionRepository(AbstractReadRepository[SessionId, Session]):
     @abstractmethod
     def session(self) -> Session | None:
         """The current session, or None when nobody is signed in."""
+
+
+class UserRepository(AbstractReadRepository[UserId, User]):
+    """The people who can sign in, as the application server reports them. The desktop only reads
+    them. Implementations live in armada_infrastructure."""
+
+    @abstractmethod
+    def page(self, page_size: int, page_token: str) -> Page[User]: ...
