@@ -74,8 +74,9 @@ def new_user(role: str = "USER_ROLE_STAFF") -> Json:
         ("CreateUser", {}, 400),
         ("ListUsers", {"page": {"pageToken": "nope"}}, 400),
         ("TransitionUserStatus", {"userId": {"value": str(uuid4())}, "suspend": {}}, 404),
+        ("TransitionUserRole", {"userId": {"value": str(uuid4())}, "makeStaff": {}}, 404),
     ],
-    ids=["GetUser", "CreateUser", "ListUsers", "TransitionUserStatus"],
+    ids=["GetUser", "CreateUser", "ListUsers", "TransitionUserStatus", "TransitionUserRole"],
 )
 def test_rpc_is_mounted_on_the_app(
     app_client: TestClient, procedure: str, body: Json, status: int
@@ -144,3 +145,54 @@ def test_deleting_a_user_disables_their_account_and_reactivating_enables_it(
     assert reactivated["status"] == "USER_STATUS_ACTIVE"
     assert enabled["enabled"] is True
     assert enabled["id"] == disabled["id"]
+
+
+def _change_role(client: TestClient, user_id: Json, action: str, expect: int = 200) -> Json:
+    return post(client, f"{_USERS}/TransitionUserRole", {"userId": user_id, action: {}}, expect)
+
+
+def test_a_role_change_is_stored_and_swaps_the_keycloak_role(
+    app_client: TestClient, keycloak_users: KeycloakUsers
+) -> None:
+    request = new_user("USER_ROLE_STUDENT")
+    created = post(app_client, f"{_USERS}/CreateUser", request)["user"]
+    [account] = keycloak_users.with_email(request["email"])
+    roles_before = keycloak_users.realm_roles(account["id"])
+
+    changed = _change_role(app_client, created["id"], "makeStaff")["user"]
+    fetched = post(app_client, f"{_USERS}/GetUser", {"userId": created["id"]})["user"]
+
+    assert changed["role"] == fetched["role"] == "USER_ROLE_STAFF"
+    # The default roles Keycloak gives every account are kept; only the student role is swapped.
+    assert keycloak_users.realm_roles(account["id"]) == roles_before - {"student"} | {"staff"}
+
+
+def test_a_refused_role_change_leaves_the_keycloak_roles(
+    app_client: TestClient, keycloak_users: KeycloakUsers
+) -> None:
+    request = new_user("USER_ROLE_STUDENT")
+    created = post(app_client, f"{_USERS}/CreateUser", request)["user"]
+    [account] = keycloak_users.with_email(request["email"])
+    roles_before = keycloak_users.realm_roles(account["id"])
+
+    body = _change_role(app_client, created["id"], "makeStudent", 400)
+
+    assert body["code"] == "failed_precondition"
+    assert keycloak_users.realm_roles(account["id"]) == roles_before
+
+
+def test_extending_a_guests_expiry_keeps_their_keycloak_role(
+    app_client: TestClient, keycloak_users: KeycloakUsers
+) -> None:
+    request = {**new_user("USER_ROLE_GUEST"), "expiresAt": "2099-01-01T00:00:00Z"}
+    created = post(app_client, f"{_USERS}/CreateUser", request)["user"]
+    [account] = keycloak_users.with_email(request["email"])
+
+    body = post(
+        app_client,
+        f"{_USERS}/TransitionUserRole",
+        {"userId": created["id"], "makeGuest": {"expiresAt": "2099-06-01T00:00:00Z"}},
+    )
+
+    assert body["user"]["expiresAt"] == "2099-06-01T00:00:00Z"
+    assert "guest" in keycloak_users.realm_roles(account["id"])

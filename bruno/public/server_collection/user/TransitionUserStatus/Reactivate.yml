@@ -1,11 +1,11 @@
 info:
-  name: Transition - Complete
+  name: Reactivate
   type: http
-  seq: 12
+  seq: 2
 
 http:
   method: POST
-  url: "{{baseUrl}}/api/server.v1.PrintJobService/TransitionPrintJob"
+  url: "{{baseUrl}}/api/server.v1.UserService/TransitionUserStatus"
   headers:
     - name: Content-Type
       value: application/json
@@ -13,8 +13,8 @@ http:
     type: json
     data: |-
       {
-        "printJobId": { "value": "{{printJobId}}" },
-        "complete": {}
+        "userId": { "value": "{{userId}}" },
+        "reactivate": {}
       }
   auth: inherit
 

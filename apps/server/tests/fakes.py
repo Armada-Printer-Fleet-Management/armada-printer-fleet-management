@@ -3,6 +3,7 @@ failed write stores nothing, a TokenVerifier that answers as it is told, and an 
 IdentityDirectory."""
 
 from collections.abc import AsyncIterable, AsyncIterator
+from dataclasses import replace
 from types import TracebackType
 from typing import Self
 from uuid import uuid4
@@ -99,6 +100,8 @@ class MemoryIdentityDirectory:
     def __init__(self) -> None:
         self.accounts: dict[str, NewAccount] = {}
         self.disabled: set[str] = set()
+        # The accounts whose sessions were ended by a role change.
+        self.sessions_ended: set[str] = set()
         self.healthy = True
 
     def _fail_if_unhealthy(self) -> None:
@@ -139,6 +142,15 @@ class MemoryIdentityDirectory:
         self._fail_if_unhealthy()
         if subject in self.accounts:
             self.disabled.add(subject)
+
+    async def set_account_role(self, subject: str, role: str, previous_role: str) -> None:
+        self._fail_if_unhealthy()
+        account = self.accounts.get(subject)
+        if account is None:
+            raise IdentityDirectoryError("No account has this subject")
+        # Each account holds one application role, so the swap replaces it whatever it was.
+        self.accounts[subject] = replace(account, role=role)
+        self.sessions_ended.add(subject)
 
     async def health_check(self) -> None:
         self._fail_if_unhealthy()

@@ -169,7 +169,7 @@ class KeycloakIdentityDirectory:
                     return subject
         raise IdentityDirectoryError("Keycloak created the account but cannot find it")
 
-    async def _assign_realm_role(self, subject: str, role: str) -> None:
+    async def _realm_role(self, role: str) -> dict[str, object]:
         response = await self._request("GET", f"/roles/{_segment(role)}")
         if response.status_code == HTTPStatus.NOT_FOUND:
             raise IdentityDirectoryError(f"The realm has no role named {role!r}")
@@ -183,14 +183,46 @@ class KeycloakIdentityDirectory:
             raise IdentityDirectoryError("Keycloak returned a malformed role") from error
         if not isinstance(representation, dict):
             raise IdentityDirectoryError("Keycloak returned a malformed role")
+        return cast(dict[str, object], representation)
 
-        response = await self._request(
-            "POST",
-            f"{_KEYCLOAK_USERS_URL}/{_segment(subject)}/role-mappings/realm",
-            [cast(dict[str, object], representation)],
-        )
+    def _role_mappings_url(self, subject: str) -> str:
+        return f"{_KEYCLOAK_USERS_URL}/{_segment(subject)}/role-mappings/realm"
+
+    async def _assign_realm_role(self, subject: str, role: str) -> None:
+        await self._add_role_mapping(subject, await self._realm_role(role))
+
+    async def _add_role_mapping(self, subject: str, representation: dict[str, object]) -> None:
+        response = await self._request("POST", self._role_mappings_url(subject), [representation])
         if response.status_code != HTTPStatus.NO_CONTENT:
             raise IdentityDirectoryError(f"Keycloak refused the role ({response.status_code})")
+
+    async def _remove_role_mapping(self, subject: str, representation: dict[str, object]) -> None:
+        response = await self._request("DELETE", self._role_mappings_url(subject), [representation])
+        if response.status_code != HTTPStatus.NO_CONTENT:
+            raise IdentityDirectoryError(
+                f"Keycloak refused to remove the role ({response.status_code})"
+            )
+
+    async def set_account_role(self, subject: str, role: str, previous_role: str) -> None:
+        new = await self._realm_role(role)
+        previous = await self._realm_role(previous_role)
+        await self._add_role_mapping(subject, new)
+        # Removing the previous role when it is the same one would take away the role just given.
+        if role != previous_role:
+            await self._remove_previous_role(subject, previous, new)
+        await self._end_sessions(subject)
+
+    async def _remove_previous_role(
+        self, subject: str, previous: dict[str, object], new: dict[str, object]
+    ) -> None:
+        try:
+            await self._remove_role_mapping(subject, previous)
+        except Exception:
+            # The port promises a failed swap leaves the roles as they were. A removal that fails
+            # too must not hide why the swap failed.
+            with suppress(IdentityDirectoryError):
+                await self._remove_role_mapping(subject, new)
+            raise
 
     async def delete_account(self, subject: str) -> None:
         response = await self._request("DELETE", f"{_KEYCLOAK_USERS_URL}/{_segment(subject)}")
@@ -219,6 +251,9 @@ class KeycloakIdentityDirectory:
                 f"Keycloak refused to disable the account ({response.status_code})"
             )
         # Disabling stops new sign-ins; ending the sessions stops their refresh tokens too.
+        await self._end_sessions(subject)
+
+    async def _end_sessions(self, subject: str) -> None:
         response = await self._request("POST", f"{_KEYCLOAK_USERS_URL}/{_segment(subject)}/logout")
         if response.status_code not in (HTTPStatus.NO_CONTENT, HTTPStatus.NOT_FOUND):
             raise IdentityDirectoryError(

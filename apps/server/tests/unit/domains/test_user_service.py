@@ -247,6 +247,63 @@ async def test_a_failed_save_puts_the_account_back_as_it_was(
     assert (user.identity_provider_ref in directory.disabled) is disabled_after
 
 
+# Changing a user's role
+
+
+async def test_change_role_gives_the_account_the_role_and_ends_its_sessions(
+    service: UserService, directory: MemoryIdentityDirectory
+) -> None:
+    user = await create(service, role=UserRole.STUDENT)
+
+    changed = await service.change_role(user.id, UserRole.STAFF, None)
+
+    assert changed.role is UserRole.STAFF
+    assert await service.user(user.id) == changed
+    assert directory.accounts[user.identity_provider_ref].role == "staff"
+    assert directory.sessions_ended == {user.identity_provider_ref}
+
+
+async def test_a_refused_role_change_changes_neither_user_nor_account(
+    service: UserService, directory: MemoryIdentityDirectory
+) -> None:
+    user = await create(service, role=UserRole.STUDENT)
+
+    with pytest.raises(RuleViolation):
+        await service.change_role(user.id, UserRole.STUDENT, None)
+
+    assert await service.user(user.id) == user
+    assert directory.accounts[user.identity_provider_ref].role == "student"
+    assert directory.sessions_ended == set()
+
+
+async def test_an_unreachable_directory_leaves_the_role_unchanged(
+    service: UserService, directory: MemoryIdentityDirectory
+) -> None:
+    user = await create(service, role=UserRole.STUDENT)
+    directory.healthy = False
+
+    with pytest.raises(Unavailable, match="identity provider"):
+        await service.change_role(user.id, UserRole.STAFF, None)
+
+    assert await service.user(user.id) == user
+
+
+async def test_a_failed_save_puts_the_accounts_role_back(
+    directory: MemoryIdentityDirectory,
+) -> None:
+    repository = _SwitchableSave()
+    async with IdentityDirectoryAccounts(lambda: directory) as accounts:
+        service = UserService(repository, accounts, clock=lambda: NOW)
+        user = await create(service, role=UserRole.STUDENT)
+        repository.fail = True
+
+        with pytest.raises(Unavailable, match="database"):
+            await service.change_role(user.id, UserRole.STAFF, None)
+
+        assert await service.user(user.id) == user
+    assert directory.accounts[user.identity_provider_ref].role == "student"
+
+
 # Listing users
 
 

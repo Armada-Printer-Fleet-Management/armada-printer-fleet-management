@@ -1,9 +1,10 @@
 import logging.config
 import os
+from importlib.util import find_spec
 from typing import Literal
 
 import structlog
-from structlog.typing import Processor
+from structlog.typing import ExceptionRenderer, Processor
 
 LogFormat = Literal["console", "json"]
 
@@ -29,11 +30,18 @@ def log_format() -> LogFormat:
             raise ValueError(f"LOG_FORMAT must be 'console' or 'json', not {other!r}")
 
 
+def _console_traceback() -> ExceptionRenderer:
+    # rich reaches the server only through a dev dependency, so the dev image has none, and
+    # structlog's rich formatter then fails on every logged exception.
+    if find_spec("rich") is None:
+        return structlog.dev.plain_traceback
+    return structlog.dev.RichTracebackFormatter(show_locals=False)
+
+
 def _renderers(log_format: LogFormat) -> list[Processor]:
     # Tracebacks leave out local variables, because those can hold secrets such as passwords.
     if log_format == "console":
-        traceback = structlog.dev.RichTracebackFormatter(show_locals=False)
-        return [structlog.dev.ConsoleRenderer(exception_formatter=traceback)]
+        return [structlog.dev.ConsoleRenderer(exception_formatter=_console_traceback())]
     return [
         structlog.processors.ExceptionRenderer(
             structlog.tracebacks.ExceptionDictTransformer(show_locals=False)

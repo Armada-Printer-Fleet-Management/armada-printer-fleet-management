@@ -1,5 +1,6 @@
 import json
 import logging
+import sys
 
 import pytest
 import structlog
@@ -60,6 +61,27 @@ def test_tracebacks_leave_out_local_variables(
     output = capsys.readouterr().err
     assert "connect failed" in output
     assert "hunter2-secret" not in output
+
+
+@pytest.mark.usefixtures("restore_logging")
+def test_console_tracebacks_render_without_rich(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # As in the dev image: rich cannot be imported, so structlog never defined its Console.
+    monkeypatch.setitem(sys.modules, "rich", None)
+    monkeypatch.delattr(structlog.dev, "Console")
+    monkeypatch.setenv("LOG_FORMAT", "console")
+    configure_logging()
+
+    try:
+        raise ConnectionError("refused")
+    except ConnectionError:
+        structlog.stdlib.get_logger("test").exception("connect failed")
+
+    output = capsys.readouterr().err
+    assert "Logging error" not in output
+    assert "connect failed" in output
+    assert "ConnectionError: refused" in output
 
 
 @pytest.mark.usefixtures("restore_logging")

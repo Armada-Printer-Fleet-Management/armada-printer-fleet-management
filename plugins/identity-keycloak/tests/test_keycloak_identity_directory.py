@@ -26,13 +26,16 @@ type Handler = Callable[[httpx2.Request], httpx2.Response]
 
 class FakeKeycloak:
     """One realm's users, roles and role mappings, behind the parts of the token endpoint and the
-    Admin REST API the directory uses. Assign `on_create`, `on_map_role`, `on_delete`,
-    `on_update`, `on_logout` or `on_admin` to answer differently. Set `omit_location` to create
-    accounts without saying where, and `hidden_from_lookup` to keep them out of the user lookup.
-    An update changes only the fields it sends, as Keycloak's does."""
+    Admin REST API the directory uses. Assign `on_create`, `on_map_role`, `on_unmap_role`,
+    `on_delete`, `on_update`, `on_logout` or `on_admin` to answer differently. Set
+    `omit_location` to create accounts without saying where, and `hidden_from_lookup` to keep them
+    out of the user lookup. An update changes only the fields it sends, as Keycloak's does."""
 
     def __init__(self) -> None:
-        self.roles = {"staff": {"id": "role-staff", "name": "staff"}}
+        self.roles = {
+            "staff": {"id": "role-staff", "name": "staff"},
+            "student": {"id": "role-student", "name": "student"},
+        }
         self.users: dict[str, dict[str, object]] = {}
         self.role_mappings: dict[str, list[str]] = {}
         self.issued_tokens: list[str] = []
@@ -40,6 +43,7 @@ class FakeKeycloak:
         self.now = 0.0
         self.on_create: Handler | None = None
         self.on_map_role: Handler | None = None
+        self.on_unmap_role: Handler | None = None
         self.on_delete: Handler | None = None
         self.on_update: Handler | None = None
         self.on_logout: Handler | None = None
@@ -104,8 +108,19 @@ class FakeKeycloak:
             case "POST", ["users", subject, "role-mappings", "realm"]:
                 if self.on_map_role is not None:
                     return self.on_map_role(request)
+                if subject not in self.users:
+                    return httpx2.Response(404)
                 names = [role["name"] for role in json.loads(request.content)]
                 self.role_mappings.setdefault(subject, []).extend(names)
+                return httpx2.Response(204)
+            case "DELETE", ["users", subject, "role-mappings", "realm"]:
+                if self.on_unmap_role is not None:
+                    return self.on_unmap_role(request)
+                if subject not in self.users:
+                    return httpx2.Response(404)
+                names = {role["name"] for role in json.loads(request.content)}
+                mapped = self.role_mappings.get(subject, [])
+                self.role_mappings[subject] = [name for name in mapped if name not in names]
                 return httpx2.Response(204)
             case "DELETE", ["users", subject]:
                 if self.on_delete is not None:
@@ -421,3 +436,90 @@ def test_a_refused_logout_is_a_directory_error() -> None:
 
     with pytest.raises(IdentityDirectoryError):
         change_access_after_create(keycloak, enabled=False)
+
+
+# Changing an account's role
+
+
+def change_role_after_create(keycloak: FakeKeycloak, role: str = "student") -> str:
+    async def use(directory: KeycloakIdentityDirectory) -> str:
+        subject = await directory.create_account(ACCOUNT)
+        # A role Keycloak gives every account, which the swap must keep.
+        keycloak.role_mappings[subject].append("offline_access")
+        await directory.set_account_role(subject, role, ACCOUNT.role)
+        return subject
+
+    return run(keycloak, use)
+
+
+def test_set_role_swaps_the_role_keeps_the_others_and_ends_sessions() -> None:
+    keycloak = FakeKeycloak()
+
+    subject = change_role_after_create(keycloak)
+
+    assert sorted(keycloak.role_mappings[subject]) == ["offline_access", "student"]
+    assert keycloak.logged_out == [subject]
+
+
+def test_a_refused_removal_takes_the_new_role_away_again() -> None:
+    keycloak = FakeKeycloak()
+    refusals = iter([httpx2.Response(500)])
+
+    def refuse_the_first_removal(request: httpx2.Request) -> httpx2.Response:
+        response = next(refusals, None)
+        if response is not None:
+            return response
+        subject = request.url.path.split("/")[-3]
+        names = {role["name"] for role in json.loads(request.content)}
+        mapped = keycloak.role_mappings[subject]
+        keycloak.role_mappings[subject] = [name for name in mapped if name not in names]
+        return httpx2.Response(204)
+
+    keycloak.on_unmap_role = refuse_the_first_removal
+
+    with pytest.raises(IdentityDirectoryError, match="remove the role"):
+        change_role_after_create(keycloak)
+
+    (subject,) = keycloak.users
+    assert sorted(keycloak.role_mappings[subject]) == ["offline_access", "staff"]
+    assert keycloak.logged_out == []
+
+
+def test_setting_a_role_the_realm_lacks_changes_nothing() -> None:
+    keycloak = FakeKeycloak()
+
+    with pytest.raises(IdentityDirectoryError, match="no role named"):
+        change_role_after_create(keycloak, role="admin")
+
+    (subject,) = keycloak.users
+    assert sorted(keycloak.role_mappings[subject]) == ["offline_access", "staff"]
+    assert keycloak.logged_out == []
+
+
+def test_setting_the_role_of_an_account_that_does_not_exist_is_a_directory_error() -> None:
+    keycloak = FakeKeycloak()
+
+    with pytest.raises(IdentityDirectoryError):
+        run(
+            keycloak, lambda directory: directory.set_account_role(str(uuid4()), "student", "staff")
+        )
+
+    assert keycloak.role_mappings == {}
+
+
+def test_a_refused_logout_after_a_role_change_is_a_directory_error() -> None:
+    keycloak = FakeKeycloak()
+    keycloak.on_logout = lambda _: httpx2.Response(403)
+
+    with pytest.raises(IdentityDirectoryError, match="end the account's sessions"):
+        change_role_after_create(keycloak)
+
+
+def test_setting_the_role_the_account_already_has_keeps_it_and_ends_sessions() -> None:
+    keycloak = FakeKeycloak()
+
+    subject = change_role_after_create(keycloak, role=ACCOUNT.role)
+
+    assert "staff" in keycloak.role_mappings[subject]
+    assert "offline_access" in keycloak.role_mappings[subject]
+    assert keycloak.logged_out == [subject]
