@@ -49,10 +49,35 @@ export {
   SignInDialog,
   type SignInDialogProps,
 } from './components/sign-in-dialog';
+export { Pagination, type PaginationProps } from './components/pagination';
+export {
+  pageWindow,
+  type PageWindow,
+  type PageWindowInput,
+} from './lib/pagination';
+export {
+  Skeleton,
+  SkeletonText,
+  TableSkeleton,
+  TableSkeletonRows,
+  type SkeletonTextProps,
+  type TableSkeletonProps,
+  type TableSkeletonRowsProps,
+} from './components/skeleton';
 export {
   ThemeSwitcher,
   type ThemeSwitcherProps,
 } from './components/theme-switcher';
+export {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  type TableProps,
+} from './components/table';
 export { Tooltip, type TooltipProps } from './components/tooltip';
 export {
   isThemePreference,

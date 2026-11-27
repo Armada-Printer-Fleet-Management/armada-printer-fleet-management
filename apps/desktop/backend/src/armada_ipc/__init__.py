@@ -2,7 +2,7 @@ from collections.abc import Iterable
 
 from proto_utils.gen.legal.v1.legal_document_pb2 import LegalDocument
 
-from armada_domains.auth.service import SessionService
+from armada_domains.auth.service import SessionService, UserService
 from armada_domains.content_asset.service import FileService
 from armada_domains.fleet.service import PrinterService
 from armada_domains.legal.service import AgreementService
@@ -18,6 +18,7 @@ from armada_ipc.printer_queue import PrinterQueueIpc
 from armada_ipc.session import SessionIpc
 from armada_ipc.slicer_configuration import SlicerConfigurationIpc
 from armada_ipc.theme import ThemeIpc
+from armada_ipc.user import UserIpc
 from armada_runtime.theme import ThemeFile
 
 
@@ -38,6 +39,7 @@ class Ipc:
         slicer_configuration: SlicerConfigurationService,
         sessions: SessionService,
         theme_file: ThemeFile,
+        users: UserService,
     ) -> None:
         self.application_info = ApplicationInfo()
         self.print_job = PrintJobIpc(print_jobs)
@@ -48,3 +50,4 @@ class Ipc:
         self.slicer_configuration = SlicerConfigurationIpc(slicer_configuration)
         self.session = SessionIpc(sessions)
         self.theme = ThemeIpc(theme_file)
+        self.user = UserIpc(users)

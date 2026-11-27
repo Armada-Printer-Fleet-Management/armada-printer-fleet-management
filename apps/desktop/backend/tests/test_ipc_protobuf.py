@@ -11,7 +11,7 @@ import pytest
 from google.protobuf.message import Message
 
 import armada_ipc
-from armada_domains.auth.service import SessionService
+from armada_domains.auth.service import SessionService, UserService
 from armada_domains.content_asset.service import FileService
 from armada_domains.fleet.service import PrinterService
 from armada_domains.legal.service import AgreementService
@@ -86,6 +86,7 @@ EXPOSED_METHODS, EXPOSED_OBJECTS = exposed(
         slicer_configuration=create_autospec(SlicerConfigurationService, instance=True),
         sessions=create_autospec(SessionService, instance=True),
         theme_file=create_autospec(ThemeFile, instance=True),
+        users=create_autospec(UserService, instance=True),
     )
 )
 SWEPT_METHODS = swept_methods()
