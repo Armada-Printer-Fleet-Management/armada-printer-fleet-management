@@ -1,11 +1,11 @@
 info:
-  name: Transition - Move To Queue
+  name: Delete
   type: http
-  seq: 11
+  seq: 3
 
 http:
   method: POST
-  url: "{{baseUrl}}/api/server.v1.PrintJobService/TransitionPrintJob"
+  url: "{{baseUrl}}/api/server.v1.UserService/TransitionUserStatus"
   headers:
     - name: Content-Type
       value: application/json
@@ -13,8 +13,8 @@ http:
     type: json
     data: |-
       {
-        "printJobId": { "value": "{{printJobId}}" },
-        "moveToQueue": { "printerQueueId": { "value": "{{printerQueueId}}" } }
+        "userId": { "value": "{{userId}}" },
+        "delete": {}
       }
   auth: inherit
 

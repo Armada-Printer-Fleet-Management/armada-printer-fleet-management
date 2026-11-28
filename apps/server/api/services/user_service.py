@@ -1,8 +1,9 @@
-from datetime import UTC
+from datetime import UTC, datetime
 
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
+from core_domain.auth import UserRole
 from core_domain.ids import UserId
 from proto_utils.gen.common.v1.page_pb2 import PageResponse
 from proto_utils.gen.server.v1.user_service_pb2 import (
@@ -111,4 +112,22 @@ class UserServiceImplementation:
         ctx: RequestContext[TransitionUserRoleRequest, TransitionUserRoleResponse],
         /,
     ) -> TransitionUserRoleResponse:
-        raise _not_implemented()
+        user_id = request_id(UserId, request.user_id)
+        expires_at: datetime | None = None
+        match request.WhichOneof("action"):
+            case "make_guest":
+                role = UserRole.GUEST
+                # A missing expiry is refused by the user's rules, as it is for a new guest.
+                if request.make_guest.HasField("expires_at"):
+                    expires_at = request.make_guest.expires_at.ToDatetime(UTC)
+            case "make_student":
+                role = UserRole.STUDENT
+            case "make_staff":
+                role = UserRole.STAFF
+            case "make_admin":
+                role = UserRole.ADMIN
+            case _:
+                raise ConnectError(Code.INVALID_ARGUMENT, "action must be set")
+        with domain_errors_as_connect():
+            user = await self._users.change_role(user_id, role, expires_at)
+        return TransitionUserRoleResponse(user=self._mapper.to_proto(user))

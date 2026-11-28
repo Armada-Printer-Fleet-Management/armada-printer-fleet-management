@@ -69,13 +69,7 @@ class User(Entity[UserId]):
         email = _valid_email(email)
         _require_name_length("first name", first_name)
         _require_name_length("last name", last_name)
-        if role is UserRole.GUEST:
-            if expires_at is None:
-                raise RuleViolation("A guest cannot be created without an expiry")
-            if expires_at <= now:
-                raise RuleViolation("A guest cannot be created with an expiry that has passed")
-        elif expires_at is not None:
-            raise RuleViolation(f"A {role.name} user cannot have an expiry")
+        _require_expiry_fits(role, expires_at, now, "created")
         return email
 
     @classmethod
@@ -142,6 +136,22 @@ class User(Entity[UserId]):
         self.deleted_at = now
         self.updated_at = now
 
+    def can_change_role(self, role: UserRole, expires_at: datetime | None) -> bool:
+        """False when nothing would change. A guest can be made a guest again with a new expiry."""
+        if role is not self.role:
+            return True
+        return role is UserRole.GUEST and expires_at != self.expires_at
+
+    def change_role(self, role: UserRole, expires_at: datetime | None, now: datetime) -> None:
+        """Gives the user a new role. A guest's access must end at a time still to come; every
+        other role's access does not expire, so leaving guest clears the expiry."""
+        if not self.can_change_role(role, expires_at):
+            raise RuleViolation(f"This user is already a {role.name} user")
+        _require_expiry_fits(role, expires_at, now, "made")
+        self.role = role
+        self.expires_at = expires_at
+        self.updated_at = now
+
 
 @dataclass(eq=False)
 class Session(Entity[SessionId]):
@@ -186,6 +196,19 @@ def _valid_email(email: str) -> str:
     if not _EMAIL.fullmatch(email):
         raise RuleViolation("That is not a valid email address")
     return email
+
+
+def _require_expiry_fits(
+    role: UserRole, expires_at: datetime | None, now: datetime, action: str
+) -> None:
+    """A guest's access must end at a time still to come; no other role's access expires."""
+    if role is UserRole.GUEST:
+        if expires_at is None:
+            raise RuleViolation(f"A guest cannot be {action} without an expiry")
+        if expires_at <= now:
+            raise RuleViolation(f"A guest cannot be {action} with an expiry that has passed")
+    elif expires_at is not None:
+        raise RuleViolation(f"A {role.name} user cannot have an expiry")
 
 
 def _require_name_length(label: str, name: str) -> None:

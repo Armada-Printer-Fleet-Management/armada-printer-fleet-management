@@ -65,6 +65,36 @@ class UserService(Service[UserRepository]):
                     await self._set_access(*restore)
             raise
 
+    async def change_role(
+        self, user_id: UserId, role: UserRole, expires_at: datetime | None
+    ) -> User:
+        """Gives the user a new role, and the account they sign in with the same one, ending its
+        sessions so the next sign-in carries it. The rule runs first, so a refused change never
+        reaches the identity provider. If the user then cannot be saved, the account's role goes
+        back to how it was."""
+        now = self._clock()
+        # The account, its role before the change and the role it was given, once it was asked.
+        restore: tuple[str, UserRole, UserRole] | None = None
+
+        async def apply(user: User) -> None:
+            nonlocal restore
+            previous_role = user.role
+            user.change_role(role, expires_at, now)
+            # Recorded before the call, so a failure after the swap, such as ending the sessions,
+            # is still undone. Swapping back roles that were never swapped is harmless.
+            restore = (user.identity_provider_ref, previous_role, role)
+            await self._accounts.set_role(user.identity_provider_ref, role, previous_role)
+
+        try:
+            return await change_async(self._repository, user_id, apply)
+        except Exception:
+            if restore is not None:
+                # The original error is the one to report; a failed restore is logged by the
+                # adapter.
+                with suppress(Unavailable):
+                    await self._accounts.set_role(*restore)
+            raise
+
     async def _set_access(self, identity_provider_ref: str, can_sign_in: bool) -> None:
         """Enables or disables the account. Both are idempotent, so setting an account already
         in step is harmless."""

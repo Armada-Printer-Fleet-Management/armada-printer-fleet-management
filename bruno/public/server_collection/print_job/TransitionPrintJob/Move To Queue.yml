@@ -1,7 +1,7 @@
 info:
-  name: Transition - Fail
+  name: Move To Queue
   type: http
-  seq: 13
+  seq: 5
 
 http:
   method: POST
@@ -12,7 +12,10 @@ http:
   body:
     type: json
     data: |-
-      { "printJobId": { "value": "{{printJobId}}" }, "fail": { "reason": "Layers shifted halfway up" } }
+      {
+        "printJobId": { "value": "{{printJobId}}" },
+        "moveToQueue": { "printerQueueId": { "value": "{{printerQueueId}}" } }
+      }
   auth: inherit
 
 settings:

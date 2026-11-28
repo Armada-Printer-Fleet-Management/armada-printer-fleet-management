@@ -76,6 +76,19 @@ class IdentityDirectory(Protocol):
         """
         ...
 
+    async def set_account_role(self, subject: str, role: str, previous_role: str) -> None:
+        """
+        Give the account with this subject `role` in place of `previous_role`, and end its
+        sessions so its next sign-in carries the new role. The account's other roles are kept.
+        When `role` and `previous_role` are the same, the account keeps that role.
+
+        If the role cannot be swapped, the account's roles are left as they were.
+
+        Raises IdentityDirectoryError if there is no such account, if either role does not exist,
+        or if there is an error with the directory itself.
+        """
+        ...
+
     async def health_check(self) -> None:
         """
         Check the health of the directory.

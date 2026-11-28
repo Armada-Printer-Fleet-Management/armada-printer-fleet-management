@@ -266,3 +266,86 @@ def test_each_hint_agrees_with_its_rule(
         refused = True
 
     assert allowed is not refused
+
+
+# Role changes
+
+
+def as_guest(expires_at: datetime = LATER) -> User:
+    return create(role=UserRole.GUEST, expires_at=expires_at)
+
+
+def test_change_role_gives_the_user_the_new_role() -> None:
+    user = create(role=UserRole.STUDENT)
+
+    user.change_role(UserRole.STAFF, None, LATER)
+
+    assert user.role is UserRole.STAFF
+    assert (user.expires_at, user.updated_at) == (None, LATER)
+
+
+@pytest.mark.parametrize("role", [r for r in UserRole if r is not UserRole.GUEST])
+def test_change_role_refuses_the_role_the_user_already_has(role: UserRole) -> None:
+    user = create(role=role)
+
+    with pytest.raises(RuleViolation):
+        user.change_role(role, None, LATER)
+
+    assert (user.role, user.updated_at) == (role, NOW)
+
+
+def test_change_role_refuses_a_guest_the_same_expiry() -> None:
+    user = as_guest()
+
+    with pytest.raises(RuleViolation):
+        user.change_role(UserRole.GUEST, LATER, NOW)
+
+    assert (user.expires_at, user.updated_at) == (LATER, NOW)
+
+
+def test_change_role_makes_a_user_a_guest_until_a_future_expiry() -> None:
+    user = create(role=UserRole.STUDENT)
+
+    user.change_role(UserRole.GUEST, LATER, NOW)
+
+    assert (user.role, user.expires_at) == (UserRole.GUEST, LATER)
+
+
+def test_change_role_gives_a_guest_a_new_expiry() -> None:
+    user = as_guest()
+    new_expiry = LATER + timedelta(days=7)
+
+    user.change_role(UserRole.GUEST, new_expiry, NOW)
+
+    assert (user.role, user.expires_at) == (UserRole.GUEST, new_expiry)
+
+
+@pytest.mark.parametrize(
+    "expires_at", [None, NOW, NOW - timedelta(seconds=1)], ids=["none", "now", "past"]
+)
+def test_change_role_refuses_a_guest_without_a_future_expiry(expires_at: datetime | None) -> None:
+    user = create(role=UserRole.STUDENT)
+
+    with pytest.raises(RuleViolation):
+        user.change_role(UserRole.GUEST, expires_at, NOW)
+
+    assert (user.role, user.expires_at) == (UserRole.STUDENT, None)
+
+
+@pytest.mark.parametrize("role", [r for r in UserRole if r is not UserRole.GUEST])
+def test_leaving_guest_clears_the_expiry(role: UserRole) -> None:
+    user = as_guest()
+
+    user.change_role(role, None, NOW)
+
+    assert (user.role, user.expires_at) == (role, None)
+
+
+@pytest.mark.parametrize("role", [r for r in UserRole if r is not UserRole.GUEST])
+def test_change_role_refuses_an_expiry_for_any_other_role(role: UserRole) -> None:
+    user = as_guest()
+
+    with pytest.raises(RuleViolation):
+        user.change_role(role, LATER, NOW)
+
+    assert (user.role, user.expires_at) == (UserRole.GUEST, LATER)

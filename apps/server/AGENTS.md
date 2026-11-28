@@ -57,7 +57,10 @@ Follow `print_job`, the worked example:
    job beside its file.
 4. **Always update the Bruno collection when an RPC is added or changed.** Each RPC has a
    request in `bruno/public/server_collection/<domain>/`, whose body matches the RPC's current
-   request message. A new domain gets its own folder. A variable a request needs goes in every
+   request message. A new domain gets its own folder. A `Transition<Entity>` RPC gets a
+   subfolder of its domain's folder named exactly after the RPC (`user/TransitionUserRole/`),
+   holding one request per action, named after the action alone (`Make Guest`), with a
+   `folder.yml` like the domain's. A variable a request needs goes in every
    file under `environments/`, holding a seeded ID from `dev_data.py` where there is one. Layout
    and conventions: `bruno/README.md`.
 

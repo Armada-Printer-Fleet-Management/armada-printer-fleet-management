@@ -21,6 +21,14 @@ class IdentityAccounts(Protocol):
         when there is no such account."""
         ...
 
+    async def set_role(
+        self, identity_provider_ref: str, role: UserRole, previous_role: UserRole
+    ) -> None:
+        """Gives the account role in place of previous_role and ends its sessions, so its next
+        token carries the new role. Raises Unavailable if the identity provider cannot, including
+        when there is no such account."""
+        ...
+
     async def disable(self, identity_provider_ref: str) -> None:
         """Stops the account signing in and ends its sessions; succeeds when there is no account.
         Raises Unavailable if the identity provider cannot."""

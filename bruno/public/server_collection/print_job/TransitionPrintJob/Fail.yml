@@ -1,5 +1,5 @@
 info:
-  name: Transition - Start Review
+  name: Fail
   type: http
   seq: 7
 
@@ -12,10 +12,7 @@ http:
   body:
     type: json
     data: |-
-      {
-        "printJobId": { "value": "{{printJobId}}" },
-        "startReview": {}
-      }
+      { "printJobId": { "value": "{{printJobId}}" }, "fail": { "reason": "Layers shifted halfway up" } }
   auth: inherit
 
 settings:

@@ -1,11 +1,11 @@
 info:
-  name: Transition - Reactivate
+  name: Make Staff
   type: http
-  seq: 5
+  seq: 3
 
 http:
   method: POST
-  url: "{{baseUrl}}/api/server.v1.UserService/TransitionUserStatus"
+  url: "{{baseUrl}}/api/server.v1.UserService/TransitionUserRole"
   headers:
     - name: Content-Type
       value: application/json
@@ -14,7 +14,7 @@ http:
     data: |-
       {
         "userId": { "value": "{{userId}}" },
-        "reactivate": {}
+        "makeStaff": {}
       }
   auth: inherit
 

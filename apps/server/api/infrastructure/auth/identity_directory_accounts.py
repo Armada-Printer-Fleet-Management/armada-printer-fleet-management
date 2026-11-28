@@ -109,6 +109,28 @@ class IdentityDirectoryAccounts:
             )
             raise
 
+    async def set_role(
+        self, identity_provider_ref: str, role: UserRole, previous_role: UserRole
+    ) -> None:
+        try:
+            with _directory_errors():
+                await self._identity_directory().set_account_role(
+                    identity_provider_ref,
+                    _DIRECTORY_ROLES[role].value,
+                    _DIRECTORY_ROLES[previous_role].value,
+                )
+        except Unavailable:
+            # Logged here, because a caller restoring an account after another failure reports
+            # that failure instead.
+            logger.warning(
+                "identity provider account role not changed",
+                role=role.name,
+                previous_role=previous_role.name,
+                identity_provider_ref=identity_provider_ref,
+                exc_info=True,
+            )
+            raise
+
     async def delete(self, identity_provider_ref: str) -> None:
         try:
             with _directory_errors():
